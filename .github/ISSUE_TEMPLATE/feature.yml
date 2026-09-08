@@ -1,0 +1,50 @@
+name: "✨ Feature / Tarea"
+description: Nueva funcionalidad, sistema o tarea a implementar
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: ¿Qué hay que implementar? ¿Por qué es necesario?
+      placeholder: Ej. Implementar el sistema de turnos básico para el combate...
+    validations:
+      required: true
+
+  - type: textarea
+    id: subtareas
+    attributes:
+      label: Checklist de sub-tareas
+      description: Desglosá el trabajo en pasos concretos (opcional, podés completarlo o ajustarlo después)
+      placeholder: |
+        - [ ] Definir estructura de datos del turno
+        - [ ] Implementar orden de turnos
+        - [ ] Conectar con UI mínima
+      value: |
+        - [ ] 
+    validations:
+      required: false
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Milestone al que pertenece
+      description: ¿En qué etapa del roadmap entra esta tarea?
+      options:
+        - M0 - Setup
+        - M1 - Arquitectura base
+        - M2 - Primer mapa jugable
+        - M3 - Combate mínimo
+        - M4 - Integración exploración-combate
+        - Sin definir todavía
+    validations:
+      required: true
+
+  - type: textarea
+    id: notas
+    attributes:
+      label: Notas adicionales
+      description: Cualquier consideración, referencia o duda técnica relevante
+    validations:
+      required: false

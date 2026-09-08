@@ -1,0 +1,55 @@
+name: "🐛 Bug"
+description: Algo no funciona como debería
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: que-paso
+    attributes:
+      label: ¿Qué pasó?
+      description: Descripción clara del problema
+      placeholder: Ej. El jugador atraviesa las paredes del mapa en ciertas esquinas...
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: ¿Qué esperabas que pasara?
+      description: Comportamiento correcto/esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducirlo
+      description: Detallá cómo llegar al bug de forma consistente
+      placeholder: |
+        1. Entrar al mapa X
+        2. Moverse hacia la esquina Y
+        3. Observar que...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Milestone relacionado
+      options:
+        - M0 - Setup
+        - M1 - Arquitectura base
+        - M2 - Primer mapa jugable
+        - M3 - Combate mínimo
+        - M4 - Integración exploración-combate
+        - Sin definir todavía
+    validations:
+      required: false
+
+  - type: textarea
+    id: notas
+    attributes:
+      label: Notas adicionales
+      description: Capturas, logs de error, o cualquier contexto extra
+    validations:
+      required: false
