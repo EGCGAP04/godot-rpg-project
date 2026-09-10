@@ -32,6 +32,31 @@ This is a personal learning project, with no deadline, developed following profe
 2. Open Godot and select "Import" on the `project.godot` file from the cloned folder
 3. Build the C# project from the editor (Project > Tools > C# > Create C# Solution, if it isn't generated automatically)
 
+## Project Structure
+ 
+The project follows a **feature-based** folder structure: each system has its own folder containing its scenes, scripts, and assets together, instead of splitting by file type.
+ 
+```text
+res://
+├── Player/          # Player character: movement, sprite, input handling
+├── Combat/          # Turn-based combat system: turn order, actions, enemies
+├── World/           # Exploration maps: tilemaps, collisions, transitions
+├── UI/              # Menus, HUD, dialogue boxes
+├── Shared/
+│   ├── Fonts/        # Shared fonts used across the project
+│   ├── Scripts/      # Generic utilities, extensions, helper classes
+│   └── Theme/        # Global UI theme resources
+└── Autoloads/       # Global singletons (empty for now, e.g. future GameManager)
+```
+ 
+### Naming conventions
+ 
+- **Folders:** `PascalCase`
+- **Scene files (`.tscn`):** `snake_case`
+- **C# scripts and classes:** `PascalCase`
+- **Scene tree nodes:** `PascalCase`
+- **C# fields/properties:** standard C# conventions (`PascalCase` for public properties, `_camelCase` for private fields)
+
 ## Screenshots
 
 _(Will be added once there's playable content)_
