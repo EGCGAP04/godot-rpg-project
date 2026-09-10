@@ -19,3 +19,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Entry point scene (main.tscn) and project conventions documentation (docs/CONVENTIONS.md)
 - Godot project moved into a dedicated Game/ subfolder, separating it from repository metadata
 - CI workflow to validate the build on every push and pull request
+- CHANGELOG checklist item added to the PR template
+- Basic top-down player movement (CharacterBody2D, 4-direction input via Input Map, normalized diagonal movement)

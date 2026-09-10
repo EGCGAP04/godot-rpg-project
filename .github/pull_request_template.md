@@ -20,6 +20,7 @@ Closes #
 - [ ] The project compiles without errors in the Godot editor
 - [ ] I tested the change manually in the editor/game
 - [ ] I updated the README or other documentation if applicable
+- [ ] I updated CHANGELOG.md under [Unreleased] with a summary of this change
 - [ ] I did not leave debug code/temporary comments in
 
 ## Additional notes
