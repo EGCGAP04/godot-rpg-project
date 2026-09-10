@@ -26,4 +26,4 @@ jobs:
         run: dotnet restore "Godot RPG Project.sln"
 
       - name: Build
-        run: dotnet build "Godot RPG Project.sln" --no-restore --configuration Release
+        run: dotnet build "Godot RPG Project.sln" --no-restore --configuration Debug
