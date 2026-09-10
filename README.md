@@ -29,15 +29,15 @@ This is a personal learning project, with no deadline, developed following profe
 ## How to open the project
 
 1. Clone the repository
-2. Open Godot and select "Import" on the `project.godot` file from the cloned folder
+2. Open Godot and select "Import" on the `Game/project.godot` file from the cloned repository
 3. Build the C# project from the editor (Project > Tools > C# > Create C# Solution, if it isn't generated automatically)
 
 ## Project Structure
- 
-The project follows a **feature-based** folder structure: each system has its own folder containing its scenes, scripts, and assets together, instead of splitting by file type.
- 
+
+The project follows a **feature-based** folder structure: each system has its own folder containing its scenes, scripts, and assets together, instead of splitting by file type. The Godot project itself lives inside `Game/`, keeping the repository root limited to project metadata (README, LICENSE, CHANGELOG, docs, GitHub config).
+
 ```text
-res://
+Game/ (res://)
 ├── Player/          # Player character: movement, sprite, input handling
 ├── Combat/          # Turn-based combat system: turn order, actions, enemies
 ├── World/           # Exploration maps: tilemaps, collisions, transitions
@@ -48,7 +48,7 @@ res://
 │   └── Theme/        # Global UI theme resources
 └── Autoloads/       # Global singletons (empty for now, e.g. future GameManager)
 ```
- 
+
 For architectural conventions (naming, node communication patterns, scene structure), see [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 
 ## Screenshots
