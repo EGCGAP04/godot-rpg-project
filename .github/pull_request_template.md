@@ -1,27 +1,27 @@
-## Descripción
+## Description
 
-<!-- ¿Qué cambia este PR? Resumen breve. -->
+<!-- What does this PR change? Brief summary. -->
 
 Closes #
 
-## Tipo de cambio
+## Change type
 
-<!-- Marcá el que corresponda -->
+<!-- Check the ones that apply -->
 
-- [ ] `feat` - Nueva funcionalidad
-- [ ] `fix` - Corrección de bug
-- [ ] `docs` - Documentación
-- [ ] `refactor` - Reorganización de código sin cambio de comportamiento
-- [ ] `chore` - Mantenimiento/configuración
+- [ ] `feat` - New functionality
+- [ ] `fix` - Bug fix
+- [ ] `docs` - Documentation
+- [ ] `refactor` - Code reorganization without behavior change
+- [ ] `chore` - Maintenance/configuration
 - [ ] `test` - Tests
 
-## Checklist antes de mergear
+## Checklist before merging
 
-- [ ] El proyecto compila sin errores en el editor de Godot
-- [ ] Probé el cambio manualmente en el editor/juego
-- [ ] Actualicé el README u otra documentación si correspondía
-- [ ] No dejé código de debug/comentarios temporales sueltos
+- [ ] The project compiles without errors in the Godot editor
+- [ ] I tested the change manually in the editor/game
+- [ ] I updated the README or other documentation if applicable
+- [ ] I did not leave debug code/temporary comments in
 
-## Notas adicionales
+## Additional notes
 
-<!-- Contexto extra, decisiones tomadas, capturas si aplica -->
+<!-- Extra context, decisions made, screenshots if applicable -->

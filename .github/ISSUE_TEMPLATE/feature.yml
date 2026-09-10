@@ -1,26 +1,26 @@
-name: "✨ Feature / Tarea"
-description: Nueva funcionalidad, sistema o tarea a implementar
+name: "✨ Feature / Task"
+description: New functionality, system, or task to implement
 title: "[Feature]: "
-labels: ["enhancement"]
+labels: ["feature"]
 body:
   - type: textarea
-    id: descripcion
+    id: description
     attributes:
-      label: Descripción
-      description: ¿Qué hay que implementar? ¿Por qué es necesario?
-      placeholder: Ej. Implementar el sistema de turnos básico para el combate...
+      label: Description
+      description: What needs to be implemented? Why is it needed?
+      placeholder: E.g. Implement the basic turn-based combat system...
     validations:
       required: true
 
   - type: textarea
-    id: subtareas
+    id: subtasks
     attributes:
-      label: Checklist de sub-tareas
-      description: Desglosá el trabajo en pasos concretos (opcional, podés completarlo o ajustarlo después)
+      label: Sub-tasks checklist
+      description: Break the work down into concrete steps (optional, can be completed or adjusted later)
       placeholder: |
-        - [ ] Definir estructura de datos del turno
-        - [ ] Implementar orden de turnos
-        - [ ] Conectar con UI mínima
+        - [ ] Define turn data structure
+        - [ ] Implement turn order
+        - [ ] Connect to minimal UI
       value: |
         - [ ] 
     validations:
@@ -29,22 +29,22 @@ body:
   - type: dropdown
     id: milestone
     attributes:
-      label: Milestone al que pertenece
-      description: ¿En qué etapa del roadmap entra esta tarea?
+      label: Milestone
+      description: Which stage of the roadmap does this task belong to?
       options:
         - M0 - Setup
-        - M1 - Arquitectura base
-        - M2 - Primer mapa jugable
-        - M3 - Combate mínimo
-        - M4 - Integración exploración-combate
-        - Sin definir todavía
+        - M1 - Core architecture
+        - M2 - First playable map
+        - M3 - Minimal combat
+        - M4 - Exploration-combat integration
+        - Not defined yet
     validations:
       required: true
 
   - type: textarea
-    id: notas
+    id: notes
     attributes:
-      label: Notas adicionales
-      description: Cualquier consideración, referencia o duda técnica relevante
+      label: Additional notes
+      description: Any relevant consideration, reference, or technical question
     validations:
       required: false

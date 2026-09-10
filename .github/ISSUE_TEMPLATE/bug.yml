@@ -1,55 +1,55 @@
 name: "🐛 Bug"
-description: Algo no funciona como debería
+description: Something isn't working as expected
 title: "[Bug]: "
 labels: ["bug"]
 body:
   - type: textarea
-    id: que-paso
+    id: what-happened
     attributes:
-      label: ¿Qué pasó?
-      description: Descripción clara del problema
-      placeholder: Ej. El jugador atraviesa las paredes del mapa en ciertas esquinas...
+      label: What happened?
+      description: Clear description of the problem
+      placeholder: E.g. The player clips through walls at certain corners of the map...
     validations:
       required: true
 
   - type: textarea
-    id: esperado
+    id: expected
     attributes:
-      label: ¿Qué esperabas que pasara?
-      description: Comportamiento correcto/esperado
+      label: What did you expect to happen?
+      description: Correct/expected behavior
     validations:
       required: true
 
   - type: textarea
-    id: pasos
+    id: steps
     attributes:
-      label: Pasos para reproducirlo
-      description: Detallá cómo llegar al bug de forma consistente
+      label: Steps to reproduce
+      description: Detail how to reliably trigger the bug
       placeholder: |
-        1. Entrar al mapa X
-        2. Moverse hacia la esquina Y
-        3. Observar que...
+        1. Enter map X
+        2. Move towards corner Y
+        3. Observe that...
     validations:
       required: false
 
   - type: dropdown
     id: milestone
     attributes:
-      label: Milestone relacionado
+      label: Related milestone
       options:
         - M0 - Setup
-        - M1 - Arquitectura base
-        - M2 - Primer mapa jugable
-        - M3 - Combate mínimo
-        - M4 - Integración exploración-combate
-        - Sin definir todavía
+        - M1 - Core architecture
+        - M2 - First playable map
+        - M3 - Minimal combat
+        - M4 - Exploration-combat integration
+        - Not defined yet
     validations:
       required: false
 
   - type: textarea
-    id: notas
+    id: notes
     attributes:
-      label: Notas adicionales
-      description: Capturas, logs de error, o cualquier contexto extra
+      label: Additional notes
+      description: Screenshots, error logs, or any extra context
     validations:
       required: false
