@@ -1,38 +1,41 @@
 # godot-rpg-project
 
-RPG por turnos en 2D pixel art, desarrollado en **Godot 4.x** con **C#**.
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![Godot](https://img.shields.io/badge/Godot-4.6.2-478cbf?logo=godotengine&logoColor=white)
 
-> Nombre del proyecto **tentativo** — el nombre definitivo del juego se definirá más adelante. Este repo se usa mientras tanto como identificador del proyecto de desarrollo.
+2D pixel art turn-based RPG, built in **Godot 4.6.2** with **C#**.
 
-## Estado del proyecto
+> **Tentative** project name — the final name of the game will be decided later. This repo is used in the meantime as the development project's identifier.
 
-🚧 En desarrollo — fase de bases (arquitectura, primer sistema de combate mínimo, primer mapa).
+## Project status
 
-Este es un proyecto personal de aprendizaje, sin fecha límite, desarrollado con estándares profesionales de control de versiones y organización de código.
+🚧 In development — foundation phase (architecture, minimal combat system, first map).
 
-## Stack técnico
+This is a personal learning project, with no deadline, developed following professional version control and code organization standards.
 
-- **Motor:** Godot 4.x
-- **Lenguaje:** C# (.NET)
-- **Género:** RPG por turnos, con posibles excepciones de combate en tiempo real más adelante
-- **Resolución base:** 640x360
+## Tech stack
+
+- **Engine:** Godot 4.x
+- **Language:** C# (.NET)
+- **Genre:** Turn-based RPG, with possible real-time combat exceptions later on
+- **Base resolution:** 640x360
 - **Tile size:** 16x16 px
 
-## Requisitos para correr el proyecto
+## Requirements to run the project
 
-- [Godot 4.x (versión .NET/Mono)](https://godotengine.org/download)
-- [.NET SDK](https://dotnet.microsoft.com/download) compatible con la versión de Godot usada
+- [Godot 4.6.2 (.NET/Mono version)](https://godotengine.org/download)
+- [.NET SDK](https://dotnet.microsoft.com/download) compatible with the Godot version used
 
-## Cómo abrir el proyecto
+## How to open the project
 
-1. Cloná el repositorio
-2. Abrí Godot y seleccioná "Importar" el `project.godot` de la carpeta clonada
-3. Compilá el proyecto de C# desde el editor (Proyecto > Herramientas > C# > Crear Solución de C#, si no se genera automáticamente)
+1. Clone the repository
+2. Open Godot and select "Import" on the `project.godot` file from the cloned folder
+3. Build the C# project from the editor (Project > Tools > C# > Create C# Solution, if it isn't generated automatically)
 
-## Capturas
+## Screenshots
 
-_(Se agregarán a medida que haya contenido jugable)_
+_(Will be added once there's playable content)_
 
-## Licencia
+## License
 
-Este proyecto está bajo la licencia MIT — ver el archivo [LICENSE](LICENSE) para más detalles.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
