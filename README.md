@@ -15,7 +15,7 @@ This is a personal learning project, with no deadline, developed following profe
 
 ## Tech stack
 
-- **Engine:** Godot 4.x
+- **Engine:** Godot 4.6.2
 - **Language:** C# (.NET)
 - **Genre:** Turn-based RPG, with possible real-time combat exceptions later on
 - **Base resolution:** 640x360
@@ -41,21 +41,15 @@ res://
 ├── Player/          # Player character: movement, sprite, input handling
 ├── Combat/          # Turn-based combat system: turn order, actions, enemies
 ├── World/           # Exploration maps: tilemaps, collisions, transitions
-├── UI/              # Menus, HUD, dialogue boxes
+├── UI/               # Menus, HUD, dialogue boxes
 ├── Shared/
 │   ├── Fonts/        # Shared fonts used across the project
 │   ├── Scripts/      # Generic utilities, extensions, helper classes
 │   └── Theme/        # Global UI theme resources
-└── Autoloads/       # Global singletons (empty for now, e.g. future GameManager)
+└── Autoloads/        # Global singletons (empty for now, e.g. future GameManager)
 ```
  
-### Naming conventions
- 
-- **Folders:** `PascalCase`
-- **Scene files (`.tscn`):** `snake_case`
-- **C# scripts and classes:** `PascalCase`
-- **Scene tree nodes:** `PascalCase`
-- **C# fields/properties:** standard C# conventions (`PascalCase` for public properties, `_camelCase` for private fields)
+For architectural conventions (naming, node communication patterns, scene structure), see [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
 
 ## Screenshots
 
