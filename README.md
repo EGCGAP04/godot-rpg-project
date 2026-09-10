@@ -41,12 +41,12 @@ res://
 ├── Player/          # Player character: movement, sprite, input handling
 ├── Combat/          # Turn-based combat system: turn order, actions, enemies
 ├── World/           # Exploration maps: tilemaps, collisions, transitions
-├── UI/               # Menus, HUD, dialogue boxes
+├── UI/              # Menus, HUD, dialogue boxes
 ├── Shared/
 │   ├── Fonts/        # Shared fonts used across the project
 │   ├── Scripts/      # Generic utilities, extensions, helper classes
 │   └── Theme/        # Global UI theme resources
-└── Autoloads/        # Global singletons (empty for now, e.g. future GameManager)
+└── Autoloads/       # Global singletons (empty for now, e.g. future GameManager)
 ```
  
 For architectural conventions (naming, node communication patterns, scene structure), see [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
