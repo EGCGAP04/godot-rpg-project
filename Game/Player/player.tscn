@@ -19,3 +19,12 @@ metadata/_edit_use_anchors_ = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1262906454]
 shape = SubResource("RectangleShape2D_4ntmi")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=819621307]
+current = true
+drag_horizontal_enabled = true
+drag_vertical_enabled = true
+drag_left_margin = 0.4
+drag_top_margin = 0.4
+drag_right_margin = 0.4
+drag_bottom_margin = 0.4
