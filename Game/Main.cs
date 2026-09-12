@@ -16,9 +16,10 @@ public partial class Main : Node2D
 
 	private void OnCombatRequested(Enemy enemy)
 	{
+		if (_combat != null || _pendingEnemy != null)
+			return;
+
 		_pendingEnemy = enemy;
-		// Deferred: the request originates in a physics callback, where adding
-		// children to the tree is not allowed.
 		CallDeferred(MethodName.StartCombat, enemy.Hp, enemy.AttackPower);
 	}
 
