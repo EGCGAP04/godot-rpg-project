@@ -9,7 +9,8 @@ The project follows a **feature-based** structure: each system has its own folde
 ```text
 Game/ (res://)
 ├── Player/          # Player character: movement, sprite, input handling
-├── Combat/          # Turn-based combat system: turn order, actions, enemies
+├── Enemy/           # Enemy scenes and stats, contact detection on the map
+├── Combat/          # Turn-based combat system: turn order, actions
 ├── World/           # Exploration maps: tilemaps, collisions, transitions
 ├── UI/               # Menus, HUD, dialogue boxes
 ├── Shared/
