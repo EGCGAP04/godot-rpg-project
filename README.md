@@ -9,14 +9,16 @@
 
 ## Project status
 
-🚧 In development — foundation phase (architecture, minimal combat system, first map).
+🚧 In development — foundation phase.
+
+The core loop is playable end to end: walk around a test map, touch an enemy to start a turn-based fight, and win or lose with consequences. All art is placeholder (solid-colour rectangles and tiles).
 
 This is a personal learning project, with no deadline, developed following professional version control and code organization standards.
 
 ## Tech stack
 
 - **Engine:** Godot 4.6.2
-- **Language:** C# (.NET)
+- **Language:** C# (.NET 8)
 - **Genre:** Turn-based RPG, with possible real-time combat exceptions later on
 - **Base resolution:** 640x360
 - **Tile size:** 16x16 px
@@ -24,13 +26,21 @@ This is a personal learning project, with no deadline, developed following profe
 ## Requirements to run the project
 
 - [Godot 4.6.2 (.NET/Mono version)](https://godotengine.org/download)
-- [.NET SDK](https://dotnet.microsoft.com/download) compatible with the Godot version used
+- [.NET SDK 8.0](https://dotnet.microsoft.com/download) or newer
 
 ## How to open the project
 
 1. Clone the repository
 2. Open Godot and select "Import" on the `Game/project.godot` file from the cloned repository
-3. Build the C# project from the editor (Project > Tools > C# > Create C# Solution, if it isn't generated automatically)
+3. Build the C# solution (the `.sln` and `.csproj` are committed, so there's no need to generate them)
+
+The project can also be built from the command line, from the `Game/` folder:
+
+```bash
+dotnet build --configuration Debug
+```
+
+Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
 ## Project Structure
 
@@ -38,15 +48,18 @@ The project follows a **feature-based** folder structure: each system has its ow
 
 ```text
 Game/ (res://)
-├── Player/          # Player character: movement, sprite, input handling
-├── Combat/          # Turn-based combat system: turn order, actions, enemies
-├── World/           # Exploration maps: tilemaps, collisions, transitions
-├── UI/              # Menus, HUD, dialogue boxes
+├── project.godot     # Project settings: autoloads, input map, rendering
+├── main.tscn         # Entry point scene; Main.cs coordinates map and combat
+├── Player/           # Player character: movement, sprite, input handling
+├── Enemy/            # Enemy scenes and stats, contact detection on the map
+├── Combat/           # Turn-based combat system: turn order, actions
+├── World/            # Exploration maps: tilemaps, collisions, transitions
+├── UI/               # Menus, HUD, dialogue boxes
 ├── Shared/
 │   ├── Fonts/        # Shared fonts used across the project
 │   ├── Scripts/      # Generic utilities, extensions, helper classes
 │   └── Theme/        # Global UI theme resources
-└── Autoloads/       # Global singletons (empty for now, e.g. future GameManager)
+└── Autoloads/        # Global singletons (e.g. PlayerStats)
 ```
 
 For architectural conventions (naming, node communication patterns, scene structure), see [docs/CONVENTIONS.md](docs/CONVENTIONS.md).

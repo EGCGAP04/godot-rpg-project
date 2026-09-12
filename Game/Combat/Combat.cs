@@ -1,7 +1,10 @@
 using Godot;
 
-public partial class Combat : Node2D
+public partial class Combat : CanvasLayer
 {
+	[Signal]
+	public delegate void CombatFinishedEventHandler(bool playerWon);
+
 	private enum TurnState
 	{
 		PlayerTurn,
@@ -20,6 +23,9 @@ public partial class Combat : Node2D
 
 	[Export]
 	public float EnemyTurnDelay = 0.6f;
+
+	[Export]
+	public float ResultDelay = 1.2f;
 
 	private int _enemyHp;
 	private TurnState _state = TurnState.PlayerTurn;
@@ -79,7 +85,7 @@ public partial class Combat : Node2D
 
 		if (_enemyHp <= 0)
 		{
-			EndCombat("Player wins.");
+			EndCombat("Player wins.", true);
 			return;
 		}
 
@@ -102,19 +108,23 @@ public partial class Combat : Node2D
 
 		if (stats.CurrentHp <= 0)
 		{
-			EndCombat("Player loses.");
+			EndCombat("Player loses.", false);
 			return;
 		}
 
 		StartPlayerTurn();
 	}
 
-	private void EndCombat(string result)
+	private void EndCombat(string result, bool playerWon)
 	{
 		_state = TurnState.Finished;
 		_attackButton.Disabled = true;
 		_resultLabel.Text = result;
 		GD.Print($"Combat over. {result}");
+
+		// Held on screen briefly rather than dismissed with confirm: the player is
+		// already mashing confirm to attack and would skip the result instantly.
+		GetTree().CreateTimer(ResultDelay).Timeout += () => EmitSignal(SignalName.CombatFinished, playerWon);
 	}
 
 	private void UpdateHpLabels()

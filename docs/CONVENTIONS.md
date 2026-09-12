@@ -8,6 +8,8 @@ The project follows a **feature-based** structure: each system has its own folde
 
 ```text
 Game/ (res://)
+├── project.godot    # Project settings: autoloads, input map, rendering
+├── main.tscn        # Entry point scene; Main.cs coordinates map and combat
 ├── Player/          # Player character: movement, sprite, input handling
 ├── Enemy/           # Enemy scenes and stats, contact detection on the map
 ├── Combat/          # Turn-based combat system: turn order, actions

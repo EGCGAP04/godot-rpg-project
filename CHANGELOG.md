@@ -32,3 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Second, stronger enemy instance on the test map, making the defeat outcome reachable in normal play
 - Minimal combat UI: player and enemy HP labels, an Attack button (disabled during the enemy's turn), and a result message on win/loss
 - Short delay before the enemy's attack resolves, so the turn handover is visible instead of instant
+- Combat now runs as an overlay on a paused world map instead of replacing the scene, keeping the map and player state alive
+- Combat outcome resolution: both outcomes fully heal the player; winning keeps the player's position and removes the defeated enemy, losing returns them to a `PlayerSpawn` marker
+- `PlayerSpawn` marker in the test map, now the authoritative player start position
+
+### Fixed
+
+- `.editorconfig` declared spaces for C# files while every file in the project is tab-indented, which would have introduced mixed indentation

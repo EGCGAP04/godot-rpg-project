@@ -2,7 +2,8 @@
 
 [ext_resource type="Script" path="res://Combat/Combat.cs" id="1_combat"]
 
-[node name="Combat" type="Node2D"]
+[node name="Combat" type="CanvasLayer"]
+process_mode = 3
 script = ExtResource("1_combat")
 
 [node name="Background" type="ColorRect" parent="."]

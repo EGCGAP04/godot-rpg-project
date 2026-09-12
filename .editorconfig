@@ -6,6 +6,11 @@ end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 
+# Tabs, matching Godot's own C# script templates and every existing file
 [*.cs]
-indent_style = space
+indent_style = tab
 indent_size = 4
+
+# Godot writes these itself; tabs are what it emits
+[*.{tscn,tres,godot}]
+indent_style = tab
