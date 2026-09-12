@@ -26,3 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PlayerStats` Autoload singleton (max/current HP) for shared player state across scenes
 - Enemy placeholder (`Area2D` with red `ColorRect`, `Hp`/`AttackPower` stats) that detects player contact and emits a `CombatTriggered` signal
 - Placeholder combat scene (`Combat/combat.tscn`) and scene switch from the world map on enemy contact
+- Turn-based combat loop (`Combat/Combat.cs`): alternating player/enemy turns with fixed damage, win/lose detection, and console output
+- `PlayerStats.TakeDamage(int)` to apply combat damage to the player's current HP
+- The touched enemy's `Hp`/`AttackPower` are now carried into the combat scene, so different enemies produce different fights
+- Second, stronger enemy instance on the test map, making the defeat outcome reachable in normal play

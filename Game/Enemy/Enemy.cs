@@ -3,7 +3,7 @@ using Godot;
 public partial class Enemy : Area2D
 {
 	[Signal]
-	public delegate void CombatTriggeredEventHandler();
+	public delegate void CombatTriggeredEventHandler(Enemy enemy);
 
 	[Export]
 	public int Hp = 10;
@@ -15,7 +15,7 @@ public partial class Enemy : Area2D
 	{
 		if (body is Player)
 		{
-			EmitSignal(SignalName.CombatTriggered);
+			EmitSignal(SignalName.CombatTriggered, this);
 		}
 	}
 }
