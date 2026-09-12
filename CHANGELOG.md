@@ -35,7 +35,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Combat now runs as an overlay on a paused world map instead of replacing the scene, keeping the map and player state alive
 - Combat outcome resolution: both outcomes fully heal the player; winning keeps the player's position and removes the defeated enemy, losing returns them to a `PlayerSpawn` marker
 - `PlayerSpawn` marker in the test map, now the authoritative player start position
+- `EnemyData` Resource (`[GlobalClass]`, with `DisplayName`/`MaxHp`/`AttackPower`) plus `weak_enemy.tres` and `strong_enemy.tres`, so new enemy types are created as resource files instead of per-instance values typed into the scene
+- Combat overlay architecture and the stats-as-Resources convention documented in `docs/CONVENTIONS.md`
+
+### Changed
+
+- `Enemy` now holds a single `EnemyData` resource instead of loose `Hp`/`AttackPower` fields, and that resource is passed straight to `Combat` instead of two separate ints
+- The player's attack power moved from an export on `Combat` into the `PlayerStats` Autoload, next to the rest of the player's stats
+- The combat UI and console output now use the enemy's `DisplayName` instead of a hardcoded "Enemy"
 
 ### Fixed
 
+- Combat could be triggered more than once (two overlapping enemies, or a re-trigger before the deferred start ran), leaking an orphaned overlay on a permanently paused tree and crashing when the first fight resolved
 - `.editorconfig` declared spaces for C# files while every file in the project is tab-indented, which would have introduced mixed indentation

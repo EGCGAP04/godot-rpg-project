@@ -5,7 +5,6 @@
 [ext_resource type="Script" uid="uid://cgmxetceupyqy" path="res://Main.cs" id="3_main"]
 
 [node name="Main" type="Node2D" unique_id=1170525517]
-position = Vector2(1, 1)
 script = ExtResource("3_main")
 
 [node name="WorldMap" parent="." unique_id=1319364358 instance=ExtResource("2_0xm2m")]

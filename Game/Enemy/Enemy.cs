@@ -6,10 +6,7 @@ public partial class Enemy : Area2D
 	public delegate void CombatTriggeredEventHandler(Enemy enemy);
 
 	[Export]
-	public int Hp = 10;
-
-	[Export]
-	public int AttackPower = 3;
+	public EnemyData Data { get; set; }
 
 	private void OnBodyEntered(Node2D body)
 	{

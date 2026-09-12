@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3 uid="uid://bdaltip3qhh3"]
+
+[ext_resource type="Script" uid="uid://vwkaouolbgoh" path="res://Enemy/EnemyData.cs" id="1_jwrdx"]
+
+[resource]
+script = ExtResource("1_jwrdx")
+DisplayName = "Enemy"
+MaxHp = 10
+AttackPower = 3
+metadata/_custom_type_script = "uid://vwkaouolbgoh"

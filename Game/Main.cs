@@ -20,14 +20,13 @@ public partial class Main : Node2D
 			return;
 
 		_pendingEnemy = enemy;
-		CallDeferred(MethodName.StartCombat, enemy.Hp, enemy.AttackPower);
+		CallDeferred(MethodName.StartCombat, enemy.Data);
 	}
 
-	private void StartCombat(int enemyHp, int enemyAttackPower)
+	private void StartCombat(EnemyData enemyData)
 	{
 		_combat = GD.Load<PackedScene>("res://Combat/combat.tscn").Instantiate<Combat>();
-		_combat.EnemyMaxHp = enemyHp;
-		_combat.EnemyAttackPower = enemyAttackPower;
+		_combat.EnemyData = enemyData;
 		_combat.CombatFinished += OnCombatFinished;
 
 		AddChild(_combat);
