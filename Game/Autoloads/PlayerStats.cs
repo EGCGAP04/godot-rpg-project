@@ -19,4 +19,9 @@ public partial class PlayerStats : Node
 	{
 		CurrentHp = Mathf.Max(CurrentHp - amount, 0);
 	}
+
+	public void FullHeal()
+	{
+		CurrentHp = MaxHp;
+	}
 }

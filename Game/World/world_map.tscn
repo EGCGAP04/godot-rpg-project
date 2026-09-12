@@ -14,6 +14,9 @@ tile_set = ExtResource("1_4ue68")
 [node name="WallsLayer" type="TileMapLayer" parent="." unique_id=328146289]
 tile_set = ExtResource("1_4ue68")
 
+[node name="PlayerSpawn" type="Marker2D" parent="."]
+position = Vector2(72, 56)
+
 [node name="Enemy" parent="." instance=ExtResource("3_enemy")]
 position = Vector2(136, 56)
 
