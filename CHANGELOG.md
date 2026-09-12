@@ -24,3 +24,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tilemap-based test room with floor and wall collisions (TileSet, FloorLayer, WallsLayer)
 - Camera2D with dead-zone drag follow behavior as a child of Player
 - `PlayerStats` Autoload singleton (max/current HP) for shared player state across scenes
+- Enemy placeholder (`Area2D` with red `ColorRect`, `Hp`/`AttackPower` stats) that detects player contact and emits a `CombatTriggered` signal
+- Placeholder combat scene (`Combat/combat.tscn`) and scene switch from the world map on enemy contact
