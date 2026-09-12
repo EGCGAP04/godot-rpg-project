@@ -1,3 +1,29 @@
 # Godot 4+ specific ignores
 .godot/
-/android/
+.mono/
+data_*/
+
+# Godot-specific mono/C# artifacts
+.mono/
+
+# Mono-specific ignores
+mono_crash.*.json
+
+# .NET / C# build artifacts
+bin/
+obj/
+*.pdb
+*.user
+
+# Export files (may contain local machine paths — uncomment if you want to version it)
+# export_presets.cfg
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vs/
+.vscode/
+*.swp
+
+# Claude Code — personal/local instructions, not shared via version control
+CLAUDE.local.md

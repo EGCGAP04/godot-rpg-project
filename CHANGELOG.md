@@ -23,3 +23,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic top-down player movement (CharacterBody2D, 4-direction input via Input Map, normalized diagonal movement)
 - Tilemap-based test room with floor and wall collisions (TileSet, FloorLayer, WallsLayer)
 - Camera2D with dead-zone drag follow behavior as a child of Player
+- `PlayerStats` Autoload singleton (max/current HP) for shared player state across scenes
