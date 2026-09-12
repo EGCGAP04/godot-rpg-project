@@ -30,3 +30,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PlayerStats.TakeDamage(int)` to apply combat damage to the player's current HP
 - The touched enemy's `Hp`/`AttackPower` are now carried into the combat scene, so different enemies produce different fights
 - Second, stronger enemy instance on the test map, making the defeat outcome reachable in normal play
+- Minimal combat UI: player and enemy HP labels, an Attack button (disabled during the enemy's turn), and a result message on win/loss
+- Short delay before the enemy's attack resolves, so the turn handover is visible instead of instant
