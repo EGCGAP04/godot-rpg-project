@@ -17,4 +17,10 @@ tile_set = ExtResource("1_4ue68")
 [node name="Enemy" parent="." instance=ExtResource("3_enemy")]
 position = Vector2(136, 56)
 
+[node name="StrongEnemy" parent="." instance=ExtResource("3_enemy")]
+position = Vector2(136, 136)
+Hp = 40
+AttackPower = 7
+
 [connection signal="CombatTriggered" from="Enemy" to="." method="OnCombatTriggered"]
+[connection signal="CombatTriggered" from="StrongEnemy" to="." method="OnCombatTriggered"]

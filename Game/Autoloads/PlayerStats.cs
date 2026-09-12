@@ -14,4 +14,9 @@ public partial class PlayerStats : Node
 		Instance = this;
 		CurrentHp = MaxHp;
 	}
+
+	public void TakeDamage(int amount)
+	{
+		CurrentHp = Mathf.Max(CurrentHp - amount, 0);
+	}
 }
