@@ -16,7 +16,7 @@ Game/ (res://)
 │   ├── Fonts/        # Shared fonts used across the project
 │   ├── Scripts/      # Generic utilities, extensions, helper classes
 │   └── Theme/        # Global UI theme resources
-└── Autoloads/        # Global singletons (empty for now, e.g. future GameManager)
+└── Autoloads/        # Global singletons (e.g. PlayerStats)
 ```
 
 `Shared/` holds anything that doesn't belong to a single feature. `Autoloads/` is kept separate since it's infrastructure, not a feature.
@@ -35,7 +35,15 @@ Godot offers several ways for nodes to communicate. This project follows a consi
 
 - **Signals** are the default for communication **between different scenes** (e.g. a `Combat` scene notifying `UI` that HP changed). Signals decouple nodes from each other — the emitter doesn't need to know who's listening.
 - **Direct references** are only used for **tight parent-child relationships within the same scene** (e.g. `Player.cs` accessing its own child `AnimationPlayer`), where the coupling doesn't matter because those nodes will always exist together.
-- **Autoloads** will be introduced later (likely around M2/M3) for global state that needs to persist across scene changes, once it's clear what actually needs to be shared.
+- **Autoloads** hold global state that needs to persist across scene changes (e.g. `PlayerStats`). Godot autoloads aren't automatically globally accessible in C# like they are in GDScript, so every Autoload script exposes a static `Instance` property set in `_Ready()`:
+  ```csharp
+  public partial class PlayerStats : Node
+  {
+      public static PlayerStats Instance { get; private set; }
+      public override void _Ready() { Instance = this; }
+  }
+  ```
+  Access elsewhere as `PlayerStats.Instance.SomeField`.
 
 ## Feature Scene Skeleton
 
