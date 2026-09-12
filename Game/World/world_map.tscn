@@ -3,6 +3,8 @@
 [ext_resource type="TileSet" uid="uid://chigtr8ylsw32" path="res://World/tileset.tres" id="1_4ue68"]
 [ext_resource type="Script" path="res://World/WorldMap.cs" id="2_wmap"]
 [ext_resource type="PackedScene" path="res://Enemy/enemy.tscn" id="3_enemy"]
+[ext_resource type="Resource" uid="uid://bdaltip3qhh3" path="res://Enemy/weak_enemy.tres" id="4_weak"]
+[ext_resource type="Resource" uid="uid://dp32vd5ebymxt" path="res://Enemy/strong_enemy.tres" id="5_strong"]
 
 [node name="WorldMap" type="Node2D" unique_id=1319364358]
 script = ExtResource("2_wmap")
@@ -19,11 +21,11 @@ position = Vector2(72, 56)
 
 [node name="Enemy" parent="." instance=ExtResource("3_enemy")]
 position = Vector2(136, 56)
+Data = ExtResource("4_weak")
 
 [node name="StrongEnemy" parent="." instance=ExtResource("3_enemy")]
 position = Vector2(136, 136)
-Hp = 40
-AttackPower = 7
+Data = ExtResource("5_strong")
 
 [connection signal="CombatTriggered" from="Enemy" to="." method="OnCombatTriggered"]
 [connection signal="CombatTriggered" from="StrongEnemy" to="." method="OnCombatTriggered"]

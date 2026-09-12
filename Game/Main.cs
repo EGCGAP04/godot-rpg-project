@@ -16,17 +16,17 @@ public partial class Main : Node2D
 
 	private void OnCombatRequested(Enemy enemy)
 	{
+		if (_combat != null || _pendingEnemy != null)
+			return;
+
 		_pendingEnemy = enemy;
-		// Deferred: the request originates in a physics callback, where adding
-		// children to the tree is not allowed.
-		CallDeferred(MethodName.StartCombat, enemy.Hp, enemy.AttackPower);
+		CallDeferred(MethodName.StartCombat, enemy.Data);
 	}
 
-	private void StartCombat(int enemyHp, int enemyAttackPower)
+	private void StartCombat(EnemyData enemyData)
 	{
 		_combat = GD.Load<PackedScene>("res://Combat/combat.tscn").Instantiate<Combat>();
-		_combat.EnemyMaxHp = enemyHp;
-		_combat.EnemyAttackPower = enemyAttackPower;
+		_combat.EnemyData = enemyData;
 		_combat.CombatFinished += OnCombatFinished;
 
 		AddChild(_combat);

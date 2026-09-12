@@ -7,6 +7,9 @@ public partial class PlayerStats : Node
 	[Export]
 	public int MaxHp { get; set; } = 20;
 
+	[Export]
+	public int AttackPower { get; set; } = 4;
+
 	public int CurrentHp { get; private set; }
 
 	public override void _Ready()

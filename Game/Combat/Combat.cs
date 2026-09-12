@@ -12,14 +12,12 @@ public partial class Combat : CanvasLayer
 		Finished
 	}
 
+	/// <summary>
+	/// Stats of the enemy being fought. Set by <c>Main</c> before the overlay is
+	/// added to the tree, so it is already available in <c>_Ready</c>.
+	/// </summary>
 	[Export]
-	public int EnemyMaxHp = 10;
-
-	[Export]
-	public int EnemyAttackPower = 3;
-
-	[Export]
-	public int PlayerAttackPower = 4;
+	public EnemyData EnemyData { get; set; }
 
 	[Export]
 	public float EnemyTurnDelay = 0.6f;
@@ -37,14 +35,17 @@ public partial class Combat : CanvasLayer
 
 	public override void _Ready()
 	{
-		_enemyHp = EnemyMaxHp;
+		// Falls back to the resource defaults so combat.tscn can still be run on
+		// its own for testing, without Main setting the stats first.
+		EnemyData ??= new EnemyData();
+		_enemyHp = EnemyData.MaxHp;
 
 		_enemyHpLabel = GetNode<Label>("EnemyHpLabel");
 		_playerHpLabel = GetNode<Label>("PlayerHpLabel");
 		_resultLabel = GetNode<Label>("ResultLabel");
 		_attackButton = GetNode<Button>("AttackButton");
 
-		GD.Print($"Combat started. Player {PlayerStats.Instance.CurrentHp}/{PlayerStats.Instance.MaxHp} HP vs Enemy {_enemyHp}/{EnemyMaxHp} HP");
+		GD.Print($"Combat started. Player {PlayerStats.Instance.CurrentHp}/{PlayerStats.Instance.MaxHp} HP vs {EnemyData.DisplayName} {_enemyHp}/{EnemyData.MaxHp} HP");
 		UpdateHpLabels();
 		StartPlayerTurn();
 	}
@@ -79,8 +80,8 @@ public partial class Combat : CanvasLayer
 
 	private void PlayerAttack()
 	{
-		_enemyHp = Mathf.Max(_enemyHp - PlayerAttackPower, 0);
-		GD.Print($"Player attacks for {PlayerAttackPower}. Enemy HP: {_enemyHp}/{EnemyMaxHp}");
+		_enemyHp = Mathf.Max(_enemyHp - PlayerStats.Instance.AttackPower, 0);
+		GD.Print($"Player attacks for {PlayerStats.Instance.AttackPower}. {EnemyData.DisplayName} HP: {_enemyHp}/{EnemyData.MaxHp}");
 		UpdateHpLabels();
 
 		if (_enemyHp <= 0)
@@ -102,8 +103,8 @@ public partial class Combat : CanvasLayer
 	private void ResolveEnemyAttack()
 	{
 		PlayerStats stats = PlayerStats.Instance;
-		stats.TakeDamage(EnemyAttackPower);
-		GD.Print($"Enemy attacks for {EnemyAttackPower}. Player HP: {stats.CurrentHp}/{stats.MaxHp}");
+		stats.TakeDamage(EnemyData.AttackPower);
+		GD.Print($"{EnemyData.DisplayName} attacks for {EnemyData.AttackPower}. Player HP: {stats.CurrentHp}/{stats.MaxHp}");
 		UpdateHpLabels();
 
 		if (stats.CurrentHp <= 0)
@@ -130,7 +131,7 @@ public partial class Combat : CanvasLayer
 	private void UpdateHpLabels()
 	{
 		PlayerStats stats = PlayerStats.Instance;
-		_enemyHpLabel.Text = $"Enemy   {_enemyHp}/{EnemyMaxHp}";
+		_enemyHpLabel.Text = $"{EnemyData.DisplayName}   {_enemyHp}/{EnemyData.MaxHp}";
 		_playerHpLabel.Text = $"Player   {stats.CurrentHp}/{stats.MaxHp}";
 	}
 }
