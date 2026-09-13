@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enemy placeholder (`Area2D` with red `ColorRect`, `Hp`/`AttackPower` stats) that detects player contact and emits a `CombatTriggered` signal
 - Placeholder combat scene (`Combat/combat.tscn`) and scene switch from the world map on enemy contact
 - Turn-based combat loop (`Combat/Combat.cs`): alternating player/enemy turns with fixed damage, win/lose detection, and console output
-- `PlayerStats.TakeDamage(int)` to apply combat damage to the player's current HP
+- `Combat/CombatResolver.cs`: a plain C# class with no Godot dependency holding the fight's HP, attack power and win/lose determination, so the combat math can be exercised without running the engine
 - The touched enemy's `Hp`/`AttackPower` are now carried into the combat scene, so different enemies produce different fights
 - Second, stronger enemy instance on the test map, making the defeat outcome reachable in normal play
 - Minimal combat UI: player and enemy HP labels, an Attack button (disabled during the enemy's turn), and a result message on win/loss
@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The player's attack power moved from an export on `Combat` into the `PlayerStats` Autoload, next to the rest of the player's stats
 - The combat UI and console output now use the enemy's `DisplayName` instead of a hardcoded "Enemy"
 - Wall tiles now live in `WallsLayer` instead of `FloorLayer`, matching the layer names
+- `Combat.cs` delegates every damage and outcome decision to `CombatResolver`, keeping only the Godot-specific concerns (nodes, turn state, timers, tween, input and UI)
+- `PlayerStats.CurrentHp` became a clamping property that combat writes the fight's result into, replacing `PlayerStats.TakeDamage(int)`, so the damage arithmetic exists in exactly one place
 
 ### Fixed
 
