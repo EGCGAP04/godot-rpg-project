@@ -10,5 +10,6 @@ script = ExtResource("3_main")
 [node name="WorldMap" parent="." unique_id=1319364358 instance=ExtResource("2_0xm2m")]
 
 [node name="Player" parent="." unique_id=1318540965 instance=ExtResource("1_ig7tw")]
+position = Vector2(72, 56)
 
 [connection signal="CombatRequested" from="WorldMap" to="." method="OnCombatRequested"]
