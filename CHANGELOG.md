@@ -43,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Enemy` now holds a single `EnemyData` resource instead of loose `Hp`/`AttackPower` fields, and that resource is passed straight to `Combat` instead of two separate ints
 - The player's attack power moved from an export on `Combat` into the `PlayerStats` Autoload, next to the rest of the player's stats
 - The combat UI and console output now use the enemy's `DisplayName` instead of a hardcoded "Enemy"
+- Wall tiles now live in `WallsLayer` instead of `FloorLayer`, matching the layer names
 
 ### Fixed
 
