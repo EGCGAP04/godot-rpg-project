@@ -31,7 +31,7 @@ public partial class Combat : CanvasLayer
 	[Export]
 	public float FadeDuration = 0.25f;
 
-	private int _enemyHp;
+	private CombatResolver _resolver;
 	private TurnState _state = TurnState.Transition;
 
 	private Label _enemyHpLabel;
@@ -45,7 +45,11 @@ public partial class Combat : CanvasLayer
 		// Falls back to the resource defaults so combat.tscn can still be run on
 		// its own for testing, without Main setting the stats first.
 		EnemyData ??= new EnemyData();
-		_enemyHp = EnemyData.MaxHp;
+		_resolver = new CombatResolver(
+			PlayerStats.Instance.CurrentHp,
+			PlayerStats.Instance.AttackPower,
+			EnemyData.MaxHp,
+			EnemyData.AttackPower);
 
 		_enemyHpLabel = GetNode<Label>("EnemyHpLabel");
 		_playerHpLabel = GetNode<Label>("PlayerHpLabel");
@@ -53,7 +57,7 @@ public partial class Combat : CanvasLayer
 		_attackButton = GetNode<Button>("AttackButton");
 		_fadeOverlay = GetNode<ColorRect>("FadeOverlay");
 
-		GD.Print($"Combat started. Player {PlayerStats.Instance.CurrentHp}/{PlayerStats.Instance.MaxHp} HP vs {EnemyData.DisplayName} {_enemyHp}/{EnemyData.MaxHp} HP");
+		GD.Print($"Combat started. Player {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp} HP vs {EnemyData.DisplayName} {_resolver.EnemyHp}/{EnemyData.MaxHp} HP");
 		UpdateHpLabels();
 
 		// The overlay starts fully black so the world map is never cut away
@@ -92,11 +96,11 @@ public partial class Combat : CanvasLayer
 
 	private void PlayerAttack()
 	{
-		_enemyHp = Mathf.Max(_enemyHp - PlayerStats.Instance.AttackPower, 0);
-		GD.Print($"Player attacks for {PlayerStats.Instance.AttackPower}. {EnemyData.DisplayName} HP: {_enemyHp}/{EnemyData.MaxHp}");
+		CombatResolver.Outcome outcome = _resolver.PlayerAttack();
+		GD.Print($"Player attacks for {_resolver.PlayerAttackPower}. {EnemyData.DisplayName} HP: {_resolver.EnemyHp}/{EnemyData.MaxHp}");
 		UpdateHpLabels();
 
-		if (_enemyHp <= 0)
+		if (outcome == CombatResolver.Outcome.PlayerWon)
 		{
 			EndCombat("Player wins.", true);
 			return;
@@ -114,12 +118,15 @@ public partial class Combat : CanvasLayer
 
 	private void ResolveEnemyAttack()
 	{
-		PlayerStats stats = PlayerStats.Instance;
-		stats.TakeDamage(EnemyData.AttackPower);
-		GD.Print($"{EnemyData.DisplayName} attacks for {EnemyData.AttackPower}. Player HP: {stats.CurrentHp}/{stats.MaxHp}");
+		CombatResolver.Outcome outcome = _resolver.EnemyAttack();
+
+		// The resolver owns the fight's numbers; the Autoload is where they have to
+		// end up, since it is what carries the player's HP back out to the map.
+		PlayerStats.Instance.CurrentHp = _resolver.PlayerHp;
+		GD.Print($"{EnemyData.DisplayName} attacks for {_resolver.EnemyAttackPower}. Player HP: {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp}");
 		UpdateHpLabels();
 
-		if (stats.CurrentHp <= 0)
+		if (outcome == CombatResolver.Outcome.PlayerLost)
 		{
 			EndCombat("Player loses.", false);
 			return;
@@ -159,8 +166,7 @@ public partial class Combat : CanvasLayer
 
 	private void UpdateHpLabels()
 	{
-		PlayerStats stats = PlayerStats.Instance;
-		_enemyHpLabel.Text = $"{EnemyData.DisplayName}   {_enemyHp}/{EnemyData.MaxHp}";
-		_playerHpLabel.Text = $"Player   {stats.CurrentHp}/{stats.MaxHp}";
+		_enemyHpLabel.Text = $"{EnemyData.DisplayName}   {_resolver.EnemyHp}/{EnemyData.MaxHp}";
+		_playerHpLabel.Text = $"Player   {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp}";
 	}
 }

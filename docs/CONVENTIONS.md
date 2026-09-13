@@ -75,6 +75,14 @@ Five details are load-bearing:
 
 `Main` also guards against starting more than one combat: a trigger arriving while a fight is pending or running is ignored, which matters when two enemies overlap the player in the same frame. The same guard also holds for a short cooldown after a fight ends, so a player who loses and respawns inside another enemy's area is not pulled straight into the next fight.
 
+## Engine-Free Game Logic
+
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to (`Combat/CombatResolver.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+
+The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
+
+When a plain class and an Autoload hold the same number, the plain class decides it and the `Node` writes the result into the Autoload — never both applying the same arithmetic. `CombatResolver` owns the fight's HP while it lasts; `Combat` copies it into `PlayerStats`, which is what carries it back out to the map.
+
 ## Stats as Resources
 
 Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). A new enemy type is a new `.tres` file, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
