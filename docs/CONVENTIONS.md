@@ -65,13 +65,15 @@ The flow is:
 
 `Main` is the coordinator because it is the only node that sees both the `Player` and the `WorldMap` — the `Player` is a **sibling** of `WorldMap`, not a child of it.
 
-Three details are load-bearing:
+Five details are load-bearing:
 
 - **The overlay must be added deferred.** The trigger fires inside a physics callback (`body_entered`), where adding or freeing nodes is not allowed, so `Main` uses `CallDeferred(MethodName.StartCombat, ...)`.
 - **`Combat` sets `process_mode = 3` (Always).** Otherwise the paused tree would freeze the overlay too, and its turn timers would never fire.
 - **Enemy stats are assigned before `AddChild`,** so they are already set when `Combat._Ready()` runs.
+- **The player is spawned from `Main._EnterTree()`, not `_Ready()`.** A `CharacterBody2D` registers its transform with the physics server when it enters the tree, and a parent's `_EnterTree` runs before its children enter, so spawning there is what keeps the server from ever seeing the position authored in `main.tscn`. Moving the player afterwards leaves enemy areas paired against that stale transform for one frame, which reports a contact — a `body_entered` followed immediately by `body_exited` — that never happened. `WorldMap.PlayerSpawnPosition` is a computed property rather than a value cached in `_Ready` for the same reason: it has to be readable before `WorldMap._Ready` has run.
+- **The fade tween is created on the `Combat` node itself** (`CreateTween()`), not on the tree. A tween is bound to the node that creates it and follows its process mode, so binding it to the `Always` overlay is what keeps it playing while the world map is paused.
 
-`Main` also guards against starting more than one combat: a trigger arriving while a fight is pending or running is ignored, which matters when two enemies overlap the player in the same frame.
+`Main` also guards against starting more than one combat: a trigger arriving while a fight is pending or running is ignored, which matters when two enemies overlap the player in the same frame. The same guard also holds for a short cooldown after a fight ends, so a player who loses and respawns inside another enemy's area is not pulled straight into the next fight.
 
 ## Stats as Resources
 

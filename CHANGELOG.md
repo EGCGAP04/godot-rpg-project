@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PlayerSpawn` marker in the test map, now the authoritative player start position
 - `EnemyData` Resource (`[GlobalClass]`, with `DisplayName`/`MaxHp`/`AttackPower`) plus `weak_enemy.tres` and `strong_enemy.tres`, so new enemy types are created as resource files instead of per-instance values typed into the scene
 - Combat overlay architecture and the stats-as-Resources convention documented in `docs/CONVENTIONS.md`
+- Fade to and from black when a combat starts and ends, so the overlay no longer cuts in and out abruptly
 
 ### Changed
 
@@ -47,5 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Losing a fight next to an enemy placed on `PlayerSpawn` immediately started another combat on respawn; a short cooldown now ignores triggers right after a fight ends
+- The player was spawned in `Main._Ready()`, after its body had already registered with the physics server, so an enemy overlapping the position authored in `main.tscn` reported a phantom contact on the second physics frame and started a combat the player was never in; the player is now spawned in `_EnterTree()`, before that registration
 - Combat could be triggered more than once (two overlapping enemies, or a re-trigger before the deferred start ran), leaking an orphaned overlay on a permanently paused tree and crashing when the first fight resolved
 - `.editorconfig` declared spaces for C# files while every file in the project is tab-indented, which would have introduced mixed indentation
