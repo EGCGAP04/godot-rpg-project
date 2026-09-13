@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 public partial class Combat : CanvasLayer
@@ -7,6 +8,8 @@ public partial class Combat : CanvasLayer
 
 	private enum TurnState
 	{
+		/// <summary>Fading in or out: no turn is active and input is ignored.</summary>
+		Transition,
 		PlayerTurn,
 		EnemyTurn,
 		Finished
@@ -25,13 +28,17 @@ public partial class Combat : CanvasLayer
 	[Export]
 	public float ResultDelay = 1.2f;
 
+	[Export]
+	public float FadeDuration = 0.25f;
+
 	private int _enemyHp;
-	private TurnState _state = TurnState.PlayerTurn;
+	private TurnState _state = TurnState.Transition;
 
 	private Label _enemyHpLabel;
 	private Label _playerHpLabel;
 	private Label _resultLabel;
 	private Button _attackButton;
+	private ColorRect _fadeOverlay;
 
 	public override void _Ready()
 	{
@@ -44,10 +51,15 @@ public partial class Combat : CanvasLayer
 		_playerHpLabel = GetNode<Label>("PlayerHpLabel");
 		_resultLabel = GetNode<Label>("ResultLabel");
 		_attackButton = GetNode<Button>("AttackButton");
+		_fadeOverlay = GetNode<ColorRect>("FadeOverlay");
 
 		GD.Print($"Combat started. Player {PlayerStats.Instance.CurrentHp}/{PlayerStats.Instance.MaxHp} HP vs {EnemyData.DisplayName} {_enemyHp}/{EnemyData.MaxHp} HP");
 		UpdateHpLabels();
-		StartPlayerTurn();
+
+		// The overlay starts fully black so the world map is never cut away
+		// abruptly; the first turn only begins once the fade in has finished.
+		_attackButton.Disabled = true;
+		FadeTo(0f, StartPlayerTurn);
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -125,7 +137,24 @@ public partial class Combat : CanvasLayer
 
 		// Held on screen briefly rather than dismissed with confirm: the player is
 		// already mashing confirm to attack and would skip the result instantly.
-		GetTree().CreateTimer(ResultDelay).Timeout += () => EmitSignal(SignalName.CombatFinished, playerWon);
+		// Only after that does the screen fade back to black, so the result text
+		// is not hidden by the transition.
+		GetTree().CreateTimer(ResultDelay).Timeout += () =>
+			FadeTo(1f, () => EmitSignal(SignalName.CombatFinished, playerWon));
+	}
+
+	/// <summary>
+	/// Tweens the black overlay to the given alpha and runs <paramref name="onFinished"/>
+	/// afterwards. The tween is bound to this node, which runs with
+	/// <c>process_mode = Always</c>, so it keeps playing while the world map is paused.
+	/// </summary>
+	private void FadeTo(float alpha, Action onFinished)
+	{
+		_state = TurnState.Transition;
+
+		Tween tween = CreateTween();
+		tween.TweenProperty(_fadeOverlay, "modulate:a", alpha, FadeDuration);
+		tween.Finished += onFinished;
 	}
 
 	private void UpdateHpLabels()
