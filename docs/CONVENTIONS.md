@@ -26,6 +26,18 @@ Game/ (res://)
 
 Unit tests are the one piece of C# that lives **outside** `Game/`, in `tests/Game.Tests/` at the repository root. See [Engine-Free Game Logic](#engine-free-game-logic) for why.
 
+## Code Formatting
+
+`.editorconfig` at the repository root is the single source of truth for whitespace: UTF-8, LF line endings, a final newline, no trailing whitespace, and **tabs** for `.cs` files, matching what Godot's own C# script templates emit.
+
+These are enforced, not merely documented: CI runs `dotnet format --verify-no-changes` over the solution and fails the `build` check on any file that does not match. The check covers both projects, `Game/` and `tests/Game.Tests/`. Run it locally before pushing:
+
+```bash
+cd Game && dotnet format "Godot RPG Project.sln" --verify-no-changes
+```
+
+Drop `--verify-no-changes` to have it apply the fixes instead of just reporting them.
+
 ## Naming Conventions
 
 - **Folders:** `PascalCase`

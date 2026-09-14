@@ -22,8 +22,8 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      # The solution covers both the game and tests/Game.Tests, so these three
-      # steps reach the test project without a working-directory of their own.
+      # The solution covers both the game and tests/Game.Tests, so every step
+      # below reaches the test project without a working-directory of its own.
       - name: Restore dependencies
         run: dotnet restore "Godot RPG Project.sln"
 
@@ -32,3 +32,9 @@ jobs:
 
       - name: Test
         run: dotnet test "Godot RPG Project.sln" --no-restore --configuration Debug --verbosity normal
+
+      # Last on purpose: a formatting nit should not stop the build and test
+      # results from being reported, since GitHub Actions halts at the first
+      # failing step.
+      - name: Verify formatting
+        run: dotnet format "Godot RPG Project.sln" --verify-no-changes --no-restore

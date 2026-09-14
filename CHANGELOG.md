@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Combat overlay architecture and the stats-as-Resources convention documented in `docs/CONVENTIONS.md`
 - Fade to and from black when a combat starts and ends, so the overlay no longer cuts in and out abruptly
 - xUnit test project (`tests/Game.Tests/`) covering `CombatResolver`'s damage, HP clamping and win/loss detection, run in CI on every push and pull request, and registered in `Game/Godot RPG Project.sln` so editors and CI see a single solution covering both projects
+- CI now fails on any file that does not match `.editorconfig`, via `dotnet format --verify-no-changes` over the whole solution
 
 ### Changed
 
