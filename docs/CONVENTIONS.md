@@ -24,6 +24,8 @@ Game/ (res://)
 
 `Shared/` holds anything that doesn't belong to a single feature. `Autoloads/` is kept separate since it's infrastructure, not a feature.
 
+Unit tests are the one piece of C# that lives **outside** `Game/`, in `tests/Game.Tests/` at the repository root. See [Engine-Free Game Logic](#engine-free-game-logic) for why.
+
 ## Naming Conventions
 
 - **Folders:** `PascalCase`
@@ -82,6 +84,24 @@ Rules that are pure decisions — how much damage an attack does, whether a figh
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
 When a plain class and an Autoload hold the same number, the plain class decides it and the `Node` writes the result into the Autoload — never both applying the same arithmetic. `CombatResolver` owns the fight's HP while it lasts; `Combat` copies it into `PlayerStats`, which is what carries it back out to the map.
+
+### Where the tests live
+
+The xUnit project sits at `tests/Game.Tests/`, outside `Game/`. Godot's C# SDK compiles every `.cs` file under the project folder and the editor scans all of `res://`, so a test project inside `Game/` would be built into the game's own assembly and shipped in the export unless an explicit `<Compile Remove>` and a `.gdignore` were maintained by hand forever. Keeping it out of `res://` costs nothing and removes both.
+
+It does **not** use a `ProjectReference` to the Godot project. Instead it compiles the engine-free sources directly:
+
+```xml
+<Compile Include="..\..\Game\Combat\CombatResolver.cs" Link="GameLogic\CombatResolver.cs" />
+```
+
+Referencing the Godot project would pull its source generators into the test assembly, where they fail with `CS8785` because `GodotProjectDir` is not set outside a Godot build. Compiling the source directly also turns this whole convention into a compiler check: a `using Godot;` added to one of these files breaks the test project immediately, instead of waiting for someone to notice it in review.
+
+**Every new engine-free class that gets tests needs its own `<Compile Include>` line** in `tests/Game.Tests/Game.Tests.csproj`. That is the deliberate trade: one line per class, in exchange for a test suite that never starts the engine.
+
+Even though it sits outside `Game/`, the test project **is** listed in `Game/Godot RPG Project.sln`. Without it, VS Code's C# Dev Kit treats it as a project no solution covers and generates its own solution under `workspaceStorage`, which on Linux writes a broken path for `Godot RPG Project.csproj` and fails every restore in the editor. One solution covering both projects avoids that, and lets CI restore, build and test from a single `.sln` path. Godot does not rewrite the file when it already exists, so the entry survives opening the editor (verified).
+
+The test project is deliberately mapped to `ActiveCfg` **without** a matching `Build.0` under `ExportDebug` and `ExportRelease`, so exporting the game does not compile the tests — a failing test should never be able to block an export.
 
 ## Stats as Resources
 

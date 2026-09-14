@@ -22,8 +22,13 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # The solution covers both the game and tests/Game.Tests, so these three
+      # steps reach the test project without a working-directory of their own.
       - name: Restore dependencies
         run: dotnet restore "Godot RPG Project.sln"
 
       - name: Build
         run: dotnet build "Godot RPG Project.sln" --no-restore --configuration Debug
+
+      - name: Test
+        run: dotnet test "Godot RPG Project.sln" --no-restore --configuration Debug --verbosity normal
