@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-14
+
 ### Added
 
 - Initial repository setup: README, LICENSE (MIT), .gitignore for Godot 4 + C#/.NET
@@ -47,13 +49,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The CI workflow's token is now restricted to `contents: read`, since it only checks out and builds the code
 - CI actions bumped to versions running on Node 24 (`actions/checkout` v4 -> v7, `actions/setup-dotnet` v4 -> v6); the v4 majors run on the deprecated Node 20
 - `Game/Godot RPG Project.sln` normalized to the format VS Code's C# Dev Kit writes, so the editor stops producing spurious diffs on it
-
 - `Enemy` now holds a single `EnemyData` resource instead of loose `Hp`/`AttackPower` fields, and that resource is passed straight to `Combat` instead of two separate ints
 - The player's attack power moved from an export on `Combat` into the `PlayerStats` Autoload, next to the rest of the player's stats
 - The combat UI and console output now use the enemy's `DisplayName` instead of a hardcoded "Enemy"
 - Wall tiles now live in `WallsLayer` instead of `FloorLayer`, matching the layer names
 - `Combat.cs` delegates every damage and outcome decision to `CombatResolver`, keeping only the Godot-specific concerns (nodes, turn state, timers, tween, input and UI)
 - `PlayerStats.CurrentHp` became a clamping property that combat writes the fight's result into, replacing `PlayerStats.TakeDamage(int)`, so the damage arithmetic exists in exactly one place
+- Test dependencies bumped by Dependabot: `Microsoft.NET.Test.Sdk` 17.11.1 -> 18.10.0, `xunit` 2.9.2 -> 2.9.3, `xunit.runner.visualstudio` 2.8.2 -> 4.0.0
+- README's Project Structure section now lists every tracked file in the repository, not just `Game/`'s top-level folders
+
+### Removed
+
+- Obsolete `.gitkeep` files in `Game/Player/` and `Game/World/`; both folders hold real content now, so Git no longer needs a placeholder to track them
 
 ### Fixed
 
@@ -61,3 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The player was spawned in `Main._Ready()`, after its body had already registered with the physics server, so an enemy overlapping the position authored in `main.tscn` reported a phantom contact on the second physics frame and started a combat the player was never in; the player is now spawned in `_EnterTree()`, before that registration
 - Combat could be triggered more than once (two overlapping enemies, or a re-trigger before the deferred start ran), leaking an orphaned overlay on a permanently paused tree and crashing when the first fight resolved
 - `.editorconfig` declared spaces for C# files while every file in the project is tab-indented, which would have introduced mixed indentation
+
+[Unreleased]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/EGCGAP04/godot-rpg-project/releases/tag/v0.1.0
