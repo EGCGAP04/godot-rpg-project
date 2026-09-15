@@ -2,6 +2,7 @@
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Godot](https://img.shields.io/badge/Godot-4.6.2-478cbf?logo=godotengine&logoColor=white)
+[![Release](https://img.shields.io/github/v/release/EGCGAP04/godot-rpg-project?logo=github&color=success)](https://github.com/EGCGAP04/godot-rpg-project/releases/latest)
 
 2D pixel art turn-based RPG, built in **Godot 4.6.2** with **C#**.
 
@@ -56,31 +57,39 @@ The project follows a **feature-based** folder structure: each system has its ow
 
 ```text
 godot-rpg-project/
+│
 ├── .github/                    # Issue/PR templates, CI, Dependabot
 │   ├── ISSUE_TEMPLATE/
 │   │   ├── bug.yml
 │   │   ├── config.yml
 │   │   └── feature.yml
+│   │
 │   ├── workflows/
 │   │   └── build.yml           # restore → build → test → format
+│   │
 │   ├── dependabot.yml
 │   └── pull_request_template.md
+│
 ├── Game/                       # res:// — the Godot project
 │   ├── Autoloads/
 │   │   └── PlayerStats.cs (+.uid)      # global singleton: player HP and attack
+│   │
 │   ├── Combat/
 │   │   ├── Combat.cs (+.uid)           # turn state, timers, input, UI
 │   │   ├── CombatResolver.cs (+.uid)   # engine-free, covered by tests
 │   │   └── combat.tscn                 # overlay scene, not a scene swap
+│   │
 │   ├── Enemy/
 │   │   ├── Enemy.cs (+.uid)
 │   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding stats
 │   │   ├── enemy.tscn
 │   │   ├── strong_enemy.tres           # 40 HP, 7 atk — the player loses
 │   │   └── weak_enemy.tres             # 10 HP, 3 atk — the player wins
+│   │
 │   ├── Player/
 │   │   ├── Player.cs (+.uid)
 │   │   └── player.tscn
+│   │
 │   ├── Shared/                 # Fonts/ Scripts/ Theme/ — .gitkeep only so far
 │   ├── UI/                     # empty so far
 │   ├── World/
@@ -89,18 +98,22 @@ godot-rpg-project/
 │   │   ├── wall_placeholder.png (+.import)
 │   │   ├── tileset.tres
 │   │   └── world_map.tscn              # test room, PlayerSpawn marker
+│   │
 │   ├── Godot RPG Project.csproj
 │   ├── Godot RPG Project.sln   # also covers Game.Tests
 │   ├── Main.cs (+.uid)         # coordinates the map and the combat overlay
 │   ├── icon.svg (+.import)
 │   ├── main.tscn               # entry point scene
 │   └── project.godot           # autoloads, input map, rendering
+│
 ├── docs/
 │   └── CONVENTIONS.md
+│
 ├── tests/                      # outside res:// on purpose — see CONVENTIONS.md
 │   └── Game.Tests/
 │       ├── CombatResolverTests.cs
 │       └── Game.Tests.csproj
+│
 ├── .editorconfig
 ├── .gitattributes
 ├── .gitignore
