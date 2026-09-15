@@ -1,0 +1,36 @@
+# Keeps dependencies and workflow actions current, so a deprecation is a pull
+# request to review rather than a build that breaks without warning.
+version: 2
+
+updates:
+  # The test project is the only one with real PackageReferences (xunit,
+  # Microsoft.NET.Test.Sdk, xunit.runner.visualstudio).
+  - package-ecosystem: "nuget"
+    directory: "/tests/Game.Tests"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "chore"
+    commit-message:
+      prefix: "chore"
+
+  # The game project pins Godot.NET.Sdk through the Sdk attribute rather than a
+  # PackageReference. Dependabot may or may not act on that; it costs nothing to
+  # watch, and the Godot version is bumped by hand with the editor either way.
+  - package-ecosystem: "nuget"
+    directory: "/Game"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "chore"
+    commit-message:
+      prefix: "chore"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "chore"
+    commit-message:
+      prefix: "chore"

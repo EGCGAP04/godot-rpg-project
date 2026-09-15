@@ -40,8 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fade to and from black when a combat starts and ends, so the overlay no longer cuts in and out abruptly
 - xUnit test project (`tests/Game.Tests/`) covering `CombatResolver`'s damage, HP clamping and win/loss detection, run in CI on every push and pull request, and registered in `Game/Godot RPG Project.sln` so editors and CI see a single solution covering both projects
 - CI now fails on any file that does not match `.editorconfig`, via `dotnet format --verify-no-changes` over the whole solution
+- Dependabot configuration (`.github/dependabot.yml`) watching the NuGet and GitHub Actions ecosystems weekly
 
 ### Changed
+
+- The CI workflow's token is now restricted to `contents: read`, since it only checks out and builds the code
+- CI actions bumped to versions running on Node 24 (`actions/checkout` v4 -> v7, `actions/setup-dotnet` v4 -> v6); the v4 majors run on the deprecated Node 20
+- `Game/Godot RPG Project.sln` normalized to the format VS Code's C# Dev Kit writes, so the editor stops producing spurious diffs on it
 
 - `Enemy` now holds a single `EnemyData` resource instead of loose `Hp`/`AttackPower` fields, and that resource is passed straight to `Combat` instead of two separate ints
 - The player's attack power moved from an export on `Combat` into the `PlayerStats` Autoload, next to the rest of the player's stats

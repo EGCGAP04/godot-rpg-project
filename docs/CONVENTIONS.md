@@ -115,6 +115,8 @@ Even though it sits outside `Game/`, the test project **is** listed in `Game/God
 
 The test project is deliberately mapped to `ActiveCfg` **without** a matching `Build.0` under `ExportDebug` and `ExportRelease`, so exporting the game does not compile the tests — a failing test should never be able to block an export.
 
+The file is stored in the format VS Code's C# Dev Kit writes (a newline after the BOM, indented configuration entries, a `SolutionProperties` section). The Dev Kit rewrites the solution into that shape whenever it loads it, so storing anything else means the editor produces a diff nobody asked for. Godot does not rewrite the file at all, so this format is stable for both tools.
+
 ## Stats as Resources
 
 Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). A new enemy type is a new `.tres` file, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
