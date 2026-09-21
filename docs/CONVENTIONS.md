@@ -66,7 +66,7 @@ Godot offers several ways for nodes to communicate. This project follows a consi
 
 ## Feature Scene Skeleton
 
-When creating the first scene of a feature (e.g. `Player/player.tscn`), the root node should be named after the scene/feature itself (e.g. root node `Player`, not a generic `Node2D`), with a matching C# script (`Player.cs`) attached to it. This keeps the scene tree self-explanatory when the scene is instanced elsewhere — instead of seeing a generic `Node2D` inside `fantasy_world.tscn`, you see `Player`.
+When creating the first scene of a feature (e.g. `Player/player.tscn`), the root node should be named after the scene/feature itself (e.g. root node `Player`, not a generic `Node2D`), with a matching C# script (`Player.cs`) attached to it. This keeps the scene tree self-explanatory when the scene is instanced elsewhere — instead of seeing a generic `Node2D` under `main.tscn`, you see `Player` and the world scene it sits beside.
 
 ## Combat Overlay Architecture
 
