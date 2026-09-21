@@ -15,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WorldUnlocks` and `CyclePosition`, the engine-free value types `CycleProgression` reads and returns
 - `GameState` Autoload singleton exposing the current world and cycle, advancing them through `CycleProgression`, and emitting `WorldChanged` and `CycleChanged`
 - Unit tests covering the full three-world sequence, the cycle wrap, and skipping either or both optional worlds
+- `WorldScene`, the base class every world scene is built on, exposing the player spawn position, the `CombatRequested` signal and a `TransitionRequested` signal a world raises when the player reaches its exit
+- `WorldExit` (`World/world_exit.tscn`), a reusable trigger that ends the current world on player contact, instanced as the bed in the Real world and as the way out of the other two
+- Placeholder rooms for the Real and Nightmare worlds (`real_world.tscn`, `nightmare_world.tscn`), each with its own `PlayerSpawn` marker and exit
+- The three world scenes are told apart by a `Modulate` tint on their `TileMapLayer` nodes, so no new art is needed to see which world is being played
+
+### Changed
+
+- `WorldMap` renamed to `WorldScene` and `world_map.tscn` to `fantasy_world.tscn`: the test room is now the Fantasy world placeholder, keeping both enemies, and `Main` talks to the base class instead of one concrete scene
+- Test dependency bumped by Dependabot: `Microsoft.NET.Test.Sdk` 18.10.0 -> 18.10.1
 
 ## [0.1.0] - 2026-09-14
 

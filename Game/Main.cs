@@ -10,7 +10,7 @@ public partial class Main : Node2D
 	[Export]
 	public float CombatCooldown = 1.0f;
 
-	private WorldMap _worldMap;
+	private WorldScene _world;
 	private Player _player;
 	private Combat _combat;
 	private Enemy _pendingEnemy;
@@ -25,9 +25,9 @@ public partial class Main : Node2D
 	// from wherever the player node happened to be placed in the scene.
 	public override void _EnterTree()
 	{
-		_worldMap = GetNode<WorldMap>("WorldMap");
+		_world = GetNode<WorldScene>("World");
 		_player = GetNode<Player>("Player");
-		_player.GlobalPosition = _worldMap.PlayerSpawnPosition;
+		_player.GlobalPosition = _world.PlayerSpawnPosition;
 	}
 
 	private void OnCombatRequested(Enemy enemy)
@@ -59,7 +59,7 @@ public partial class Main : Node2D
 		}
 		else
 		{
-			_player.GlobalPosition = _worldMap.PlayerSpawnPosition;
+			_player.GlobalPosition = _world.PlayerSpawnPosition;
 		}
 
 		_pendingEnemy = null;
