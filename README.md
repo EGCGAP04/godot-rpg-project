@@ -97,12 +97,16 @@ godot-rpg-project/
 │   │   ├── CyclePosition.cs (+.uid)    # engine-free: a world plus its cycle number
 │   │   ├── CycleProgression.cs (+.uid) # engine-free: which world comes next
 │   │   ├── World.cs (+.uid)            # the Real / Fantasy / Nightmare enum
-│   │   ├── WorldMap.cs (+.uid)
+│   │   ├── WorldExit.cs (+.uid)        # Area2D that ends a world on contact
+│   │   ├── WorldScene.cs (+.uid)       # base class the three world scenes share
 │   │   ├── WorldUnlocks.cs (+.uid)     # engine-free: which worlds are reachable
 │   │   ├── floor_placeholder.png (+.import)
 │   │   ├── wall_placeholder.png (+.import)
 │   │   ├── tileset.tres
-│   │   └── world_map.tscn              # test room, PlayerSpawn marker
+│   │   ├── fantasy_world.tscn          # the old test room, tinted; keeps both enemies
+│   │   ├── nightmare_world.tscn        # placeholder room, dark tint, no enemies yet
+│   │   ├── real_world.tscn             # placeholder room, holds the bed
+│   │   └── world_exit.tscn             # reusable bed / exit trigger
 │   │
 │   ├── Godot RPG Project.csproj
 │   ├── Godot RPG Project.sln   # also covers Game.Tests
