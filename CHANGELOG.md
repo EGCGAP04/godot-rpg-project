@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - GitHub release badge in the README, linking to the latest release
+- `World` enum (Real, Fantasy, Nightmare) naming the three worlds a cycle runs through, in the order they are played
+- `CycleProgression`, an engine-free class deciding which world follows the one being played and when the cycle number advances, taking the unlocked worlds as an input so a world can be skipped
+- `WorldUnlocks` and `CyclePosition`, the engine-free value types `CycleProgression` reads and returns
+- `GameState` Autoload singleton exposing the current world and cycle, advancing them through `CycleProgression`, and emitting `WorldChanged` and `CycleChanged`
+- Unit tests covering the full three-world sequence, the cycle wrap, and skipping either or both optional worlds
 
 ## [0.1.0] - 2026-09-14
 

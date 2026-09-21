@@ -27,6 +27,10 @@
   -->
   <ItemGroup>
     <Compile Include="..\..\Game\Combat\CombatResolver.cs" Link="GameLogic\CombatResolver.cs" />
+    <Compile Include="..\..\Game\World\World.cs" Link="GameLogic\World.cs" />
+    <Compile Include="..\..\Game\World\CyclePosition.cs" Link="GameLogic\CyclePosition.cs" />
+    <Compile Include="..\..\Game\World\WorldUnlocks.cs" Link="GameLogic\WorldUnlocks.cs" />
+    <Compile Include="..\..\Game\World\CycleProgression.cs" Link="GameLogic\CycleProgression.cs" />
   </ItemGroup>
 
 </Project>
