@@ -12,7 +12,7 @@
 
 🚧 In development — foundation phase.
 
-The core loop is playable end to end: walk around a test map, touch an enemy to start a turn-based fight, and win or lose with consequences. All art is placeholder (solid-colour rectangles and tiles).
+The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost. All art is placeholder (solid-colour rectangles and tinted tiles).
 
 This is a personal learning project, with no deadline, developed following professional version control and code organization standards.
 
@@ -94,7 +94,9 @@ godot-rpg-project/
 │   │   └── player.tscn
 │   │
 │   ├── Shared/                 # Fonts/ Scripts/ Theme/ — .gitkeep only so far
-│   ├── UI/                     # empty so far
+│   ├── UI/
+│   │   ├── ScreenFade.cs (+.uid)       # shared fade, used by combat and transitions
+│   │   └── screen_fade.tscn
 │   ├── World/
 │   │   ├── CyclePosition.cs (+.uid)    # engine-free: a world plus its cycle number
 │   │   ├── CycleProgression.cs (+.uid) # engine-free: which world comes next
@@ -112,7 +114,7 @@ godot-rpg-project/
 │   │
 │   ├── Godot RPG Project.csproj
 │   ├── Godot RPG Project.sln   # also covers Game.Tests
-│   ├── Main.cs (+.uid)         # coordinates the map and the combat overlay
+│   ├── Main.cs (+.uid)         # coordinates worlds, the player and combat
 │   ├── icon.svg (+.import)
 │   ├── main.tscn               # entry point scene
 │   └── project.godot           # autoloads, input map, rendering

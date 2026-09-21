@@ -1,15 +1,27 @@
 [gd_scene format=3 uid="uid://bu27r3dr3kdox"]
 
 [ext_resource type="PackedScene" uid="uid://w61sw0g3ec00" path="res://Player/player.tscn" id="1_ig7tw"]
-[ext_resource type="PackedScene" path="res://World/fantasy_world.tscn" id="2_world"]
-[ext_resource type="Script" uid="uid://cgmxetceupyqy" path="res://Main.cs" id="3_main"]
+[ext_resource type="Script" uid="uid://cgmxetceupyqy" path="res://Main.cs" id="2_main"]
+[ext_resource type="PackedScene" path="res://World/real_world.tscn" id="3_real"]
+[ext_resource type="PackedScene" path="res://World/fantasy_world.tscn" id="4_fantasy"]
+[ext_resource type="PackedScene" path="res://World/nightmare_world.tscn" id="5_nightmare"]
+[ext_resource type="PackedScene" path="res://UI/screen_fade.tscn" id="6_fade"]
 
 [node name="Main" type="Node2D"]
-script = ExtResource("3_main")
-
-[node name="World" parent="." instance=ExtResource("2_world")]
+script = ExtResource("2_main")
+RealWorldScene = ExtResource("3_real")
+FantasyWorldScene = ExtResource("4_fantasy")
+NightmareWorldScene = ExtResource("5_nightmare")
 
 [node name="Player" parent="." instance=ExtResource("1_ig7tw")]
-position = Vector2(72, 56)
 
-[connection signal="CombatRequested" from="World" to="." method="OnCombatRequested"]
+[node name="Hud" type="CanvasLayer" parent="."]
+layer = 0
+
+[node name="WorldLabel" type="Label" parent="Hud"]
+offset_left = 8.0
+offset_top = 4.0
+offset_right = 320.0
+offset_bottom = 24.0
+
+[node name="ScreenFade" parent="Hud" instance=ExtResource("6_fade")]
