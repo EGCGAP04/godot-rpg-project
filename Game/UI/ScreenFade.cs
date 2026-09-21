@@ -44,6 +44,14 @@ public partial class ScreenFade : ColorRect
 	/// A fade already in flight is killed first, so overlapping calls cannot leave two
 	/// tweens fighting over the same property or fire a stale callback.
 	/// </summary>
+	/// <remarks>
+	/// A killed tween never raises <c>Finished</c>, so <b>do not park state that must be
+	/// cleared in <paramref name="onFinished"/> alone</b> unless the caller is the only
+	/// one that can start a fade on this instance. <c>Main</c> gets away with it because
+	/// its two callers are mutually exclusive and combat owns a separate instance; a
+	/// third caller would strand whatever flag the interrupted callback was going to
+	/// clear.
+	/// </remarks>
 	public void FadeTo(float alpha, Action onFinished = null)
 	{
 		_tween?.Kill();

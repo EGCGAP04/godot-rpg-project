@@ -14,12 +14,12 @@ Game/ (res://)
 ├── Enemy/           # Enemy scenes and stats, contact detection on the map
 ├── Combat/          # Turn-based combat system: turn order, actions
 ├── World/           # Exploration maps: tilemaps, collisions, transitions
-├── UI/               # Menus, HUD, dialogue boxes
+├── UI/              # Menus, HUD, dialogue boxes, the shared screen fade
 ├── Shared/
 │   ├── Fonts/        # Shared fonts used across the project
 │   ├── Scripts/      # Generic utilities, extensions, helper classes
 │   └── Theme/        # Global UI theme resources
-└── Autoloads/        # Global singletons (e.g. PlayerStats)
+└── Autoloads/       # Global singletons (GameState, PlayerStats)
 ```
 
 `Shared/` holds anything that doesn't belong to a single feature. `Autoloads/` is kept separate since it's infrastructure, not a feature.
@@ -121,7 +121,7 @@ What works is refusing the trigger: `Main` ignores combat requests while a trans
 
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to (`Combat/CombatResolver.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`. The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 

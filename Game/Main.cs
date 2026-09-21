@@ -113,6 +113,9 @@ public partial class Main : Node2D
 	/// </remarks>
 	private void SwapWorld(int world)
 	{
+		// Both, and in this order: QueueFree alone would leave the outgoing world in the
+		// tree until the end of the frame, with its enemies' areas still registered while
+		// the incoming world is added. RemoveChild detaches it immediately.
 		_world.QueueFree();
 		RemoveChild(_world);
 
