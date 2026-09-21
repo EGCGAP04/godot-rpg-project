@@ -72,6 +72,7 @@ godot-rpg-project/
 │
 ├── Game/                       # res:// — the Godot project
 │   ├── Autoloads/
+│   │   ├── GameState.cs (+.uid)        # global singleton: current world and cycle
 │   │   └── PlayerStats.cs (+.uid)      # global singleton: player HP and attack
 │   │
 │   ├── Combat/
@@ -93,7 +94,11 @@ godot-rpg-project/
 │   ├── Shared/                 # Fonts/ Scripts/ Theme/ — .gitkeep only so far
 │   ├── UI/                     # empty so far
 │   ├── World/
+│   │   ├── CyclePosition.cs (+.uid)    # engine-free: a world plus its cycle number
+│   │   ├── CycleProgression.cs (+.uid) # engine-free: which world comes next
+│   │   ├── World.cs (+.uid)            # the Real / Fantasy / Nightmare enum
 │   │   ├── WorldMap.cs (+.uid)
+│   │   ├── WorldUnlocks.cs (+.uid)     # engine-free: which worlds are reachable
 │   │   ├── floor_placeholder.png (+.import)
 │   │   ├── wall_placeholder.png (+.import)
 │   │   ├── tileset.tres
@@ -112,7 +117,9 @@ godot-rpg-project/
 ├── tests/                      # outside res:// on purpose — see CONVENTIONS.md
 │   └── Game.Tests/
 │       ├── CombatResolverTests.cs
-│       └── Game.Tests.csproj
+│       ├── CycleProgressionTests.cs
+│       ├── Game.Tests.csproj
+│       └── WorldUnlocksTests.cs
 │
 ├── .editorconfig
 ├── .gitattributes
