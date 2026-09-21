@@ -31,6 +31,8 @@
     <Compile Include="..\..\Game\World\CyclePosition.cs" Link="GameLogic\CyclePosition.cs" />
     <Compile Include="..\..\Game\World\WorldUnlocks.cs" Link="GameLogic\WorldUnlocks.cs" />
     <Compile Include="..\..\Game\World\CycleProgression.cs" Link="GameLogic\CycleProgression.cs" />
+    <Compile Include="..\..\Game\Player\Direction.cs" Link="GameLogic\Direction.cs" />
+    <Compile Include="..\..\Game\Player\DirectionResolver.cs" Link="GameLogic\DirectionResolver.cs" />
   </ItemGroup>
 
 </Project>

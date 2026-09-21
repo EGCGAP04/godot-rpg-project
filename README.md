@@ -88,6 +88,8 @@ godot-rpg-project/
 │   │   └── weak_enemy.tres             # 10 HP, 3 atk — the player wins
 │   │
 │   ├── Player/
+│   │   ├── Direction.cs (+.uid)
+│   │   ├── DirectionResolver.cs (+.uid) # engine-free: last direction pressed wins
 │   │   ├── Player.cs (+.uid)
 │   │   └── player.tscn
 │   │
@@ -122,6 +124,7 @@ godot-rpg-project/
 │   └── Game.Tests/
 │       ├── CombatResolverTests.cs
 │       ├── CycleProgressionTests.cs
+│       ├── DirectionResolverTests.cs
 │       ├── Game.Tests.csproj
 │       └── WorldUnlocksTests.cs
 │

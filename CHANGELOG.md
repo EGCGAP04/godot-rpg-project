@@ -20,8 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Placeholder rooms for the Real and Nightmare worlds (`real_world.tscn`, `nightmare_world.tscn`), each with its own `PlayerSpawn` marker and exit
 - The three world scenes are told apart by a `Modulate` tint on their `TileMapLayer` nodes, so no new art is needed to see which world is being played
 
+- `Direction` enum and `DirectionResolver`, an engine-free class that turns several simultaneously held directions into the one being moved in, and remembers the facing after movement stops
+- Gamepad bindings across the whole Input Map: D-pad and left stick for the four movement actions, and face buttons for `confirm`, `cancel` and `open_menu`
+- Unit tests covering single and overlapping presses, the fallback on release, re-pressing a held direction, and facing persistence
+
 ### Changed
 
+- Player movement is now strictly 4-directional, replacing `Input.GetVector(...)`, which allowed diagonals: the strongest held direction wins, ties go to the most recently pressed one, and releasing the winner falls back to whatever is still held instead of stopping the character. Following the stronger direction is what keeps an analog stick from stuttering as it sweeps through a diagonal; digital input always reports full strength, so on a keyboard or D-pad the rule is exactly last-pressed-wins
 - `WorldMap` renamed to `WorldScene` and `world_map.tscn` to `fantasy_world.tscn`: the test room is now the Fantasy world placeholder, keeping both enemies, and `Main` talks to the base class instead of one concrete scene
 - Test dependency bumped by Dependabot: `Microsoft.NET.Test.Sdk` 18.10.0 -> 18.10.1
 
