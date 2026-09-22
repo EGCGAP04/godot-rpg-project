@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-22
+
 ### Added
 
 - GitHub release badge in the README, linking to the latest release
@@ -25,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ScreenFade` (`UI/screen_fade.tscn`), the fade to and from black extracted from the combat overlay so world transitions reuse it instead of growing a second copy
 - `Main` now coordinates the three worlds and the cycle: it holds whichever world is active, swaps it when `GameState` reports a change, keeps the `Player` alive across the swap and places it at the new world's spawn, and fades through the transition
 - Temporary on-screen label showing the current world and cycle
+- Combat triggers are ignored while a world transition runs and for a short cooldown after it, so an enemy in the incoming world standing where the player was in the outgoing one cannot start a fight that never happened
+- World and cycle coordination documented in `docs/CONVENTIONS.md`, including the measurements showing why the transition guards cannot be replaced by reordering the swap
 
 ### Changed
 
@@ -33,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Player movement is now strictly 4-directional, replacing `Input.GetVector(...)`, which allowed diagonals: the strongest held direction wins, ties go to the most recently pressed one, and releasing the winner falls back to whatever is still held instead of stopping the character. Following the stronger direction is what keeps an analog stick from stuttering as it sweeps through a diagonal; digital input always reports full strength, so on a keyboard or D-pad the rule is exactly last-pressed-wins
 - `WorldMap` renamed to `WorldScene` and `world_map.tscn` to `fantasy_world.tscn`: the test room is now the Fantasy world placeholder, keeping both enemies, and `Main` talks to the base class instead of one concrete scene
 - Test dependency bumped by Dependabot: `Microsoft.NET.Test.Sdk` 18.10.0 -> 18.10.1
+
+### Fixed
+
+- Six scenes carried no `uid`, so every reference to them depended on its path alone: `combat.tscn` and `enemy.tscn` since the combat milestone, `fantasy_world.tscn` since the rename from `world_map.tscn` dropped it, and `screen_fade.tscn`, `real_world.tscn` and `world_exit.tscn` since they were added. All of them, and the references to them, now have one
 
 ## [0.1.0] - 2026-09-14
 
@@ -96,5 +104,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Combat could be triggered more than once (two overlapping enemies, or a re-trigger before the deferred start ran), leaking an orphaned overlay on a permanently paused tree and crashing when the first fight resolved
 - `.editorconfig` declared spaces for C# files while every file in the project is tab-indented, which would have introduced mixed indentation
 
-[Unreleased]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/EGCGAP04/godot-rpg-project/releases/tag/v0.1.0
