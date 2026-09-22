@@ -19,13 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `WorldExit` (`World/world_exit.tscn`), a reusable trigger that ends the current world on player contact, instanced as the bed in the Real world and as the way out of the other two
 - Placeholder rooms for the Real and Nightmare worlds (`real_world.tscn`, `nightmare_world.tscn`), each with its own `PlayerSpawn` marker and exit
 - The three world scenes are told apart by a `Modulate` tint on their `TileMapLayer` nodes, so no new art is needed to see which world is being played
-
 - `Direction` enum and `DirectionResolver`, an engine-free class that turns several simultaneously held directions into the one being moved in, and remembers the facing after movement stops
 - Gamepad bindings across the whole Input Map: D-pad and left stick for the four movement actions, and face buttons for `confirm`, `cancel` and `open_menu`
 - Unit tests covering single and overlapping presses, the fallback on release, re-pressing a held direction, and facing persistence
+- `ScreenFade` (`UI/screen_fade.tscn`), the fade to and from black extracted from the combat overlay so world transitions reuse it instead of growing a second copy
+- `Main` now coordinates the three worlds and the cycle: it holds whichever world is active, swaps it when `GameState` reports a change, keeps the `Player` alive across the swap and places it at the new world's spawn, and fades through the transition
+- Temporary on-screen label showing the current world and cycle
 
 ### Changed
 
+- `main.tscn` no longer authors a world; `Main` builds the first one from `GameState.CurrentWorld`, so which world the run is in has a single source of truth
+- Autoloads now assign their static `Instance` in `_EnterTree` instead of `_Ready`: a node's own `_EnterTree` runs before any autoload's `_Ready`, and `Main` needs `GameState` that early to place the player before any `Area2D` registers against a stale transform
 - Player movement is now strictly 4-directional, replacing `Input.GetVector(...)`, which allowed diagonals: the strongest held direction wins, ties go to the most recently pressed one, and releasing the winner falls back to whatever is still held instead of stopping the character. Following the stronger direction is what keeps an analog stick from stuttering as it sweeps through a diagonal; digital input always reports full strength, so on a keyboard or D-pad the rule is exactly last-pressed-wins
 - `WorldMap` renamed to `WorldScene` and `world_map.tscn` to `fantasy_world.tscn`: the test room is now the Fantasy world placeholder, keeping both enemies, and `Main` talks to the base class instead of one concrete scene
 - Test dependency bumped by Dependabot: `Microsoft.NET.Test.Sdk` 18.10.0 -> 18.10.1

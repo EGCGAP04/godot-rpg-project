@@ -112,8 +112,11 @@ public class CombatResolverTests
 	[Fact]
 	public void AFullFight_ResolvesAfterTheExpectedNumberOfRounds()
 	{
-		// The test map's weak enemy: 10 HP against the player's 5 attack power, so
-		// the player wins on the second attack without ever dropping below 1 HP.
+		// A whole fight in miniature, checking that the outcome only flips on the blow
+		// that actually drops the enemy. The numbers are illustrative and deliberately
+		// not the shipped ones: the player's attack power and the enemies' stats are
+		// [Export]/.tres values meant to be retuned, and a unit test that pinned them
+		// would fail on every balance pass while proving nothing about the rules.
 		var resolver = new CombatResolver(playerHp: 20, playerAttackPower: 5, enemyHp: 10, enemyAttackPower: 3);
 
 		Assert.Equal(CombatResolver.Outcome.Ongoing, resolver.PlayerAttack());

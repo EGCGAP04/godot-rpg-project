@@ -28,9 +28,6 @@ public partial class Combat : CanvasLayer
 	[Export]
 	public float ResultDelay = 1.2f;
 
-	[Export]
-	public float FadeDuration = 0.25f;
-
 	private CombatResolver _resolver;
 	private TurnState _state = TurnState.Transition;
 
@@ -38,7 +35,7 @@ public partial class Combat : CanvasLayer
 	private Label _playerHpLabel;
 	private Label _resultLabel;
 	private Button _attackButton;
-	private ColorRect _fadeOverlay;
+	private ScreenFade _fade;
 
 	public override void _Ready()
 	{
@@ -55,7 +52,7 @@ public partial class Combat : CanvasLayer
 		_playerHpLabel = GetNode<Label>("PlayerHpLabel");
 		_resultLabel = GetNode<Label>("ResultLabel");
 		_attackButton = GetNode<Button>("AttackButton");
-		_fadeOverlay = GetNode<ColorRect>("FadeOverlay");
+		_fade = GetNode<ScreenFade>("ScreenFade");
 
 		GD.Print($"Combat started. Player {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp} HP vs {EnemyData.DisplayName} {_resolver.EnemyHp}/{EnemyData.MaxHp} HP");
 		UpdateHpLabels();
@@ -63,7 +60,7 @@ public partial class Combat : CanvasLayer
 		// The overlay starts fully black so the world map is never cut away
 		// abruptly; the first turn only begins once the fade in has finished.
 		_attackButton.Disabled = true;
-		FadeTo(0f, StartPlayerTurn);
+		Fade(ScreenFade.Clear, StartPlayerTurn);
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -147,21 +144,17 @@ public partial class Combat : CanvasLayer
 		// Only after that does the screen fade back to black, so the result text
 		// is not hidden by the transition.
 		GetTree().CreateTimer(ResultDelay).Timeout += () =>
-			FadeTo(1f, () => EmitSignal(SignalName.CombatFinished, playerWon));
+			Fade(ScreenFade.Opaque, () => EmitSignal(SignalName.CombatFinished, playerWon));
 	}
 
 	/// <summary>
-	/// Tweens the black overlay to the given alpha and runs <paramref name="onFinished"/>
-	/// afterwards. The tween is bound to this node, which runs with
-	/// <c>process_mode = Always</c>, so it keeps playing while the world map is paused.
+	/// Suspends the turn while the shared <see cref="ScreenFade"/> plays. The fade owns
+	/// the tween; all this adds is that no input is accepted until it finishes.
 	/// </summary>
-	private void FadeTo(float alpha, Action onFinished)
+	private void Fade(float alpha, Action onFinished)
 	{
 		_state = TurnState.Transition;
-
-		Tween tween = CreateTween();
-		tween.TweenProperty(_fadeOverlay, "modulate:a", alpha, FadeDuration);
-		tween.Finished += onFinished;
+		_fade.FadeTo(alpha, onFinished);
 	}
 
 	private void UpdateHpLabels()

@@ -44,7 +44,11 @@ public partial class GameState : Node
 	/// <see cref="CycleProgression.FirstCycle"/>.</summary>
 	public int CurrentCycle { get; private set; } = CycleProgression.FirstCycle;
 
-	public override void _Ready()
+	// _EnterTree, not _Ready: autoloads enter the tree before the main scene does,
+	// but their _Ready has not run by the time the main scene's own _EnterTree runs.
+	// Main needs this in _EnterTree, because that is where it has to place the player
+	// before any Area2D registers against a stale transform (see #40).
+	public override void _EnterTree()
 	{
 		Instance = this;
 	}

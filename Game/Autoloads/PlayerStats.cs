@@ -23,7 +23,10 @@ public partial class PlayerStats : Node
 		set => _currentHp = Mathf.Clamp(value, 0, MaxHp);
 	}
 
-	public override void _Ready()
+	// _EnterTree, not _Ready, matching every autoload: a node's own _EnterTree runs
+	// before any autoload's _Ready, so _Ready is too late for anything that wires
+	// itself up that early.
+	public override void _EnterTree()
 	{
 		Instance = this;
 		CurrentHp = MaxHp;
