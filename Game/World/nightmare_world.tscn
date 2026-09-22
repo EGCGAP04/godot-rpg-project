@@ -2,7 +2,7 @@
 
 [ext_resource type="TileSet" uid="uid://chigtr8ylsw32" path="res://World/tileset.tres" id="1_tileset"]
 [ext_resource type="Script" uid="uid://c7atfmo0m3awh" path="res://World/WorldScene.cs" id="2_script"]
-[ext_resource type="PackedScene" path="res://World/world_exit.tscn" id="3_exit"]
+[ext_resource type="PackedScene" uid="uid://ojvb3ure7une" path="res://World/world_exit.tscn" id="3_exit"]
 
 [node name="NightmareWorld" type="Node2D" unique_id=603667549]
 script = ExtResource("2_script")

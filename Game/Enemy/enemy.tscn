@@ -1,21 +1,21 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://cnkkaoa8kax27"]
 
-[ext_resource type="Script" path="res://Enemy/Enemy.cs" id="1_enemy"]
+[ext_resource type="Script" uid="uid://cubn78piuwime" path="res://Enemy/Enemy.cs" id="1_enemy"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_enemy"]
 size = Vector2(16, 16)
 
-[node name="Enemy" type="Area2D"]
+[node name="Enemy" type="Area2D" unique_id=1800058179]
 script = ExtResource("1_enemy")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="ColorRect" type="ColorRect" parent="." unique_id=2118820742]
 offset_left = -8.0
 offset_top = -8.0
 offset_right = 8.0
 offset_bottom = 8.0
 color = Color(1, 0, 0, 1)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=803811672]
 shape = SubResource("RectangleShape2D_enemy")
 
 [connection signal="body_entered" from="." to="." method="OnBodyEntered"]

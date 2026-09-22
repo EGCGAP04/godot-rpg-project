@@ -1,8 +1,8 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://lq8i0psxlit"]
 
-[ext_resource type="Script" path="res://UI/ScreenFade.cs" id="1_fade"]
+[ext_resource type="Script" uid="uid://csmpsonb0rqs2" path="res://UI/ScreenFade.cs" id="1_fade"]
 
-[node name="ScreenFade" type="ColorRect"]
+[node name="ScreenFade" type="ColorRect" unique_id=1971931098]
 process_mode = 3
 offset_right = 640.0
 offset_bottom = 360.0
