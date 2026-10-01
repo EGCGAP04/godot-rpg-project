@@ -3,9 +3,6 @@
 .mono/
 data_*/
 
-# Godot-specific mono/C# artifacts
-.mono/
-
 # Mono-specific ignores
 mono_crash.*.json
 
@@ -27,5 +24,3 @@ Thumbs.db
 
 # Claude Code — personal/local instructions, not shared via version control
 CLAUDE.local.md
-diseno-del-juego.md
-roadmap.md

@@ -1,14 +1,14 @@
-name: "✨ Feature / Task"
-description: New functionality, system, or task to implement
-title: "[Feature]: "
-labels: ["feature"]
+name: "🧹 Chore"
+description: Maintenance with no gameplay change — CI, dependencies, configuration, releases
+title: "[Chore]: "
+labels: ["chore"]
 body:
   - type: textarea
     id: description
     attributes:
       label: Description
-      description: What needs to be implemented? Why is it needed?
-      placeholder: E.g. Implement the basic turn-based combat system...
+      description: What needs maintaining, and why now?
+      placeholder: E.g. Bump the CI actions to versions that run on Node 24, since the current ones run on a deprecated Node...
     validations:
       required: true
 
@@ -18,9 +18,9 @@ body:
       label: Sub-tasks checklist
       description: Break the work down into concrete steps (optional, can be completed or adjusted later)
       placeholder: |
-        - [ ] Define turn data structure
-        - [ ] Implement turn order
-        - [ ] Connect to minimal UI
+        - [ ] Bump actions/checkout and actions/setup-dotnet
+        - [ ] Confirm the build check passes on the PR
+        - [ ] Update CHANGELOG.md
       value: |
         - [ ] 
     validations:
