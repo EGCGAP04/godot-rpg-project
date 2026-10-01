@@ -1,14 +1,14 @@
-name: "✨ Feature / Task"
-description: New functionality, system, or task to implement
-title: "[Feature]: "
-labels: ["feature"]
+name: "♻️ Refactor"
+description: Code restructuring without behavior change
+title: "[Refactor]: "
+labels: ["refactor"]
 body:
   - type: textarea
     id: description
     attributes:
       label: Description
-      description: What needs to be implemented? Why is it needed?
-      placeholder: E.g. Implement the basic turn-based combat system...
+      description: What is being restructured, and why? What has to behave exactly as before?
+      placeholder: E.g. Extract the damage arithmetic from Combat.cs into an engine-free class that can be unit-tested...
     validations:
       required: true
 
@@ -18,9 +18,9 @@ body:
       label: Sub-tasks checklist
       description: Break the work down into concrete steps (optional, can be completed or adjusted later)
       placeholder: |
-        - [ ] Define turn data structure
-        - [ ] Implement turn order
-        - [ ] Connect to minimal UI
+        - [ ] Extract the logic into a plain C# class
+        - [ ] Cover it with unit tests, each with a negative control
+        - [ ] Confirm the behavior is unchanged in a headless run
       value: |
         - [ ] 
     validations:

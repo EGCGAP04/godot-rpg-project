@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Issue forms for maintenance work (`chore.yml`, `docs.yml` and `refactor.yml`), each applying its own label and title prefix, so a non-feature Issue no longer starts from the feature form and has its label corrected by hand
+
+### Changed
+
+- `.gitignore` no longer lists two local planning documents that now live outside the working tree, and no longer lists `.mono/` twice
+
+### Fixed
+
+- The Issue forms' milestone dropdown offered only M0–M4, three of them under names that no longer matched GitHub, so the feature form's required field could not name the milestone being worked on; every form now lists the open milestones under their exact titles
+- README's Project Structure described `DirectionResolver` as "last direction pressed wins"; the strongest held direction wins, and the most recent press only breaks ties
+
 ## [0.2.0] - 2026-09-22
 
 ### Added

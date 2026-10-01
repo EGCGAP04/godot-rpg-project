@@ -36,12 +36,16 @@ body:
     id: milestone
     attributes:
       label: Related milestone
+      # The open milestones, under their exact GitHub titles. The same list is in
+      # every form in this folder: add a milestone to all of them when it is
+      # created, and drop it from all of them when it closes.
       options:
-        - M0 - Setup
-        - M1 - Core architecture
-        - M2 - First playable map
-        - M3 - Minimal combat
-        - M4 - Exploration-combat integration
+        - M6 - Dialogue, Decisions and Localization
+        - M7 - Characters and Stats
+        - M8 - Combat v2
+        - M9 - Saving
+        - M10 - Maps and Exploration
+        - M11 - The First Real Cycle
         - Not defined yet
     validations:
       required: false

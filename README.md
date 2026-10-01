@@ -61,8 +61,11 @@ godot-rpg-project/
 ├── .github/                    # Issue/PR templates, CI, Dependabot
 │   ├── ISSUE_TEMPLATE/
 │   │   ├── bug.yml
+│   │   ├── chore.yml
 │   │   ├── config.yml
-│   │   └── feature.yml
+│   │   ├── docs.yml
+│   │   ├── feature.yml
+│   │   └── refactor.yml
 │   │
 │   ├── workflows/
 │   │   └── build.yml           # restore → build → test → format
@@ -89,7 +92,7 @@ godot-rpg-project/
 │   │
 │   ├── Player/
 │   │   ├── Direction.cs (+.uid)
-│   │   ├── DirectionResolver.cs (+.uid) # engine-free: last direction pressed wins
+│   │   ├── DirectionResolver.cs (+.uid) # engine-free: strongest direction wins, last pressed breaks ties
 │   │   ├── Player.cs (+.uid)
 │   │   └── player.tscn
 │   │
