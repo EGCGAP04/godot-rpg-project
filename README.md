@@ -83,6 +83,15 @@ godot-rpg-project/
 │   │   ├── CombatResolver.cs (+.uid)   # engine-free, covered by tests
 │   │   └── combat.tscn                 # overlay scene, not a scene swap
 │   │
+│   ├── Dialogue/
+│   │   ├── FlagCondition.cs (+.uid)       # engine-free: a condition as a tree, and its evaluation
+│   │   ├── FlagConditionParser.cs (+.uid) # engine-free: condition text → tree, by recursive descent
+│   │   ├── FlagEffect.cs (+.uid)          # engine-free: set, clear or add a flag
+│   │   ├── FlagEffectParser.cs (+.uid)    # engine-free: effect text → effect
+│   │   ├── FlagSyntaxException.cs (+.uid) # a malformed condition or effect, and its column
+│   │   ├── FlagTokenizer.cs (+.uid)       # engine-free: splits condition and effect text into tokens
+│   │   └── IFlagStore.cs (+.uid)          # where conditions read flags and effects write them
+│   │
 │   ├── Enemy/
 │   │   ├── Enemy.cs (+.uid)
 │   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding stats
@@ -130,7 +139,13 @@ godot-rpg-project/
 │       ├── CombatResolverTests.cs
 │       ├── CycleProgressionTests.cs
 │       ├── DirectionResolverTests.cs
+│       ├── FlagConditionParserTests.cs
+│       ├── FlagConditionTests.cs
+│       ├── FlagEffectParserTests.cs
+│       ├── FlagEffectTests.cs
+│       ├── FlagTokenizerTests.cs
 │       ├── Game.Tests.csproj
+│       ├── InMemoryFlagStore.cs    # stand-in for the decision registry
 │       └── WorldUnlocksTests.cs
 │
 ├── .editorconfig

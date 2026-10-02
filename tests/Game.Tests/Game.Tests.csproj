@@ -33,6 +33,13 @@
     <Compile Include="..\..\Game\World\CycleProgression.cs" Link="GameLogic\CycleProgression.cs" />
     <Compile Include="..\..\Game\Player\Direction.cs" Link="GameLogic\Direction.cs" />
     <Compile Include="..\..\Game\Player\DirectionResolver.cs" Link="GameLogic\DirectionResolver.cs" />
+    <Compile Include="..\..\Game\Dialogue\IFlagStore.cs" Link="GameLogic\IFlagStore.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagSyntaxException.cs" Link="GameLogic\FlagSyntaxException.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagTokenizer.cs" Link="GameLogic\FlagTokenizer.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagCondition.cs" Link="GameLogic\FlagCondition.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagConditionParser.cs" Link="GameLogic\FlagConditionParser.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagEffect.cs" Link="GameLogic\FlagEffect.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagEffectParser.cs" Link="GameLogic\FlagEffectParser.cs" />
   </ItemGroup>
 
 </Project>
