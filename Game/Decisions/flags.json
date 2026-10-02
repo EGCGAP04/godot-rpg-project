@@ -1,0 +1,10 @@
+{
+	"format": 1,
+	"flags": {
+		"example.has_key": { "type": "bool", "lifetime": "cycle", "description": "The player is carrying the stranger's key. Set outside dialogue, when the key is picked up." },
+		"example.promised_help": { "type": "bool", "lifetime": "run", "description": "The player promised to look for the key and has not handed it back yet. Refusing withdraws the promise." },
+		"example.key_returned": { "type": "bool", "lifetime": "run", "description": "The key was handed back." },
+		"example.times_met": { "type": "counter", "lifetime": "run", "description": "How many times the first meeting has been completed in this playthrough." },
+		"example.met_before": { "type": "bool", "lifetime": "persistent", "description": "The stranger was met in some playthrough. Survives loading an earlier save." }
+	}
+}

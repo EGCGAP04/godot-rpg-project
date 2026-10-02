@@ -1,0 +1,24 @@
+{
+	"format": 1,
+	"nodes": {
+		"start": {
+			"lines": [
+				{ "speaker": "example_stranger", "line": "remember_help", "if": "example.promised_help" },
+				{ "speaker": "example_stranger", "line": "remember_refusal", "if": "example.times_met >= 1 and not (example.promised_help or example.key_returned)" },
+				{ "speaker": "example_stranger", "line": "remember_key", "if": "example.key_returned" },
+				{ "speaker": "example_stranger", "line": "first_time", "if": "example.times_met == 0" },
+				{ "speaker": "example_stranger", "line": "still_looking", "if": "example.promised_help and not example.has_key" }
+			],
+			"choices": [
+				{ "option": "give_key", "if": "example.has_key", "do": ["clear example.has_key", "set example.key_returned", "clear example.promised_help"], "next": "grateful" },
+				{ "option": "leave", "next": "END" }
+			]
+		},
+		"grateful": {
+			"lines": [
+				{ "speaker": "example_stranger", "line": "found_it" }
+			],
+			"next": "END"
+		}
+	}
+}

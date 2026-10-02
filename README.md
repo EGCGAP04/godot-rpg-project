@@ -83,7 +83,18 @@ godot-rpg-project/
 │   │   ├── CombatResolver.cs (+.uid)   # engine-free, covered by tests
 │   │   └── combat.tscn                 # overlay scene, not a scene swap
 │   │
+│   ├── Decisions/
+│   │   ├── FlagCatalogue.cs (+.uid)       # engine-free: reads the catalogue of flags
+│   │   └── flags.json                     # every flag, with its type and lifetime
+│   │
 │   ├── Dialogue/
+│   │   ├── Conversations/                 # one JSON file per conversation
+│   │   │   ├── example_first_meeting.json # the format's reference example, in two parts
+│   │   │   └── example_second_meeting.json
+│   │   │
+│   │   ├── Conversation.cs (+.uid)        # engine-free: a conversation's nodes, lines and options
+│   │   ├── ConversationReader.cs (+.uid)  # engine-free: a conversation's JSON → Conversation
+│   │   ├── DialogueNames.cs (+.uid)       # the format's naming rules and reserved names
 │   │   ├── FlagCondition.cs (+.uid)       # engine-free: a condition as a tree, and its evaluation
 │   │   ├── FlagConditionParser.cs (+.uid) # engine-free: condition text → tree, by recursive descent
 │   │   ├── FlagEffect.cs (+.uid)          # engine-free: set, clear or add a flag
@@ -105,7 +116,14 @@ godot-rpg-project/
 │   │   ├── Player.cs (+.uid)
 │   │   └── player.tscn
 │   │
-│   ├── Shared/                 # Fonts/ Scripts/ Theme/ — .gitkeep only so far
+│   ├── Shared/
+│   │   ├── Fonts/                         # .gitkeep only so far
+│   │   ├── Scripts/
+│   │   │   ├── DataFileException.cs (+.uid) # a malformed data file: which, where and what
+│   │   │   └── StrictJson.cs (+.uid)        # strict JSON reading shared by the data files
+│   │   │
+│   │   └── Theme/                         # .gitkeep only so far
+│   │
 │   ├── UI/
 │   │   ├── ScreenFade.cs (+.uid)       # shared fade, used by combat and transitions
 │   │   └── screen_fade.tscn
@@ -137,8 +155,11 @@ godot-rpg-project/
 ├── tests/                      # outside res:// on purpose — see CONVENTIONS.md
 │   └── Game.Tests/
 │       ├── CombatResolverTests.cs
+│       ├── ConversationReaderTests.cs
 │       ├── CycleProgressionTests.cs
+│       ├── DialogueNamesTests.cs
 │       ├── DirectionResolverTests.cs
+│       ├── FlagCatalogueTests.cs
 │       ├── FlagConditionParserTests.cs
 │       ├── FlagConditionTests.cs
 │       ├── FlagEffectParserTests.cs
@@ -146,6 +167,7 @@ godot-rpg-project/
 │       ├── FlagTokenizerTests.cs
 │       ├── Game.Tests.csproj
 │       ├── InMemoryFlagStore.cs    # stand-in for the decision registry
+│       ├── ProjectFiles.cs         # finds Game/ from inside a test run
 │       └── WorldUnlocksTests.cs
 │
 ├── .editorconfig

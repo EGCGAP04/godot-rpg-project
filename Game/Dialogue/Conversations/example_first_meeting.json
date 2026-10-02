@@ -1,0 +1,44 @@
+{
+	"format": 1,
+	"nodes": {
+		"start": {
+			"lines": [
+				{ "speaker": "example_stranger", "line": "greet", "if": "not example.met_before" },
+				{ "speaker": "example_stranger", "line": "greet_familiar", "if": "example.met_before and example.times_met == 0" },
+				{ "speaker": "example_stranger", "line": "greet_again", "if": "example.times_met >= 1" },
+				{ "speaker": "example_stranger", "line": "lost_key" },
+				{ "speaker": "example_stranger", "line": "ask" }
+			],
+			"choices": [
+				{ "option": "help", "do": ["set example.promised_help"], "next": "thanks" },
+				{ "option": "refuse", "do": ["clear example.promised_help"], "next": "shrug" },
+				{ "option": "give_key", "if": "example.has_key", "do": ["clear example.has_key", "set example.key_returned"], "next": "relief" }
+			]
+		},
+		"thanks": {
+			"lines": [
+				{ "speaker": "example_stranger", "line": "will_wait" }
+			],
+			"next": "farewell"
+		},
+		"shrug": {
+			"lines": [
+				{ "speaker": "example_stranger", "line": "never_mind" }
+			],
+			"next": "farewell"
+		},
+		"relief": {
+			"lines": [
+				{ "speaker": "narrator", "line": "hand_over" },
+				{ "speaker": "example_stranger", "line": "relieved" }
+			],
+			"next": "farewell"
+		},
+		"farewell": {
+			"lines": [
+				{ "speaker": "example_stranger", "line": "bye", "do": ["set example.met_before", "add example.times_met 1"] }
+			],
+			"next": "END"
+		}
+	}
+}

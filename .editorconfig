@@ -14,3 +14,7 @@ indent_size = 4
 # Godot writes these itself; tabs are what it emits
 [*.{tscn,tres,godot}]
 indent_style = tab
+
+# Data files (conversations, the flag catalogue): tabs, like everything else
+[*.json]
+indent_style = tab
