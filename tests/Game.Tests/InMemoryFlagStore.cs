@@ -29,6 +29,23 @@ public sealed class InMemoryFlagStore : IFlagStore
 		return this;
 	}
 
+	/// <summary>
+	/// Declares every flag of <paramref name="catalogue"/> at its starting value, as at the
+	/// start of a playthrough: false or 0. Does not count as writes.
+	/// </summary>
+	public InMemoryFlagStore WithCatalogue(FlagCatalogue catalogue)
+	{
+		foreach (FlagDeclaration flag in catalogue.Flags.Values)
+		{
+			if (flag.Type == FlagType.Bool)
+				WithFlag(flag.Name);
+			else
+				WithCounter(flag.Name);
+		}
+
+		return this;
+	}
+
 	public bool GetFlag(string name) => _flags[name];
 
 	public int GetCounter(string name) => _counters[name];

@@ -95,6 +95,7 @@ godot-rpg-project/
 │   │   ├── Conversation.cs (+.uid)        # engine-free: a conversation's nodes, lines and options
 │   │   ├── ConversationReader.cs (+.uid)  # engine-free: a conversation's JSON → Conversation
 │   │   ├── DialogueNames.cs (+.uid)       # the format's naming rules and reserved names
+│   │   ├── DialogueRunner.cs (+.uid)      # engine-free: walks a conversation, line by line and choice by choice
 │   │   ├── FlagCondition.cs (+.uid)       # engine-free: a condition as a tree, and its evaluation
 │   │   ├── FlagConditionParser.cs (+.uid) # engine-free: condition text → tree, by recursive descent
 │   │   ├── FlagEffect.cs (+.uid)          # engine-free: set, clear or add a flag
@@ -158,6 +159,7 @@ godot-rpg-project/
 │       ├── ConversationReaderTests.cs
 │       ├── CycleProgressionTests.cs
 │       ├── DialogueNamesTests.cs
+│       ├── DialogueRunnerTests.cs
 │       ├── DirectionResolverTests.cs
 │       ├── FlagCatalogueTests.cs
 │       ├── FlagConditionParserTests.cs
