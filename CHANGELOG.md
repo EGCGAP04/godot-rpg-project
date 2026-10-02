@@ -10,12 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Issue forms for maintenance work (`chore.yml`, `docs.yml` and `refactor.yml`), each applying its own label and title prefix, so a non-feature Issue no longer starts from the feature form and has its label corrected by hand
+- The custom JSON dialogue format: conversations in `Dialogue/Conversations/`, made of nodes whose lines are read in order and end in a choice or a jump, with each line's text kept out of the file behind a key
+- A small language for dialogue conditions and effects over flags (`not`, `and`, `or`, parentheses and counter comparisons; `set`, `clear` and `add`), read by `FlagTokenizer`, `FlagConditionParser` and `FlagEffectParser`
+- `ConversationReader`, which reads a conversation file strictly and says where it is malformed, and `DialogueRunner`, which walks a conversation a line or a choice at a time
+- The flag catalogue, `Decisions/flags.json`, read by `FlagCatalogue`, declaring every flag once with its type and lifetime
+- `DialogueValidator`, which checks every conversation against the catalogue and against each other (undeclared or mistyped flags, repeated ids, unreachable nodes, and anywhere the player could be left stuck), and a test that runs it over the whole project, so a broken conversation fails CI
+- The format's reference example, a conversation in two parts that uses every feature of the format
+- `StrictJson` and `DataFileException` in `Shared/Scripts/`, shared by the readers of the game's JSON data files
+- A Dialogue Format section in `docs/CONVENTIONS.md`, including why the format is custom JSON rather than Ink or Yarn Spinner
 
 ### Changed
 
 - `.gitignore` no longer lists two local planning documents that now live outside the working tree, and no longer lists `.mono/` twice
+- `.editorconfig` indents JSON files with tabs
 
 ### Fixed
+
+- README said CI runs on every push; it runs on pull requests into `main` and on pushes to `main`
 
 - The Issue forms' milestone dropdown offered only M0–M4, three of them under names that no longer matched GitHub, so the feature form's required field could not name the milestone being worked on; every form now lists the open milestones under their exact titles
 - README's Project Structure described `DirectionResolver` as "last direction pressed wins"; the strongest held direction wins, and the most recent press only breaks ties

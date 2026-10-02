@@ -33,6 +33,21 @@
     <Compile Include="..\..\Game\World\CycleProgression.cs" Link="GameLogic\CycleProgression.cs" />
     <Compile Include="..\..\Game\Player\Direction.cs" Link="GameLogic\Direction.cs" />
     <Compile Include="..\..\Game\Player\DirectionResolver.cs" Link="GameLogic\DirectionResolver.cs" />
+    <Compile Include="..\..\Game\Dialogue\IFlagStore.cs" Link="GameLogic\IFlagStore.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagSyntaxException.cs" Link="GameLogic\FlagSyntaxException.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagTokenizer.cs" Link="GameLogic\FlagTokenizer.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagCondition.cs" Link="GameLogic\FlagCondition.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagConditionParser.cs" Link="GameLogic\FlagConditionParser.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagEffect.cs" Link="GameLogic\FlagEffect.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagEffectParser.cs" Link="GameLogic\FlagEffectParser.cs" />
+    <Compile Include="..\..\Game\Dialogue\DialogueNames.cs" Link="GameLogic\DialogueNames.cs" />
+    <Compile Include="..\..\Game\Dialogue\Conversation.cs" Link="GameLogic\Conversation.cs" />
+    <Compile Include="..\..\Game\Dialogue\ConversationReader.cs" Link="GameLogic\ConversationReader.cs" />
+    <Compile Include="..\..\Game\Dialogue\DialogueRunner.cs" Link="GameLogic\DialogueRunner.cs" />
+    <Compile Include="..\..\Game\Dialogue\DialogueValidator.cs" Link="GameLogic\DialogueValidator.cs" />
+    <Compile Include="..\..\Game\Decisions\FlagCatalogue.cs" Link="GameLogic\FlagCatalogue.cs" />
+    <Compile Include="..\..\Game\Shared\Scripts\DataFileException.cs" Link="GameLogic\DataFileException.cs" />
+    <Compile Include="..\..\Game\Shared\Scripts\StrictJson.cs" Link="GameLogic\StrictJson.cs" />
   </ItemGroup>
 
 </Project>

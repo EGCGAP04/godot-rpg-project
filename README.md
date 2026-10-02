@@ -43,13 +43,13 @@ dotnet build --configuration Debug
 
 Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
-The rules that do not need the engine — combat resolution, the world/cycle progression, and movement direction — are covered by unit tests that run without it. The solution includes the test project, so from the same `Game/` folder:
+The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, and the dialogue format — are covered by unit tests that run without it. One of them checks every conversation in the project, so a broken one fails the build. The solution includes the test project, so from the same `Game/` folder:
 
 ```bash
 dotnet test "Godot RPG Project.sln" --configuration Debug
 ```
 
-CI runs this on every push and pull request, along with `dotnet format --verify-no-changes`, so a formatting mismatch fails the build too.
+CI runs this on every pull request into `main` and every push to it, along with `dotnet format --verify-no-changes`, so a formatting mismatch fails the build too.
 
 ## Project Structure
 
@@ -83,6 +83,28 @@ godot-rpg-project/
 │   │   ├── CombatResolver.cs (+.uid)   # engine-free, covered by tests
 │   │   └── combat.tscn                 # overlay scene, not a scene swap
 │   │
+│   ├── Decisions/
+│   │   ├── FlagCatalogue.cs (+.uid)       # engine-free: reads the catalogue of flags
+│   │   └── flags.json                     # every flag, with its type and lifetime
+│   │
+│   ├── Dialogue/
+│   │   ├── Conversations/                 # one JSON file per conversation
+│   │   │   ├── example_first_meeting.json # the format's reference example, in two parts
+│   │   │   └── example_second_meeting.json
+│   │   │
+│   │   ├── Conversation.cs (+.uid)        # engine-free: a conversation's nodes, lines and options
+│   │   ├── ConversationReader.cs (+.uid)  # engine-free: a conversation's JSON → Conversation
+│   │   ├── DialogueNames.cs (+.uid)       # the format's naming rules and reserved names
+│   │   ├── DialogueRunner.cs (+.uid)      # engine-free: walks a conversation, line by line and choice by choice
+│   │   ├── DialogueValidator.cs (+.uid)   # engine-free: checks every conversation against the catalogue
+│   │   ├── FlagCondition.cs (+.uid)       # engine-free: a condition as a tree, and its evaluation
+│   │   ├── FlagConditionParser.cs (+.uid) # engine-free: condition text → tree, by recursive descent
+│   │   ├── FlagEffect.cs (+.uid)          # engine-free: set, clear or add a flag
+│   │   ├── FlagEffectParser.cs (+.uid)    # engine-free: effect text → effect
+│   │   ├── FlagSyntaxException.cs (+.uid) # a malformed condition or effect, and its column
+│   │   ├── FlagTokenizer.cs (+.uid)       # engine-free: splits condition and effect text into tokens
+│   │   └── IFlagStore.cs (+.uid)          # where conditions read flags and effects write them
+│   │
 │   ├── Enemy/
 │   │   ├── Enemy.cs (+.uid)
 │   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding stats
@@ -96,7 +118,14 @@ godot-rpg-project/
 │   │   ├── Player.cs (+.uid)
 │   │   └── player.tscn
 │   │
-│   ├── Shared/                 # Fonts/ Scripts/ Theme/ — .gitkeep only so far
+│   ├── Shared/
+│   │   ├── Fonts/                         # .gitkeep only so far
+│   │   ├── Scripts/
+│   │   │   ├── DataFileException.cs (+.uid) # a malformed data file: which, where and what
+│   │   │   └── StrictJson.cs (+.uid)        # strict JSON reading shared by the data files
+│   │   │
+│   │   └── Theme/                         # .gitkeep only so far
+│   │
 │   ├── UI/
 │   │   ├── ScreenFade.cs (+.uid)       # shared fade, used by combat and transitions
 │   │   └── screen_fade.tscn
@@ -128,9 +157,21 @@ godot-rpg-project/
 ├── tests/                      # outside res:// on purpose — see CONVENTIONS.md
 │   └── Game.Tests/
 │       ├── CombatResolverTests.cs
+│       ├── ConversationReaderTests.cs
 │       ├── CycleProgressionTests.cs
+│       ├── DialogueNamesTests.cs
+│       ├── DialogueRunnerTests.cs
+│       ├── DialogueValidatorTests.cs # includes the test that validates every conversation
 │       ├── DirectionResolverTests.cs
+│       ├── FlagCatalogueTests.cs
+│       ├── FlagConditionParserTests.cs
+│       ├── FlagConditionTests.cs
+│       ├── FlagEffectParserTests.cs
+│       ├── FlagEffectTests.cs
+│       ├── FlagTokenizerTests.cs
 │       ├── Game.Tests.csproj
+│       ├── InMemoryFlagStore.cs    # stand-in for the decision registry
+│       ├── ProjectFiles.cs         # finds Game/ from inside a test run
 │       └── WorldUnlocksTests.cs
 │
 ├── .editorconfig
