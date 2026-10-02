@@ -4,6 +4,16 @@ using System.Linq;
 using System.Text.Json;
 
 /// <summary>
+/// A conversation file as found in the project: its path, which names it in messages, and
+/// its text. The game builds one from what <c>FileAccess</c> reads; the tests, from disk.
+/// </summary>
+public readonly record struct ConversationFile(string Path, string Json)
+{
+	/// <summary>The conversation's id: the file name without its extension.</summary>
+	public string Id => System.IO.Path.GetFileNameWithoutExtension(Path);
+}
+
+/// <summary>
 /// Reads one conversation from the text of its JSON file, or says where the file is
 /// wrong.
 /// </summary>
@@ -67,6 +77,10 @@ public static class ConversationReader
 
 		return new Conversation(id, nodes);
 	}
+
+	/// <summary>Reads a conversation file, taking the conversation's id from the file's name.</summary>
+	/// <exception cref="DataFileException">The file is not a well-formed conversation.</exception>
+	public static Conversation Read(ConversationFile file) => Read(file.Id, file.Json);
 
 	private static DialogueNode ReadNode(string id, string nodeId, JsonElement element)
 	{

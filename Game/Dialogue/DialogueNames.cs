@@ -1,9 +1,17 @@
+using System.Collections.Generic;
+
 /// <summary>
 /// The naming rules of the dialogue format in one place: what a valid id or name looks
 /// like, and the few names with a meaning of their own.
 /// </summary>
 public static class DialogueNames
 {
+	/// <summary>
+	/// Ids no conversation may take, because they begin localization keys that belong to
+	/// something else: the names of speakers, and the interface's own strings.
+	/// </summary>
+	public static readonly IReadOnlySet<string> ReservedConversationIds = new HashSet<string> { "speaker", "ui" };
+
 	/// <summary>The node every conversation begins at.</summary>
 	public const string Start = "start";
 

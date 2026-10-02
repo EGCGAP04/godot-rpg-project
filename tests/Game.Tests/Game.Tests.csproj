@@ -44,6 +44,7 @@
     <Compile Include="..\..\Game\Dialogue\Conversation.cs" Link="GameLogic\Conversation.cs" />
     <Compile Include="..\..\Game\Dialogue\ConversationReader.cs" Link="GameLogic\ConversationReader.cs" />
     <Compile Include="..\..\Game\Dialogue\DialogueRunner.cs" Link="GameLogic\DialogueRunner.cs" />
+    <Compile Include="..\..\Game\Dialogue\DialogueValidator.cs" Link="GameLogic\DialogueValidator.cs" />
     <Compile Include="..\..\Game\Decisions\FlagCatalogue.cs" Link="GameLogic\FlagCatalogue.cs" />
     <Compile Include="..\..\Game\Shared\Scripts\DataFileException.cs" Link="GameLogic\DataFileException.cs" />
     <Compile Include="..\..\Game\Shared\Scripts\StrictJson.cs" Link="GameLogic\StrictJson.cs" />
