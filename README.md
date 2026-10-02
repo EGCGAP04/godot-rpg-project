@@ -43,13 +43,13 @@ dotnet build --configuration Debug
 
 Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
-The rules that do not need the engine — combat resolution, the world/cycle progression, and movement direction — are covered by unit tests that run without it. The solution includes the test project, so from the same `Game/` folder:
+The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, and the dialogue format — are covered by unit tests that run without it. One of them checks every conversation in the project, so a broken one fails the build. The solution includes the test project, so from the same `Game/` folder:
 
 ```bash
 dotnet test "Godot RPG Project.sln" --configuration Debug
 ```
 
-CI runs this on every push and pull request, along with `dotnet format --verify-no-changes`, so a formatting mismatch fails the build too.
+CI runs this on every pull request into `main` and every push to it, along with `dotnet format --verify-no-changes`, so a formatting mismatch fails the build too.
 
 ## Project Structure
 

@@ -14,6 +14,8 @@ Game/ (res://)
 ├── Enemy/           # Enemy scenes and stats, contact detection on the map
 ├── Combat/          # Turn-based combat system: turn order, actions
 ├── World/           # Exploration maps: tilemaps, collisions, transitions
+├── Dialogue/        # Branching dialogue: the conversation files, their reader, runner and validator
+├── Decisions/       # The flag catalogue; later, the registry of decisions itself
 ├── UI/              # Menus, HUD, dialogue boxes, the shared screen fade
 ├── Shared/
 │   ├── Fonts/        # Shared fonts used across the project
@@ -28,7 +30,7 @@ Unit tests are the one piece of C# that lives **outside** `Game/`, in `tests/Gam
 
 ## Code Formatting
 
-`.editorconfig` at the repository root is the single source of truth for whitespace: UTF-8, LF line endings, a final newline, no trailing whitespace, and **tabs** for `.cs` files, matching what Godot's own C# script templates emit.
+`.editorconfig` at the repository root is the single source of truth for whitespace: UTF-8, LF line endings, a final newline, no trailing whitespace, and **tabs** for `.cs` files, matching what Godot's own C# script templates emit. The JSON data files use tabs too, though for them the rule only guides the editor: `dotnet format` checks C# alone.
 
 These are enforced, not merely documented: CI runs `dotnet format --verify-no-changes` over the solution and fails the `build` check on any file that does not match. The check covers both projects, `Game/` and `tests/Game.Tests/`. Run it locally before pushing:
 
@@ -45,6 +47,7 @@ Drop `--verify-no-changes` to have it apply the fixes instead of just reporting 
 - **C# scripts and classes:** `PascalCase`
 - **Scene tree nodes:** `PascalCase`
 - **C# fields/properties:** standard C# conventions (`PascalCase` for public properties, `_camelCase` for private fields)
+- **Data files (`.json`):** `snake_case`, like scenes. A conversation's file name is its id (see [Dialogue Format](#dialogue-format))
 
 ## Node Communication Pattern
 
@@ -119,9 +122,88 @@ What works is refusing the trigger: `Main` ignores combat requests while a trans
 
 **Do not "simplify" this by removing the guards and relying on ordering.** It has been tried.
 
+## Dialogue Format
+
+Branching dialogue is written in a JSON format of the project's own. Godot's localization system handles text, but has no notion of which line follows which or of what unlocks a branch, so that structure needs a format. Ink and Yarn Spinner were the alternatives, and both would have brought validation and editor tooling for free; this is a learning project, and designing the format teaches more here than integrating one. The cost is that the tooling has to be built. The validator below is where most of it is paid: with around a hundred endings planned, a dangling jump or a misspelt flag has to fail CI, not turn up in play. Both tools remain references — Ink for flow control, Yarn Spinner for line ids and localization.
+
+**The JSON holds structure and keys, never text.** The text of every line lives in the localization tables, found by its key.
+
+### A conversation
+
+One file per conversation, anywhere under `Dialogue/Conversations/`. The file name is the conversation's id, which must be unique across the project. `example_first_meeting.json` and `example_second_meeting.json` are the format's reference example: between them they use every feature it has.
+
+```json
+{
+	"format": 1,
+	"nodes": {
+		"start": {
+			"lines": [
+				{ "speaker": "example_stranger", "line": "ask" }
+			],
+			"choices": [
+				{ "option": "help", "do": ["set example.promised_help"], "next": "thanks" },
+				{ "option": "give_key", "if": "example.has_key", "next": "thanks" },
+				{ "option": "refuse", "next": "END" }
+			]
+		},
+		"thanks": {
+			"lines": [
+				{ "speaker": "example_stranger", "line": "thanks" }
+			],
+			"next": "END"
+		}
+	}
+}
+```
+
+- A conversation is a set of **nodes** and begins at `start`. A node is a block of **lines** read in order, ending in exactly one of a **choice** (`choices`) or a **jump** (`next`, to another node or to `END`).
+- Every line names its `speaker`: a character's id, or `narrator` for narration, which the dialogue box shows with no name.
+- Lines and options can carry a condition (`if`) and effects (`do`). A line whose condition does not hold is skipped; an option whose condition does not hold is not offered.
+- Ids and names are lowercase words: letters, digits and underscores, starting with a letter. `END` is the only name in capitals, because it is not a node.
+- `format` is the version of the format, so a later change can be migrated by a script that knows what it starts from.
+
+### Keys
+
+The key of a line or an option is its conversation, its node and its own name: `example_first_meeting.start.ask`. A speaker's name is `speaker.<id>`, which is why no conversation may be called `speaker` — nor `ui`, kept for the interface's own strings. Sorted, a table groups by conversation and then by node, which keeps it navigable at hundreds of lines. Renaming a node, or moving a line to another one, changes the key on purpose: the old text is left behind where it can be seen, instead of silently showing on the wrong line, as it would with keys made from line positions.
+
+### Conditions and effects
+
+Conditions and effects are written in a small language over flags, not as general expressions:
+
+```text
+example.has_key                       a boolean flag is set
+not example.met_before
+example.times_met >= 1                a counter compared with a number: == != < <= > >=
+example.promised_help and not (example.key_returned or example.has_key)
+
+set example.promised_help             effects set or clear a boolean flag,
+clear example.has_key                 or add to a counter (a negative amount subtracts)
+add example.times_met 1
+```
+
+`not` applies before `and` and `and` before `or`, as in C#, and parentheses group first. `and`, `or`, `not`, `set`, `clear` and `add` are reserved, so no name can use them.
+
+`FlagTokenizer` splits the text into tokens. `FlagConditionParser` builds a `FlagCondition` tree from them by recursive descent: one method per rule of the grammar, each asking the rule below it for its operands, which is where the precedence comes from. `FlagEffectParser` checks the three fixed shapes of an effect. Every error names the column where it starts.
+
+### Flags
+
+Every flag is declared once, in `Decisions/flags.json`, with its type — `bool`, which starts `false`, or `counter`, which starts at 0 — its lifetime — `cycle`, `run` or `persistent` — and optionally a description for the debug tooling. A flag that is not declared does not exist.
+
+A flag's name is a **group and a fact**, joined by a dot. The group says what the flag is about: usually the character it matters to, under the same id the character speaks with, and otherwise a place or a game system, such as `world.` or `combat.`. The fact says what is true once the flag is set, in the positive — `promised_help`, not `not_promised` — and a counter is named for what it counts. Lifetime and type stay out of the name, since the catalogue holds them, and so do cycle and world: a flag is written in one place and read in many.
+
+**A choice is remembered only through the flags its option sets.** Nothing records choices on its own, so everything the game remembers is a declared flag, with a lifetime someone chose. The reference example shows the pattern, including a later answer replacing an earlier one with `clear`.
+
+### Reading, running and validating
+
+- **`ConversationReader`** reads one file and checks that it is well formed: the right properties with the right types, valid names, conditions and effects that parse, a `start` node, and jumps to nodes that exist. Every JSON object is read property by property, through `StrictJson`, instead of being deserialized. JSON allows a repeated property and `JsonDocument` accepts one without complaint (verified), while a deserializer would quietly keep one of the two. The reader takes the file's text, not a path: the game reads files through `FileAccess`, which sees inside the packed `res://` of an export, and the tests read them from disk.
+- **`DialogueRunner`** walks one conversation a step at a time: a line, a choice, or the end. It is passive — whoever drives it asks what to show and calls `Advance` or `Choose` — and `DialogueRunner.Start` already applies the first line's effects. Conditions are evaluated when they are reached, so the effects of earlier lines count; a line's effects apply when it is shown, and an option's when it is chosen.
+- **`DialogueValidator`** checks every conversation against the catalogue and against each other, and reports every problem instead of the first: flags that are not declared or are used with the wrong type, ids that repeat or are reserved, nodes nothing leads to, and anywhere the player could be left stuck. Every choice must offer an option with no condition, and from every node there must be a way to `END` that depends on none. That is strict on purpose: two options with opposite conditions would also always leave a way out, and are still rejected. `EveryConversationInTheProject_IsValid` runs it over `Dialogue/Conversations/`, so a broken conversation fails the `build` check.
+
+Conditions read flags and effects write them through `IFlagStore`, which the decision registry will implement for the game. The tests use an in-memory stand-in that rejects any name it was not given, as the registry will.
+
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`. The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, and the whole dialogue format in `Dialogue/`. The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
