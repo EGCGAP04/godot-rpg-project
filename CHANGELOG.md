@@ -18,16 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The format's reference example, a conversation in two parts that uses every feature of the format
 - `StrictJson` and `DataFileException` in `Shared/Scripts/`, shared by the readers of the game's JSON data files
 - A Dialogue Format section in `docs/CONVENTIONS.md`, including why the format is custom JSON rather than Ink or Yarn Spinner
+- `SECURITY.md`, which asks for security problems to be reported privately, through GitHub's private vulnerability reporting, rather than in a public Issue
+- CodeQL code scanning in GitHub's default setup, which analyses the C# code and the workflows on every pull request into `main`, every push to it and once a week, and reports what it finds as code scanning alerts without failing the build
+- A wiki, whose Home page gathers links to every part of the documentation and to the milestones and releases
 
 ### Changed
 
 - `.gitignore` no longer lists two local planning documents that now live outside the working tree, and no longer lists `.mono/` twice
 - `.editorconfig` indents JSON files with tabs
+- Dependabot groups its updates into one pull request a week for the test project's packages and one for the workflow actions, instead of one per package: `main` only merges a branch that is up to date with it, so each merge forced every other Dependabot pull request to be updated and rerun
+- Releases are immutable from the next one on: once a release is published, its tag can no longer be moved or deleted
+- Workflows can only use actions created by GitHub, the only ones CI uses, so adding a third-party action now takes a deliberate change to the repository settings
+- Auto-merge is enabled: a pull request can be set to merge itself once its checks pass
+- Test dependencies bumped by Dependabot: `Microsoft.NET.Test.Sdk` 18.10.1 -> 18.11.0, `xunit.runner.visualstudio` 4.0.0 -> 4.0.1
 
 ### Fixed
 
 - README said CI runs on every push; it runs on pull requests into `main` and on pushes to `main`
-
 - The Issue forms' milestone dropdown offered only M0–M4, three of them under names that no longer matched GitHub, so the feature form's required field could not name the milestone being worked on; every form now lists the open milestones under their exact titles
 - README's Project Structure described `DirectionResolver` as "last direction pressed wins"; the strongest held direction wins, and the most recent press only breaks ties
 

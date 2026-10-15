@@ -13,6 +13,13 @@ updates:
       - "chore"
     commit-message:
       prefix: "chore"
+    # One pull request for all of them. main only merges a branch that is up to
+    # date with it, so with one pull request per package, merging the first one
+    # forces every other one to be updated and its CI to run again.
+    groups:
+      test-dependencies:
+        patterns:
+          - "*"
 
   # The game project pins Godot.NET.Sdk through the Sdk attribute rather than a
   # PackageReference. Dependabot may or may not act on that; it costs nothing to
@@ -34,3 +41,8 @@ updates:
       - "chore"
     commit-message:
       prefix: "chore"
+    # One pull request for all of them, for the same reason as the test packages.
+    groups:
+      actions:
+        patterns:
+          - "*"

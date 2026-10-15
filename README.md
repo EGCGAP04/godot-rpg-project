@@ -49,11 +49,11 @@ The rules that do not need the engine — combat resolution, the world/cycle pro
 dotnet test "Godot RPG Project.sln" --configuration Debug
 ```
 
-CI runs this on every pull request into `main` and every push to it, along with `dotnet format --verify-no-changes`, so a formatting mismatch fails the build too.
+CI runs this on every pull request into `main` and every push to it, along with `dotnet format --verify-no-changes`, so a formatting mismatch fails the build too. CodeQL also scans the C# code and the workflows on those same events and once a week, and reports what it finds as code scanning alerts rather than failing the build.
 
 ## Project Structure
 
-The project follows a **feature-based** folder structure: each system has its own folder containing its scenes, scripts, and assets together, instead of splitting by file type. The Godot project itself lives inside `Game/`, keeping the repository root limited to project metadata (README, LICENSE, CHANGELOG, docs, GitHub config).
+The project follows a **feature-based** folder structure: each system has its own folder containing its scenes, scripts, and assets together, instead of splitting by file type. The Godot project itself lives inside `Game/`, keeping the repository root limited to project metadata (README, LICENSE, CHANGELOG, security policy, docs, GitHub config).
 
 ```text
 godot-rpg-project/
@@ -179,16 +179,21 @@ godot-rpg-project/
 ├── .gitignore
 ├── CHANGELOG.md
 ├── LICENSE
-└── README.md
+├── README.md
+└── SECURITY.md
 ```
 
 `.cs (+.uid)` means Godot's generated `.cs.uid` file sits next to the script and is committed with it.
 
-For architectural conventions (naming, node communication patterns, scene structure), see [docs/CONVENTIONS.md](docs/CONVENTIONS.md).
+For architectural conventions (naming, node communication patterns, scene structure), see [docs/CONVENTIONS.md](docs/CONVENTIONS.md). The [wiki](https://github.com/EGCGAP04/godot-rpg-project/wiki) gathers, on one page, links to every part of the documentation and to the milestones and releases.
 
 ## Screenshots
 
 _(Will be added once there's playable content)_
+
+## Security
+
+Please don't report a vulnerability in a public Issue: [SECURITY.md](SECURITY.md) explains how to report it privately.
 
 ## License
 
