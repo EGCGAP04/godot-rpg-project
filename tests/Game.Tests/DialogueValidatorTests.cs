@@ -34,16 +34,21 @@ public class DialogueValidatorTests
 	{
 		// The test that makes a broken conversation fail CI. It refuses to pass by finding
 		// nothing, so a wrong folder cannot look like a valid project.
-		string folder = Path.Combine(ProjectFiles.GameDirectory, "Dialogue", "Conversations");
-		Assert.True(Directory.Exists(folder), $"There is no conversations folder at {folder}.");
-
-		ConversationFile[] files = Directory.EnumerateFiles(folder, "*.json", SearchOption.AllDirectories)
-			.OrderBy(path => path, StringComparer.Ordinal)
-			.Select(path => new ConversationFile(Path.GetRelativePath(ProjectFiles.GameDirectory, path), File.ReadAllText(path)))
-			.ToArray();
+		ConversationFile[] files = ProjectFiles.ConversationFiles();
 
 		Assert.NotEmpty(files);
 		Assert.Empty(DialogueValidator.Validate(ProjectFiles.ReadText("Decisions", "flags.json"), files));
+	}
+
+	[Fact]
+	public void EveryConversationInTheProject_HasItsText()
+	{
+		ConversationFile[] files = ProjectFiles.ConversationFiles();
+		TranslationFile[] tables = ProjectFiles.TranslationFiles();
+
+		Assert.NotEmpty(files);
+		Assert.NotEmpty(tables);
+		Assert.Empty(DialogueValidator.ValidateText(files, tables));
 	}
 
 	[Fact]
@@ -162,12 +167,119 @@ public class DialogueValidatorTests
 			Assert.Single(problems));
 	}
 
+	// Text
+
+	/// <summary>
+	/// The tables <see cref="Valid"/> needs, in both languages: its text beside it, and its
+	/// speaker's name.
+	/// </summary>
+	private static List<TranslationFile> TablesForValid() => new()
+	{
+		PoText.File("Dialogue/Conversations/test.en.po", ("test.start.hi", "Hi")),
+		PoText.File("Dialogue/Conversations/test.es.po", ("test.start.hi", "Hola")),
+		PoText.File("Localization/speaker.en.po", ("speaker.guide", "Guide")),
+		PoText.File("Localization/speaker.es.po", ("speaker.guide", "Guía")),
+	};
+
+	private static IReadOnlyList<string> ValidateText(IEnumerable<TranslationFile> tables, params ConversationFile[] files) =>
+		DialogueValidator.ValidateText(files, tables);
+
+	[Fact]
+	public void AConversationWithAllItsText_HasNoProblems()
+	{
+		Assert.Empty(ValidateText(TablesForValid(), Source("test", Valid)));
+	}
+
 	[Theory]
 	[InlineData("speaker")]
 	[InlineData("ui")]
-	public void AReservedId_IsReported(string id)
+	public void AConversationNamedLikeASharedTable_IsReported(string id)
 	{
-		Assert.Contains("this id is reserved", Assert.Single(Validate(Source(id, Valid))));
+		List<TranslationFile> tables = TablesForValid();
+		tables.Add(PoText.File("Localization/ui.en.po", ("ui.a", "A")));
+
+		Assert.Equal(
+			$"{id}: this id is the name of the tables in Localization/, which begin keys that are not a conversation's, so 'Dialogue/Conversations/{id}.json' needs another name.",
+			ValidateText(tables, Source(id, Valid)).First());
+	}
+
+	[Fact]
+	public void AConversationWithNoTableBesideIt_IsReported()
+	{
+		List<TranslationFile> tables = TablesForValid();
+		tables.RemoveAll(table => table.Name == "test");
+		tables.Add(PoText.File("Dialogue/Conversations/Real/test.en.po", ("test.start.hi", "Hi")));
+
+		Assert.Equal(
+			new[]
+			{
+				"test: there is no table beside 'Dialogue/Conversations/test.json'; its text goes in test.<locale>.po, in the same folder.",
+				"Dialogue/Conversations/Real/test: a table outside Localization/ holds a conversation's text, and there is no conversation called 'test' beside it.",
+			},
+			ValidateText(tables, Source("test", Valid)));
+	}
+
+	[Fact]
+	public void ALineOrOptionWithNoText_IsReported()
+	{
+		var problems = ValidateText(TablesForValid(), Source("test", """
+			{ 'format': 1, 'nodes': { 'start': {
+				'lines': [ { 'speaker': 'guide', 'line': 'hi' }, { 'speaker': 'guide', 'line': 'ask' } ],
+				'choices': [ { 'option': 'leave', 'next': 'END' } ] } } }
+			"""));
+
+		Assert.Equal(
+			new[]
+			{
+				"test: 'test.start.ask' has no text in Dialogue/Conversations/test.en.po.",
+				"test: 'test.start.leave' has no text in Dialogue/Conversations/test.en.po.",
+			},
+			problems);
+	}
+
+	[Fact]
+	public void ATextNoLineOrOptionUses_IsReported()
+	{
+		List<TranslationFile> tables = TablesForValid();
+		tables[0] = PoText.File("Dialogue/Conversations/test.en.po", ("test.start.hi", "Hi"), ("test.old_node.hi", "Hi"));
+
+		Assert.Equal(
+			"Dialogue/Conversations/test.en.po: line 7: 'test.old_node.hi' is not the key of any line or option of test.",
+			Assert.Single(ValidateText(tables, Source("test", Valid))));
+	}
+
+	[Fact]
+	public void ASpeakerWithNoName_IsReported_ButNarrationNeedsNone()
+	{
+		List<TranslationFile> tables = TablesForValid();
+		tables[0] = PoText.File("Dialogue/Conversations/test.en.po", ("test.start.hi", "Hi"), ("test.start.typo", "Hm"), ("test.start.told", "It ends."));
+
+		var problems = ValidateText(tables, Source("test", """
+			{ 'format': 1, 'nodes': { 'start': { 'lines': [
+				{ 'speaker': 'guide', 'line': 'hi' },
+				{ 'speaker': 'gide', 'line': 'typo' },
+				{ 'speaker': 'narrator', 'line': 'told' } ],
+				'next': 'END' } } }
+			"""));
+
+		Assert.Equal("test: the speaker 'gide' has no name: 'speaker.gide' is not in Localization/speaker.en.po.", Assert.Single(problems));
+	}
+
+	[Fact]
+	public void WithNoSpeakerTableAtAll_EverySpeakerIsReported()
+	{
+		List<TranslationFile> tables = TablesForValid();
+		tables.RemoveAll(table => table.Name == LocalizationNames.SpeakerTable);
+
+		Assert.Equal(
+			"test: the speaker 'guide' has no name: 'speaker.guide' is not in Localization/speaker.en.po.",
+			Assert.Single(ValidateText(tables, Source("test", Valid))));
+	}
+
+	[Fact]
+	public void AConversationThatCannotBeRead_IsLeftToValidate()
+	{
+		Assert.Empty(ValidateText(TablesForValid(), Source("test", "{ 'format': 2, 'nodes': {} }")));
 	}
 
 	// Reading
@@ -195,7 +307,7 @@ public class DialogueValidatorTests
 	{
 		var problems = Validate(
 			Source("test", "{ 'format': 1, 'nodes': { 'start': { 'lines': [ { 'speaker': 'guide', 'line': 'hi', 'if': 'a.nope' } ], 'next': 'END' }, 'orphan': { 'next': 'END' } } }"),
-			Source("ui", Valid));
+			Source("broken", "{ 'format': 2, 'nodes': {} }"));
 
 		Assert.Equal(3, problems.Count);
 	}

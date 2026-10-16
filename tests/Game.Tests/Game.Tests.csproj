@@ -51,6 +51,8 @@
     <Compile Include="..\..\Game\Localization\TranslationTable.cs" Link="GameLogic\TranslationTable.cs" />
     <Compile Include="..\..\Game\Localization\TranslationTableReader.cs" Link="GameLogic\TranslationTableReader.cs" />
     <Compile Include="..\..\Game\Localization\TextTemplate.cs" Link="GameLogic\TextTemplate.cs" />
+    <Compile Include="..\..\Game\Localization\LocalizationNames.cs" Link="GameLogic\LocalizationNames.cs" />
+    <Compile Include="..\..\Game\Localization\LocalizationValidator.cs" Link="GameLogic\LocalizationValidator.cs" />
   </ItemGroup>
 
 </Project>

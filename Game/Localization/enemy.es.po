@@ -1,0 +1,10 @@
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "enemy.weak"
+msgstr "Enemigo"
+
+msgid "enemy.strong"
+msgstr "Enemigo fuerte"

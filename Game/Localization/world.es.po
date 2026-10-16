@@ -1,0 +1,13 @@
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "world.real"
+msgstr "Real"
+
+msgid "world.fantasy"
+msgstr "Fantasía"
+
+msgid "world.nightmare"
+msgstr "Pesadilla"

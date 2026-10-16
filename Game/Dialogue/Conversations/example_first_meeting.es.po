@@ -1,0 +1,47 @@
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "example_first_meeting.start.greet"
+msgstr "¡Ah! Hola."
+
+msgid "example_first_meeting.start.greet_familiar"
+msgstr "¿Nos conocemos? Tu cara me suena."
+
+msgid "example_first_meeting.start.greet_again"
+msgstr "Ah, eres tú otra vez."
+
+msgid "example_first_meeting.start.lost_key"
+msgstr "Perdí mi llave por aquí cerca."
+
+msgid "example_first_meeting.start.ask"
+msgstr "¿Me ayudas a encontrarla?"
+
+#. An option: the player's answer.
+msgid "example_first_meeting.start.help"
+msgstr "La buscaré."
+
+#. An option: the player's answer.
+msgid "example_first_meeting.start.refuse"
+msgstr "Perdón, ahora no puedo."
+
+#. An option, shown only if the player has the key.
+msgid "example_first_meeting.start.give_key"
+msgstr "¿Es esta?"
+
+msgid "example_first_meeting.thanks.will_wait"
+msgstr "¡Gracias! Te espero aquí."
+
+msgid "example_first_meeting.shrug.never_mind"
+msgstr "Ah. Bueno, no importa."
+
+#. Narration: shown without a name.
+msgid "example_first_meeting.relief.hand_over"
+msgstr "Le das la llave."
+
+msgid "example_first_meeting.relief.relieved"
+msgstr "¡Es esa! Muchas gracias."
+
+msgid "example_first_meeting.farewell.bye"
+msgstr "Nos vemos."

@@ -3,6 +3,33 @@ using System.Collections.Generic;
 using System.Text;
 
 /// <summary>
+/// A translation table file as found in the project: its path inside <c>Game/</c>, which
+/// names it in messages, and its text. The name of the file says which table it is and in
+/// which language: <c>Localization/ui.es.po</c> is the table <c>ui</c>, in Spanish.
+/// </summary>
+public readonly record struct TranslationFile(string Path, string Text)
+{
+	/// <summary>The folder the file is in, with forward slashes, such as <c>Localization</c>.</summary>
+	public string Folder => (System.IO.Path.GetDirectoryName(Path) ?? "").Replace('\\', '/');
+
+	/// <summary>
+	/// The table's name: the file name up to its first dot. Every key in the table starts
+	/// with it.
+	/// </summary>
+	public string Name => System.IO.Path.GetFileName(Path).Split('.')[0];
+
+	/// <summary>The language in the file name: what sits between the name and <c>.po</c>.</summary>
+	public string Locale
+	{
+		get
+		{
+			string[] parts = System.IO.Path.GetFileName(Path).Split('.');
+			return parts.Length == 3 ? parts[1] : "";
+		}
+	}
+}
+
+/// <summary>
 /// Reads one translation table from the text of its gettext <c>.po</c> file, or says where
 /// the file is wrong.
 /// </summary>
@@ -47,6 +74,10 @@ using System.Text;
 public static class TranslationTableReader
 {
 	private static readonly char[] Whitespace = { ' ', '\t' };
+
+	/// <summary>Reads a table file found in the project, named in messages by its path.</summary>
+	/// <exception cref="DataFileException">The file is not a table this game reads.</exception>
+	public static TranslationTable Read(TranslationFile file) => Read(file.Path, file.Text);
 
 	/// <param name="file">The file, as messages should name it.</param>
 	/// <param name="text">The text of the file.</param>
