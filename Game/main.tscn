@@ -19,6 +19,7 @@ NightmareWorldScene = ExtResource("5_nightmare")
 layer = 0
 
 [node name="WorldLabel" type="Label" parent="Hud" unique_id=942579110]
+auto_translate_mode = 2
 offset_left = 8.0
 offset_top = 4.0
 offset_right = 320.0

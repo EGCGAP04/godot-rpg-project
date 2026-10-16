@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 PlayerStats="*res://Autoloads/PlayerStats.cs"
 GameState="*res://Autoloads/GameState.cs"
+LocaleSwitchKey="*res://Localization/LocaleSwitchKey.cs"
 
 [display]
 

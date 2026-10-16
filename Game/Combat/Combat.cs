@@ -54,7 +54,7 @@ public partial class Combat : CanvasLayer
 		_attackButton = GetNode<Button>("AttackButton");
 		_fade = GetNode<ScreenFade>("ScreenFade");
 
-		GD.Print($"Combat started. Player {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp} HP vs {EnemyData.DisplayName} {_resolver.EnemyHp}/{EnemyData.MaxHp} HP");
+		GD.Print($"Combat started. Player {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp} HP vs {EnemyData.NameKey} {_resolver.EnemyHp}/{EnemyData.MaxHp} HP");
 		UpdateHpLabels();
 
 		// The overlay starts fully black so the world map is never cut away
@@ -94,12 +94,12 @@ public partial class Combat : CanvasLayer
 	private void PlayerAttack()
 	{
 		CombatResolver.Outcome outcome = _resolver.PlayerAttack();
-		GD.Print($"Player attacks for {_resolver.PlayerAttackPower}. {EnemyData.DisplayName} HP: {_resolver.EnemyHp}/{EnemyData.MaxHp}");
+		GD.Print($"Player attacks for {_resolver.PlayerAttackPower}. {EnemyData.NameKey} HP: {_resolver.EnemyHp}/{EnemyData.MaxHp}");
 		UpdateHpLabels();
 
 		if (outcome == CombatResolver.Outcome.PlayerWon)
 		{
-			EndCombat("Player wins.", true);
+			EndCombat(true);
 			return;
 		}
 
@@ -120,24 +120,27 @@ public partial class Combat : CanvasLayer
 		// The resolver owns the fight's numbers; the Autoload is where they have to
 		// end up, since it is what carries the player's HP back out to the map.
 		PlayerStats.Instance.CurrentHp = _resolver.PlayerHp;
-		GD.Print($"{EnemyData.DisplayName} attacks for {_resolver.EnemyAttackPower}. Player HP: {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp}");
+		GD.Print($"{EnemyData.NameKey} attacks for {_resolver.EnemyAttackPower}. Player HP: {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp}");
 		UpdateHpLabels();
 
 		if (outcome == CombatResolver.Outcome.PlayerLost)
 		{
-			EndCombat("Player loses.", false);
+			EndCombat(false);
 			return;
 		}
 
 		StartPlayerTurn();
 	}
 
-	private void EndCombat(string result, bool playerWon)
+	private void EndCombat(bool playerWon)
 	{
 		_state = TurnState.Finished;
 		_attackButton.Disabled = true;
-		_resultLabel.Text = result;
-		GD.Print($"Combat over. {result}");
+
+		// A key, not text: the label translates it itself, and again if the language
+		// changes while the result is on screen.
+		_resultLabel.Text = playerWon ? "ui.combat.player_won" : "ui.combat.player_lost";
+		GD.Print($"Combat over. {(playerWon ? "Player wins." : "Player loses.")}");
 
 		// Held on screen briefly rather than dismissed with confirm: the player is
 		// already mashing confirm to attack and would skip the result instantly.
@@ -157,9 +160,22 @@ public partial class Combat : CanvasLayer
 		_fade.FadeTo(alpha, onFinished);
 	}
 
+	public override void _Notification(int what)
+	{
+		// The HP labels are built here rather than translated by Godot, so a change of
+		// language has to rebuild them. It can arrive before _Ready has found them.
+		if (what == NotificationTranslationChanged && _resolver != null)
+			UpdateHpLabels();
+	}
+
+	// Built from a translated template, so these two labels have auto-translation off in
+	// combat.tscn: Godot would otherwise look the finished text up as a key again.
 	private void UpdateHpLabels()
 	{
-		_enemyHpLabel.Text = $"{EnemyData.DisplayName}   {_resolver.EnemyHp}/{EnemyData.MaxHp}";
-		_playerHpLabel.Text = $"Player   {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp}";
+		_enemyHpLabel.Text = HpText(Tr(EnemyData.NameKey), _resolver.EnemyHp, EnemyData.MaxHp);
+		_playerHpLabel.Text = HpText(Tr("ui.combat.player"), _resolver.PlayerHp, PlayerStats.Instance.MaxHp);
 	}
+
+	private string HpText(string name, int hp, int maxHp) =>
+		TextTemplate.Fill(Tr("ui.combat.hp"), ("name", name), ("hp", hp), ("max_hp", maxHp));
 }
