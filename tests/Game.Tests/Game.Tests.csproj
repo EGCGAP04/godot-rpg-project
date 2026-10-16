@@ -50,6 +50,7 @@
     <Compile Include="..\..\Game\Shared\Scripts\StrictJson.cs" Link="GameLogic\StrictJson.cs" />
     <Compile Include="..\..\Game\Localization\TranslationTable.cs" Link="GameLogic\TranslationTable.cs" />
     <Compile Include="..\..\Game\Localization\TranslationTableReader.cs" Link="GameLogic\TranslationTableReader.cs" />
+    <Compile Include="..\..\Game\Localization\TextTemplate.cs" Link="GameLogic\TextTemplate.cs" />
   </ItemGroup>
 
 </Project>
