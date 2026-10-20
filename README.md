@@ -43,7 +43,7 @@ dotnet build --configuration Debug
 
 Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
-The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, and the dialogue format — are covered by unit tests that run without it. One of them checks every conversation in the project, so a broken one fails the build. The solution includes the test project, so from the same `Game/` folder:
+The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format and the translation tables — are covered by unit tests that run without it. Some of them check every conversation and every translation table in the project, so a broken conversation or a missing translation fails the build. The solution includes the test project, so from the same `Game/` folder:
 
 ```bash
 dotnet test "Godot RPG Project.sln" --configuration Debug
@@ -88,15 +88,19 @@ godot-rpg-project/
 │   │   └── flags.json                     # every flag, with its type and lifetime
 │   │
 │   ├── Dialogue/
-│   │   ├── Conversations/                 # one JSON file per conversation
+│   │   ├── Conversations/                 # one JSON file per conversation, its text beside it
+│   │   │   ├── example_first_meeting.en.po # its text, one table per language
+│   │   │   ├── example_first_meeting.es.po
 │   │   │   ├── example_first_meeting.json # the format's reference example, in two parts
+│   │   │   ├── example_second_meeting.en.po
+│   │   │   ├── example_second_meeting.es.po
 │   │   │   └── example_second_meeting.json
 │   │   │
 │   │   ├── Conversation.cs (+.uid)        # engine-free: a conversation's nodes, lines and options
 │   │   ├── ConversationReader.cs (+.uid)  # engine-free: a conversation's JSON → Conversation
-│   │   ├── DialogueNames.cs (+.uid)       # the format's naming rules and reserved names
+│   │   ├── DialogueNames.cs (+.uid)       # the format's naming rules and special names
 │   │   ├── DialogueRunner.cs (+.uid)      # engine-free: walks a conversation, line by line and choice by choice
-│   │   ├── DialogueValidator.cs (+.uid)   # engine-free: checks every conversation against the catalogue
+│   │   ├── DialogueValidator.cs (+.uid)   # engine-free: checks every conversation against the catalogue and its text
 │   │   ├── FlagCondition.cs (+.uid)       # engine-free: a condition as a tree, and its evaluation
 │   │   ├── FlagConditionParser.cs (+.uid) # engine-free: condition text → tree, by recursive descent
 │   │   ├── FlagEffect.cs (+.uid)          # engine-free: set, clear or add a flag
@@ -107,10 +111,26 @@ godot-rpg-project/
 │   │
 │   ├── Enemy/
 │   │   ├── Enemy.cs (+.uid)
-│   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding stats
+│   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding stats and the name's key
 │   │   ├── enemy.tscn
 │   │   ├── strong_enemy.tres           # 40 HP, 7 atk — the player loses
 │   │   └── weak_enemy.tres             # 10 HP, 3 atk — the player wins
+│   │
+│   ├── Localization/                      # the tables of no single conversation, one per kind of key
+│   │   ├── LocaleSwitchKey.cs (+.uid)     # temporary: F2 switches the language, until #75
+│   │   ├── LocalizationNames.cs (+.uid)   # the languages and how a table's file is named
+│   │   ├── LocalizationValidator.cs (+.uid) # engine-free: checks every table and its registration
+│   │   ├── TextTemplate.cs (+.uid)        # engine-free: fills a text's {named} placeholders
+│   │   ├── TranslationTable.cs (+.uid)    # engine-free: one table's keys and texts
+│   │   ├── TranslationTableReader.cs (+.uid) # engine-free: a .po file → TranslationTable
+│   │   ├── enemy.en.po                    # enemies' names
+│   │   ├── enemy.es.po
+│   │   ├── speaker.en.po                  # the names of who speaks in conversations
+│   │   ├── speaker.es.po
+│   │   ├── ui.en.po                       # the interface's text
+│   │   ├── ui.es.po
+│   │   ├── world.en.po                    # the worlds' names
+│   │   └── world.es.po
 │   │
 │   ├── Player/
 │   │   ├── Direction.cs (+.uid)
@@ -149,7 +169,7 @@ godot-rpg-project/
 │   ├── Main.cs (+.uid)         # coordinates worlds, the player and combat
 │   ├── icon.svg (+.import)
 │   ├── main.tscn               # entry point scene
-│   └── project.godot           # autoloads, input map, rendering
+│   └── project.godot           # autoloads, input map, rendering, translation tables
 │
 ├── docs/
 │   └── CONVENTIONS.md
@@ -161,7 +181,7 @@ godot-rpg-project/
 │       ├── CycleProgressionTests.cs
 │       ├── DialogueNamesTests.cs
 │       ├── DialogueRunnerTests.cs
-│       ├── DialogueValidatorTests.cs # includes the test that validates every conversation
+│       ├── DialogueValidatorTests.cs # includes the tests that check every conversation and its text
 │       ├── DirectionResolverTests.cs
 │       ├── FlagCatalogueTests.cs
 │       ├── FlagConditionParserTests.cs
@@ -170,8 +190,13 @@ godot-rpg-project/
 │       ├── FlagEffectTests.cs
 │       ├── FlagTokenizerTests.cs
 │       ├── Game.Tests.csproj
+│       ├── GameKeysTests.cs        # every key the game's code and scenes name has its text
 │       ├── InMemoryFlagStore.cs    # stand-in for the decision registry
-│       ├── ProjectFiles.cs         # finds Game/ from inside a test run
+│       ├── LocalizationValidatorTests.cs # includes the test that checks every table
+│       ├── PoText.cs               # writes small .po tables for tests
+│       ├── ProjectFiles.cs         # finds Game/ and its data files from inside a test run
+│       ├── TextTemplateTests.cs
+│       ├── TranslationTableReaderTests.cs
 │       └── WorldUnlocksTests.cs
 │
 ├── .editorconfig

@@ -8,7 +8,7 @@ The project follows a **feature-based** structure: each system has its own folde
 
 ```text
 Game/ (res://)
-├── project.godot    # Project settings: autoloads, input map, rendering
+├── project.godot    # Project settings: autoloads, input map, rendering, translation tables
 ├── main.tscn        # Entry point; Main.cs coordinates worlds, player and combat
 ├── Player/          # Player character: movement, sprite, input handling
 ├── Enemy/           # Enemy scenes and stats, contact detection on the map
@@ -16,6 +16,7 @@ Game/ (res://)
 ├── World/           # Exploration maps: tilemaps, collisions, transitions
 ├── Dialogue/        # Branching dialogue: the conversation files, their reader, runner and validator
 ├── Decisions/       # The flag catalogue; later, the registry of decisions itself
+├── Localization/    # Translation tables of no single conversation, their reader and validator
 ├── UI/              # Menus, HUD, dialogue boxes, the shared screen fade
 ├── Shared/
 │   ├── Fonts/        # Shared fonts used across the project
@@ -130,7 +131,7 @@ Branching dialogue is written in a JSON format of the project's own. Godot's loc
 
 ### A conversation
 
-One file per conversation, anywhere under `Dialogue/Conversations/`. The file name is the conversation's id, which must be unique across the project. `example_first_meeting.json` and `example_second_meeting.json` are the format's reference example: between them they use every feature it has.
+One file per conversation, anywhere under `Dialogue/Conversations/`. The file name is the conversation's id, which must be unique across the project. Its text sits beside it, in one table per language: `example_first_meeting.en.po` and `example_first_meeting.es.po` (see [Localization](#localization)). `example_first_meeting.json` and `example_second_meeting.json` are the format's reference example: between them they use every feature it has.
 
 ```json
 {
@@ -164,7 +165,7 @@ One file per conversation, anywhere under `Dialogue/Conversations/`. The file na
 
 ### Keys
 
-The key of a line or an option is its conversation, its node and its own name: `example_first_meeting.start.ask`. A speaker's name is `speaker.<id>`, which is why no conversation may be called `speaker` — nor `ui`, kept for the interface's own strings. Sorted, a table groups by conversation and then by node, which keeps it navigable at hundreds of lines. Renaming a node, or moving a line to another one, changes the key on purpose: the old text is left behind where it can be seen, instead of silently showing on the wrong line, as it would with keys made from line positions.
+The key of a line or an option is its conversation, its node and its own name: `example_first_meeting.start.ask`. A speaker's name is `speaker.<id>`, in the shared `speaker` table. No conversation may take the name of a shared table — `speaker`, `ui`, `enemy`, `world` and any added later — since its keys would mix with that table's. Sorted, a conversation's table groups by node, which keeps it navigable at hundreds of lines. Renaming a node, or moving a line to another one, changes the key on purpose: the old text is left behind where it can be seen, instead of silently showing on the wrong line, as it would with keys made from line positions.
 
 ### Conditions and effects
 
@@ -197,13 +198,96 @@ A flag's name is a **group and a fact**, joined by a dot. The group says what th
 
 - **`ConversationReader`** reads one file and checks that it is well formed: the right properties with the right types, valid names, conditions and effects that parse, a `start` node, and jumps to nodes that exist. Every JSON object is read property by property, through `StrictJson`, instead of being deserialized. JSON allows a repeated property and `JsonDocument` accepts one without complaint (verified), while a deserializer would quietly keep one of the two. The reader takes the file's text, not a path: the game reads files through `FileAccess`, which sees inside the packed `res://` of an export, and the tests read them from disk.
 - **`DialogueRunner`** walks one conversation a step at a time: a line, a choice, or the end. It is passive — whoever drives it asks what to show and calls `Advance` or `Choose` — and `DialogueRunner.Start` already applies the first line's effects. Conditions are evaluated when they are reached, so the effects of earlier lines count; a line's effects apply when it is shown, and an option's when it is chosen.
-- **`DialogueValidator`** checks every conversation against the catalogue and against each other, and reports every problem instead of the first: flags that are not declared or are used with the wrong type, ids that repeat or are reserved, nodes nothing leads to, and anywhere the player could be left stuck. Every choice must offer an option with no condition, and from every node there must be a way to `END` that depends on none. That is strict on purpose: two options with opposite conditions would also always leave a way out, and are still rejected. `EveryConversationInTheProject_IsValid` runs it over `Dialogue/Conversations/`, so a broken conversation fails the `build` check.
+- **`DialogueValidator`** checks every conversation against the catalogue and against each other, and reports every problem instead of the first: flags that are not declared or are used with the wrong type, ids that repeat, nodes nothing leads to, and anywhere the player could be left stuck. Every choice must offer an option with no condition, and from every node there must be a way to `END` that depends on none. That is strict on purpose: two options with opposite conditions would also always leave a way out, and are still rejected. `EveryConversationInTheProject_IsValid` runs it over `Dialogue/Conversations/`, so a broken conversation fails the `build` check. `DialogueValidator.ValidateText` checks the other half: that each conversation has its table beside it, with a text for every line and option and nothing else, and that every speaker but `narrator` has a name. `EveryConversationInTheProject_HasItsText` runs it.
 
 Conditions read flags and effects write them through `IFlagStore`, which the decision registry will implement for the game. The tests use an in-memory stand-in that rejects any name it was not given, as the registry will.
 
+## Localization
+
+Every text the player sees comes from a translation table, in Spanish and English, so nothing on screen is written in code or in a scene. Console output (`GD.Print`) is for development and stays in English.
+
+### The tables
+
+The tables are gettext `.po` files. Godot loads them as they are, with nothing generated beside them and nothing to keep out of git, and each language is its own file, so correcting the Spanish touches the Spanish file alone. The format also has room for contexts, plurals and notes for whoever translates. CSV was the alternative, and it was rejected for three reasons: Godot imports every `.csv` under `res://` as a translation and writes binary files next to it, a compressed CSV table cannot list its keys at run time, and every row holds every language, so one correction rewrites the whole row.
+
+```po
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#. {name} is a combatant's name; {hp} and {max_hp}, numbers.
+msgid "ui.combat.hp"
+msgstr "{name}   {hp}/{max_hp}"
+```
+
+- **A table is a file `<name>.<locale>.po`, and every key in it starts with `<name>.`** That way two tables can never hold the same key. This matters because Godot merges every table of a language into one, and when a key appears twice it keeps one of them without saying.
+- **The header must declare `Language`, matching the file name.** Godot loads a table without one as English, silently, so a Spanish table with a broken header would replace the English text.
+- **The `msgid` is the key, never English text.** English is one more translation, in `*.en.po`, so correcting it does not change the key or break the other languages.
+- **Notes for whoever translates (`#.`) are repeated in every language,** since each translator opens only their own file.
+- **Entries go in a readable order:** a conversation's in the order of its JSON, the rest grouped by area.
+
+### Where they live, and the keys
+
+A conversation's table sits beside its JSON and is named after it. Every other table lives in `Localization/`, one per kind of key:
+
+| Key | Table | Example |
+|---|---|---|
+| A line or an option | the conversation's | `example_first_meeting.start.help` |
+| A speaker's name | `speaker` | `speaker.example_stranger` |
+| The interface's text: `ui.<area>.<name>`, where the area is the screen or system it appears on | `ui` | `ui.combat.attack`, `ui.hud.world_and_cycle` |
+| A world's name, from the `World` enum in lowercase | `world` | `world.fantasy` |
+| An enemy's name, held by its `EnemyData` | `enemy` | `enemy.strong` |
+
+A new kind of content, such as items or skills, gets a pair of tables of its own in `Localization/` (`item.en.po` and `item.es.po`). Those tables are what reserve the prefix: no conversation may take the name of a shared table, and there is no other list to keep up to date.
+
+**Godot only uses the tables `project.godot` lists** under `internationalization/locale/translations`. Every new conversation adds two paths to that list, which is easy to forget, so the validator compares the list with the `.po` files on disk, both ways.
+
+### Placeholders
+
+A text with something in it from the code names its placeholders: `{hp}/{max_hp}`, never `{0}/{1}`. Each language puts them in whatever order reads naturally, and whoever translates sees what goes where.
+
+```csharp
+_enemyHpLabel.Text = TextTemplate.Fill(Tr("ui.combat.hp"), ("name", Tr(EnemyData.NameKey)), ("hp", hp), ("max_hp", maxHp));
+```
+
+- **A placeholder is a word between braces.** Any other brace is plain text.
+- **Values are written with the invariant culture,** so a number reads the same whatever the system's settings are. To format a number differently, pass it as a string.
+- **A placeholder with no value is left showing,** instead of throwing. Pseudolocalization rewrites placeholders along with the rest of the text (`{hp}` comes back as `{h̀ṕ}`), and throwing there would break the very run meant to find untranslated text.
+- **The validator checks that every language uses the same placeholders,** so a translation that loses one, or misspells it, fails CI.
+
+### In the game
+
+- **The starting language needs no code.** Godot starts in the system's language when a table exists for it (`es_AR` finds `es`) and falls back to English otherwise, and English is already Godot's default fallback, so `project.godot` does not repeat it. Remembering the player's choice waits for a place to store settings, in M9 at the latest.
+- **A fixed text is a key, and Godot translates it by itself.** A `Control` whose `text` is a key shows its translation, and updates when the language changes: the Attack button holds `ui.combat.attack` in `combat.tscn`, and `Combat` assigns the result's key to its label.
+- **A text built in code goes through `Tr()` and `TextTemplate`,** as the HP labels and the world and cycle label do. Those labels have `auto_translate_mode` set to *Disabled*; otherwise Godot would look the finished text up as a key again, and pseudolocalization would rewrite it twice. They are rebuilt on `NotificationTranslationChanged`, which Godot sends every node when the language changes.
+- **F2 switches to the next language,** on every screen and while a fight pauses the tree. This is `Localization/LocaleSwitchKey.cs`, a temporary autoload. #75's debug tooling replaces it, and removing it means deleting that file and its line under `[autoload]`.
+- **Pseudolocalization checks that no text bypasses the tables.** It rewrites every translated text with accents and brackets (`[Åŧáćáŕ]`), so any text on screen without brackets did not come from a table. Turn it on for one run with an `override.cfg` beside `project.godot`, which `.gitignore` already lists:
+
+  ```ini
+  [internationalization]
+
+  pseudolocalization/use_pseudolocalization=true
+  ```
+
+### Reading and validating
+
+- **`TranslationTableReader`** reads a `.po` file and stops at its first problem, giving the line, just like `ConversationReader`. It reads comments, `msgid` and `msgstr`, texts split across quoted lines, and the escapes `\n`, `\t`, `\"` and `\\`. It refuses contexts and plurals rather than skipping them, since nothing needs them yet, and it refuses any line that is not part of the format. Entries marked `#, fuzzy` are kept but flagged: Godot ignores them, and a translation Poedit guessed would otherwise show as a raw key.
+- **`LocalizationValidator`** checks every table together and reports every problem:
+  - a file name or header that disagrees with its language;
+  - a key outside its table's prefix;
+  - a fuzzy or empty text;
+  - a table or a key that one language lacks;
+  - different placeholders in different languages;
+  - two tables sharing a name;
+  - any table `project.godot` does not register, or registers when the file does not exist.
+
+  `EveryTableInTheProject_IsValid` runs it over the project.
+- **`GameKeysTests`** checks every key the code, scenes and resources name against the shared tables, by searching for quoted strings that start with a table's name. Keys built at run time are invisible to that search, so each kind needs a test of its own; for the worlds' names, that test is `EveryWorld_HasAName`.
+
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, and the whole dialogue format in `Dialogue/`. The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, and the reading and checking of the translation tables in `Localization/`. The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
@@ -231,6 +315,6 @@ The file is stored in the format VS Code's C# Dev Kit writes (a newline after th
 
 ## Stats as Resources
 
-Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). A new enemy type is a new `.tres` file, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
+Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). A new enemy type is a new `.tres` file, plus its name in the two `Localization/enemy.*.po` tables, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
 
 Global player state is the exception: it lives in the `PlayerStats` Autoload, since it has to persist across scenes.

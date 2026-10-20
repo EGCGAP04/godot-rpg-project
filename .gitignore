@@ -3,6 +3,9 @@
 .mono/
 data_*/
 
+# Per-run settings overrides, such as turning on pseudolocalization
+override.cfg
+
 # Mono-specific ignores
 mono_crash.*.json
 

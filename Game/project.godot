@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 PlayerStats="*res://Autoloads/PlayerStats.cs"
 GameState="*res://Autoloads/GameState.cs"
+LocaleSwitchKey="*res://Localization/LocaleSwitchKey.cs"
 
 [display]
 
@@ -82,6 +83,10 @@ open_menu={
 , Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":6,"pressure":0.0,"pressed":false,"script":null)
 ]
 }
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://Localization/enemy.en.po", "res://Localization/enemy.es.po", "res://Localization/speaker.en.po", "res://Localization/speaker.es.po", "res://Localization/ui.en.po", "res://Localization/ui.es.po", "res://Localization/world.en.po", "res://Localization/world.es.po", "res://Dialogue/Conversations/example_first_meeting.en.po", "res://Dialogue/Conversations/example_first_meeting.es.po", "res://Dialogue/Conversations/example_second_meeting.en.po", "res://Dialogue/Conversations/example_second_meeting.es.po")
 
 [physics]
 

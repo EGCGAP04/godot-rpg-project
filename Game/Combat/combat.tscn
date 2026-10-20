@@ -13,11 +13,11 @@ offset_bottom = 360.0
 color = Color(0.09, 0.09, 0.13, 1)
 
 [node name="EnemyHpLabel" type="Label" parent="." unique_id=556287245]
+auto_translate_mode = 2
 offset_left = 40.0
 offset_top = 60.0
 offset_right = 600.0
 offset_bottom = 90.0
-text = "Enemy"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -30,11 +30,11 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="PlayerHpLabel" type="Label" parent="." unique_id=1340458604]
+auto_translate_mode = 2
 offset_left = 40.0
 offset_top = 220.0
 offset_right = 600.0
 offset_bottom = 250.0
-text = "Player"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -43,7 +43,7 @@ offset_left = 270.0
 offset_top = 285.0
 offset_right = 370.0
 offset_bottom = 317.0
-text = "Attack"
+text = "ui.combat.attack"
 
 [node name="ScreenFade" parent="." unique_id=621046089 instance=ExtResource("2_fade")]
 

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace GodotRPGProject.Tests;
 
@@ -16,6 +18,32 @@ public static class ProjectFiles
 	/// <summary>Reads a file by its path inside <c>Game/</c>, one folder per argument.</summary>
 	public static string ReadText(params string[] pathInsideGame) =>
 		File.ReadAllText(Path.Combine(GameDirectory, Path.Combine(pathInsideGame)));
+
+	/// <summary>
+	/// Every conversation file under <c>Dialogue/Conversations/</c>, in a fixed order. Fails
+	/// when the folder is missing, so a wrong path cannot pass as a project with nothing in it.
+	/// </summary>
+	public static ConversationFile[] ConversationFiles()
+	{
+		string folder = Path.Combine(GameDirectory, "Dialogue", "Conversations");
+
+		if (!Directory.Exists(folder))
+			throw new DirectoryNotFoundException($"There is no conversations folder at {folder}.");
+
+		return Find(folder, "*.json").Select(path => new ConversationFile(InsideGame(path), File.ReadAllText(path))).ToArray();
+	}
+
+	/// <summary>Every translation table file in <c>Game/</c>, in a fixed order.</summary>
+	public static TranslationFile[] TranslationFiles() =>
+		Find(GameDirectory, "*.po").Select(path => new TranslationFile(InsideGame(path), File.ReadAllText(path))).ToArray();
+
+	private static IEnumerable<string> Find(string folder, string pattern) =>
+		Directory.EnumerateFiles(folder, pattern, SearchOption.AllDirectories)
+			.Where(path => !InsideGame(path).StartsWith(".godot/"))
+			.OrderBy(path => path, StringComparer.Ordinal);
+
+	/// <summary>A path as the game names it: inside <c>Game/</c>, with forward slashes.</summary>
+	private static string InsideGame(string path) => Path.GetRelativePath(GameDirectory, path).Replace('\\', '/');
 
 	private static string FindGameDirectory()
 	{

@@ -150,11 +150,22 @@ public partial class Main : Node2D
 		_ => RealWorldScene
 	};
 
+	public override void _Notification(int what)
+	{
+		// The world label is built here rather than translated by Godot, so a change of
+		// language has to rebuild it.
+		if (what == NotificationTranslationChanged && _worldLabel != null)
+			UpdateWorldLabel();
+	}
+
 	// Temporary, until there is a real HUD: without it there is nothing on screen
-	// that says which world or cycle the run is in.
+	// that says which world or cycle the run is in. Built from a translated template,
+	// so the label has auto-translation off in main.tscn.
 	private void UpdateWorldLabel()
 	{
-		_worldLabel.Text = $"{GameState.Instance.CurrentWorld}  -  Cycle {GameState.Instance.CurrentCycle}";
+		World world = GameState.Instance.CurrentWorld;
+		string worldName = Tr($"world.{world.ToString().ToLowerInvariant()}");
+		_worldLabel.Text = TextTemplate.Fill(Tr("ui.hud.world_and_cycle"), ("world", worldName), ("cycle", GameState.Instance.CurrentCycle));
 	}
 
 	// --- Combat ---

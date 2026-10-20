@@ -1,0 +1,26 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#. The combat button. Room for about ten characters.
+msgid "ui.combat.attack"
+msgstr "Attack"
+
+#. The player's name beside their HP, until the party exists.
+msgid "ui.combat.player"
+msgstr "Player"
+
+#. {name} is a combatant's name; {hp} and {max_hp}, numbers.
+msgid "ui.combat.hp"
+msgstr "{name}   {hp}/{max_hp}"
+
+msgid "ui.combat.player_won"
+msgstr "Player wins."
+
+msgid "ui.combat.player_lost"
+msgstr "Player loses."
+
+#. {world} is a world's name (world.*); {cycle}, a number.
+msgid "ui.hud.world_and_cycle"
+msgstr "{world}  -  Cycle {cycle}"

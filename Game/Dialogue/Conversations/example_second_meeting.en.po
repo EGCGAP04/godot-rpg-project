@@ -1,0 +1,30 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "example_second_meeting.start.remember_help"
+msgstr "Any luck with my key?"
+
+msgid "example_second_meeting.start.remember_refusal"
+msgstr "Changed your mind?"
+
+msgid "example_second_meeting.start.remember_key"
+msgstr "Thanks again for the key!"
+
+msgid "example_second_meeting.start.first_time"
+msgstr "Hello. I don't think we've met."
+
+msgid "example_second_meeting.start.still_looking"
+msgstr "I'm still looking for it too."
+
+#. An option, shown only if the player has the key.
+msgid "example_second_meeting.start.give_key"
+msgstr "I found your key."
+
+#. An option: the player's answer.
+msgid "example_second_meeting.start.leave"
+msgstr "Bye."
+
+msgid "example_second_meeting.grateful.found_it"
+msgstr "You found it! Thank you."

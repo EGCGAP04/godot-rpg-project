@@ -1,0 +1,30 @@
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "example_second_meeting.start.remember_help"
+msgstr "¿Hubo suerte con mi llave?"
+
+msgid "example_second_meeting.start.remember_refusal"
+msgstr "¿Cambiaste de opinión?"
+
+msgid "example_second_meeting.start.remember_key"
+msgstr "¡Gracias otra vez por la llave!"
+
+msgid "example_second_meeting.start.first_time"
+msgstr "Hola. Creo que no nos conocemos."
+
+msgid "example_second_meeting.start.still_looking"
+msgstr "Yo también sigo buscándola."
+
+#. An option, shown only if the player has the key.
+msgid "example_second_meeting.start.give_key"
+msgstr "Encontré tu llave."
+
+#. An option: the player's answer.
+msgid "example_second_meeting.start.leave"
+msgstr "Adiós."
+
+msgid "example_second_meeting.grateful.found_it"
+msgstr "¡La encontraste! Gracias."
