@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SECURITY.md`, which asks for security problems to be reported privately, through GitHub's private vulnerability reporting, rather than in a public Issue
 - CodeQL code scanning in GitHub's default setup, which analyses the C# code and the workflows on every pull request into `main`, every push to it and once a week, and reports what it finds as code scanning alerts without failing the build
 - A wiki, whose Home page gathers links to every part of the documentation and to the milestones and releases
+- Spanish and English localization. Every text the player sees comes from gettext `.po` tables, which sit beside each conversation or in `Localization/`, one per kind of key (`ui`, `world`, `enemy`, `speaker`). The game starts in the system's language when there is a table for it, and in English otherwise
+- `TranslationTableReader`, which reads a `.po` table strictly and refuses what the game does not use yet, such as contexts and plurals
+- `TextTemplate`, which fills a translated text's named placeholders (`{hp}/{max_hp}`), so each language can order them as it needs
+- `LocalizationValidator`, which checks every table together: file names and headers, key prefixes, fuzzy or empty texts, a table or a key missing in one language, mismatched placeholders, and registration in `project.godot`. A test runs it over the whole project, so a missing translation fails CI
+- `DialogueValidator.ValidateText`, which checks that every conversation has its table beside it, with a text for each line and option, and that every speaker has a name
+- A test that checks every key the game's code, scenes and resources name against the tables
+- F2 switches the language while playing, as a temporary aid until the debug tooling of #75
+- A Localization section in `docs/CONVENTIONS.md`: the tables, the key convention, placeholders, the runtime switch and pseudolocalization
 
 ### Changed
 
@@ -31,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Workflows can only use actions created by GitHub, the only ones CI uses, so adding a third-party action now takes a deliberate change to the repository settings
 - Auto-merge is enabled: a pull request can be set to merge itself once its checks pass
 - Test dependencies bumped by Dependabot: `Microsoft.NET.Test.Sdk` 18.10.1 -> 18.11.0, `xunit.runner.visualstudio` 4.0.0 -> 4.0.1
+- The combat overlay, the world and cycle label and the enemies' names are translated, and switch language at once. `EnemyData.DisplayName` is now `NameKey`, so a new enemy type gets a translated name from its `.tres` and two table entries
+- A conversation may not take the name of a table in `Localization/`, which replaces the fixed list of reserved conversation ids
+- `.gitignore` lists `override.cfg`, which turns on pseudolocalization for a single run
 
 ### Fixed
 
