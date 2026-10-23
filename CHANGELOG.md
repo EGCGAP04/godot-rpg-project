@@ -34,6 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Decisions/world_access.json`, which opens each optional world with a condition over flags, read by `WorldAccess`; that the Nightmare world needs the Fantasy world stays in code. Its two flags, `world.fantasy_closed` and `world.nightmare_closed`, start unset, so every world stays reachable until something sets them
 - Tests that check every flag the code names against the catalogue, every flag `world_access.json` reads, and that every enemy has an id of its own
 - A Decision Registry section in `docs/CONVENTIONS.md`
+- The dialogue system. Facing a character and pressing `confirm` starts its conversation in a dialogue box, which shows the speaker, the line and a choice's options, picked with `move_up` / `move_down` and `confirm`. Conversations read and write the decision registry's flags
+- Two kinds of conversation: a voluntary one, started by the player, leaves the world running; a forced one, started by the game, pauses it. Both keep the player still and every exit closed, and a fight requested during one starts as soon as it ends instead of being dropped
+- A world can open with a forced conversation, started once its fade in has finished
+- M6's demo: a neighbor in the Real world asks whether the player is going to bed. Staying up skips that night's dream, and the next morning opens with a line that remembers the answer
+- `ConversationRules` and `Facing`, engine-free and tested: what each kind of conversation allows, and whether the player is facing something
+- A Dialogue Flow section in `docs/CONVENTIONS.md`
 
 ### Changed
 
@@ -51,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A dialogue counter never goes below 0: subtracting more than it holds leaves it at 0
 - Enemies have an `Id`, which the history of fights records, separate from their translated name
 - The test of translation keys skips flag names, since `world.` is both a group of flags and the worlds' table
+- The player does not move or turn during a conversation
 
 ### Fixed
 
