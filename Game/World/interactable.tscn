@@ -1,6 +1,6 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bph022c6r1qv8"]
 
-[ext_resource type="Script" path="res://World/Interactable.cs" id="1_interactable"]
+[ext_resource type="Script" uid="uid://cil4klf53vw2n" path="res://World/Interactable.cs" id="1_interactable"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_reach"]
 size = Vector2(48, 48)
@@ -8,22 +8,22 @@ size = Vector2(48, 48)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(16, 16)
 
-[node name="Interactable" type="Area2D"]
+[node name="Interactable" type="Area2D" unique_id=883294560]
 script = ExtResource("1_interactable")
 
-[node name="ColorRect" type="ColorRect" parent="."]
+[node name="ColorRect" type="ColorRect" parent="." unique_id=838858645]
 offset_left = -8.0
 offset_top = -8.0
 offset_right = 8.0
 offset_bottom = 8.0
 color = Color(0.2, 0.75, 0.3, 1)
 
-[node name="Reach" type="CollisionShape2D" parent="."]
+[node name="Reach" type="CollisionShape2D" parent="." unique_id=1658954199]
 shape = SubResource("RectangleShape2D_reach")
 
-[node name="Body" type="StaticBody2D" parent="."]
+[node name="Body" type="StaticBody2D" parent="." unique_id=508466801]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Body"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Body" unique_id=862151288]
 shape = SubResource("RectangleShape2D_body")
 
 [connection signal="body_entered" from="." to="." method="OnBodyEntered"]

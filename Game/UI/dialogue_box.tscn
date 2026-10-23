@@ -1,31 +1,34 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://06orxxdll5hp"]
 
-[ext_resource type="Script" path="res://UI/DialogueBox.cs" id="1_box"]
+[ext_resource type="Script" uid="uid://bqssdb88w5per" path="res://UI/DialogueBox.cs" id="1_box"]
 
-[node name="DialogueBox" type="CanvasLayer"]
+[node name="DialogueBox" type="CanvasLayer" unique_id=2007401890]
 process_mode = 3
 script = ExtResource("1_box")
 
-[node name="Panel" type="Panel" parent="."]
+[node name="Panel" type="Panel" parent="." unique_id=663423916]
 offset_left = 16.0
 offset_top = 200.0
 offset_right = 624.0
 offset_bottom = 352.0
 
-[node name="SpeakerLabel" type="Label" parent="Panel"]
+[node name="SpeakerLabel" type="Label" parent="Panel" unique_id=985599756]
+layout_mode = 0
 offset_left = 12.0
 offset_top = 6.0
 offset_right = 596.0
 offset_bottom = 29.0
 
-[node name="TextLabel" type="Label" parent="Panel"]
+[node name="TextLabel" type="Label" parent="Panel" unique_id=1470537338]
+layout_mode = 0
 offset_left = 12.0
 offset_top = 32.0
 offset_right = 596.0
 offset_bottom = 80.0
 autowrap_mode = 3
 
-[node name="ChoiceList" type="VBoxContainer" parent="Panel"]
+[node name="ChoiceList" type="VBoxContainer" parent="Panel" unique_id=1255078961]
+layout_mode = 0
 offset_left = 28.0
 offset_top = 84.0
 offset_right = 596.0
