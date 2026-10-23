@@ -206,6 +206,7 @@ godot-rpg-project/
 │       ├── DialogueRunnerTests.cs
 │       ├── DialogueValidatorTests.cs # includes the tests that check every conversation and its text
 │       ├── DirectionResolverTests.cs
+│       ├── EnemyDataTests.cs       # every enemy writes its name and HP
 │       ├── FacingTests.cs
 │       ├── FlagCatalogueTests.cs
 │       ├── FlagConditionParserTests.cs

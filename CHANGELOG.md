@@ -64,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README said CI runs on every push; it runs on pull requests into `main` and on pushes to `main`
 - The Issue forms' milestone dropdown offered only M0–M4, three of them under names that no longer matched GitHub, so the feature form's required field could not name the milestone being worked on; every form now lists the open milestones under their exact titles
 - README's Project Structure described `DirectionResolver` as "last direction pressed wins"; the strongest held direction wins, and the most recent press only breaks ties
+- Saving `weak_enemy.tres` in the editor dropped its name and stats from the file, because they equalled `EnemyData`'s defaults. The defaults are now empty and zero, and a test requires every enemy to write its name and HP
 
 ## [0.2.0] - 2026-09-22
 
