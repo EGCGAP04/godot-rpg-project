@@ -45,7 +45,12 @@
     <Compile Include="..\..\Game\Dialogue\ConversationReader.cs" Link="GameLogic\ConversationReader.cs" />
     <Compile Include="..\..\Game\Dialogue\DialogueRunner.cs" Link="GameLogic\DialogueRunner.cs" />
     <Compile Include="..\..\Game\Dialogue\DialogueValidator.cs" Link="GameLogic\DialogueValidator.cs" />
+    <Compile Include="..\..\Game\Dialogue\FlagUses.cs" Link="GameLogic\FlagUses.cs" />
     <Compile Include="..\..\Game\Decisions\FlagCatalogue.cs" Link="GameLogic\FlagCatalogue.cs" />
+    <Compile Include="..\..\Game\Decisions\CombatRecord.cs" Link="GameLogic\CombatRecord.cs" />
+    <Compile Include="..\..\Game\Decisions\SlotSnapshot.cs" Link="GameLogic\SlotSnapshot.cs" />
+    <Compile Include="..\..\Game\Decisions\DecisionState.cs" Link="GameLogic\DecisionState.cs" />
+    <Compile Include="..\..\Game\Decisions\WorldAccess.cs" Link="GameLogic\WorldAccess.cs" />
     <Compile Include="..\..\Game\Shared\Scripts\DataFileException.cs" Link="GameLogic\DataFileException.cs" />
     <Compile Include="..\..\Game\Shared\Scripts\StrictJson.cs" Link="GameLogic\StrictJson.cs" />
     <Compile Include="..\..\Game\Localization\TranslationTable.cs" Link="GameLogic\TranslationTable.cs" />

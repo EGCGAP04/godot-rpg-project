@@ -15,7 +15,10 @@ namespace GodotRPGProject.Tests;
 /// <remarks>
 /// The search is textual: a quoted string that starts with the name of a shared table and
 /// a dot, such as <c>"ui.combat.attack"</c>. A key built at run time is invisible to it, so
-/// each of those needs a test of its own, like <see cref="EveryWorld_HasAName"/>.
+/// each of those needs a test of its own, like <see cref="EveryWorld_HasAName"/>. A flag
+/// named in a call such as <c>SetFlag("world.fantasy_closed", true)</c> is skipped: the
+/// group <c>world.</c> is also the worlds' table, and <see cref="GameFlagsTests"/> checks
+/// those names against the flag catalogue instead.
 /// </remarks>
 public class GameKeysTests
 {
@@ -54,7 +57,7 @@ public class GameKeysTests
 
 			for (int i = 0; i < lines.Length; i++)
 			{
-				foreach (Match match in pattern.Matches(lines[i]))
+				foreach (Match match in pattern.Matches(GameFlagsTests.FlagCall.Replace(lines[i], "")))
 				{
 					string key = match.Groups[1].Value;
 					found.Add(key);

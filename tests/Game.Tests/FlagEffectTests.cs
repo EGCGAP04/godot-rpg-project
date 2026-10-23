@@ -22,6 +22,7 @@ public class FlagEffectTests
 	[Theory]
 	[InlineData(1, 3)]
 	[InlineData(-2, 0)]
+	[InlineData(-5, 0)]
 	public void Add_ChangesTheCounterByTheAmount(int amount, int expected)
 	{
 		var flags = new InMemoryFlagStore().WithCounter("example.times_met", 2);

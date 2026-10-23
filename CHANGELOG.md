@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A test that checks every key the game's code, scenes and resources name against the tables
 - F2 switches the language while playing, as a temporary aid until the debug tooling of #75
 - A Localization section in `docs/CONVENTIONS.md`: the tables, the key convention, placeholders, the runtime switch and pseudolocalization
+- The decision registry, in memory: `DecisionState` holds every flag of the catalogue and the history of fights, resets the cycle flags when a new cycle starts, and takes and restores a save slot's snapshot (the cycle and run flags and the fights, never the persistent flags). The `DecisionRegistry` autoload loads it and re-emits each change as a signal
+- Every fight is recorded with its world, cycle, enemy and result, and counted in two new counters, `combat.wins` and `combat.losses`
+- `Decisions/world_access.json`, which opens each optional world with a condition over flags, read by `WorldAccess`; that the Nightmare world needs the Fantasy world stays in code. Its two flags, `world.fantasy_closed` and `world.nightmare_closed`, start unset, so every world stays reachable until something sets them
+- Tests that check every flag the code names against the catalogue, every flag `world_access.json` reads, and that every enemy has an id of its own
+- A Decision Registry section in `docs/CONVENTIONS.md`
 
 ### Changed
 
@@ -42,6 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The combat overlay, the world and cycle label and the enemies' names are translated, and switch language at once. `EnemyData.DisplayName` is now `NameKey`, so a new enemy type gets a translated name from its `.tres` and two table entries
 - A conversation may not take the name of a table in `Localization/`, which replaces the fixed list of reserved conversation ids
 - `.gitignore` lists `override.cfg`, which turns on pseudolocalization for a single run
+- `GameState` no longer stores which worlds are unlocked: it asks the decision registry each time the run moves on
+- A dialogue counter never goes below 0: subtracting more than it holds leaves it at 0
+- Enemies have an `Id`, which the history of fights records, separate from their translated name
+- The test of translation keys skips flag names, since `world.` is both a group of flags and the worlds' table
 
 ### Fixed
 

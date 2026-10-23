@@ -15,14 +15,14 @@ Game/ (res://)
 ├── Combat/          # Turn-based combat system: turn order, actions
 ├── World/           # Exploration maps: tilemaps, collisions, transitions
 ├── Dialogue/        # Branching dialogue: the conversation files, their reader, runner and validator
-├── Decisions/       # The flag catalogue; later, the registry of decisions itself
+├── Decisions/       # The flag catalogue, the decision registry's state, and what opens each world
 ├── Localization/    # Translation tables of no single conversation, their reader and validator
 ├── UI/              # Menus, HUD, dialogue boxes, the shared screen fade
 ├── Shared/
 │   ├── Fonts/        # Shared fonts used across the project
 │   ├── Scripts/      # Generic utilities, extensions, helper classes
 │   └── Theme/        # Global UI theme resources
-└── Autoloads/       # Global singletons (GameState, PlayerStats)
+└── Autoloads/       # Global singletons (GameState, DecisionRegistry, PlayerStats)
 ```
 
 `Shared/` holds anything that doesn't belong to a single feature. `Autoloads/` is kept separate since it's infrastructure, not a feature.
@@ -81,7 +81,7 @@ The flow is:
 1. `Enemy` (an `Area2D`) detects player contact and emits `CombatTriggered(enemy)`.
 2. The `WorldScene` re-emits it as `CombatRequested(enemy)`.
 3. `Main` (on `main.tscn`) handles it: it instances `combat.tscn`, sets the enemy stats, adds it as a child and sets `GetTree().Paused = true`.
-4. When the fight ends, `Combat` emits `CombatFinished(playerWon)`. `Main` applies the outcome, frees the overlay and unpauses.
+4. When the fight ends, `Combat` emits `CombatFinished(playerWon)`. `Main` applies the outcome, frees the overlay, unpauses, and only then records the fight in the decision registry (see [Fights](#fights) for why last).
 
 `Main` is the coordinator because it is the only node that sees both the `Player` and the world — the `Player` is a **sibling** of the world scene, not a child of it. It holds a `WorldScene`, never a concrete world, so the same flow works in all three.
 
@@ -104,7 +104,7 @@ The flow mirrors the combat one:
 1. A `WorldExit` (an `Area2D`, instanced as the bed in the Real world and as the way out of the other two) detects the player and emits `ExitTriggered`.
 2. The `WorldScene` re-emits it as `TransitionRequested`.
 3. `Main` fades to black, then calls `GameState.Advance()`.
-4. `GameState` asks `CycleProgression` for the next position and emits `WorldChanged`.
+4. `GameState` asks `CycleProgression` for the next position, passing the worlds the decision registry has open at that moment, and emits `CycleChanged` when the cycle changes, then `WorldChanged`.
 5. `Main` swaps the world scene, places the player at its `PlayerSpawn`, and fades back in.
 
 `main.tscn` authors **no** world at all. `Main` builds the first one from `GameState.CurrentWorld` in `_EnterTree`, exactly as it builds every later one, so there is one source of truth for which world the run is in rather than a scene and an Autoload that have to agree.
@@ -178,7 +178,7 @@ example.times_met >= 1                a counter compared with a number: == != < 
 example.promised_help and not (example.key_returned or example.has_key)
 
 set example.promised_help             effects set or clear a boolean flag,
-clear example.has_key                 or add to a counter (a negative amount subtracts)
+clear example.has_key                 or add to a counter (a negative amount subtracts, down to 0)
 add example.times_met 1
 ```
 
@@ -200,7 +200,7 @@ A flag's name is a **group and a fact**, joined by a dot. The group says what th
 - **`DialogueRunner`** walks one conversation a step at a time: a line, a choice, or the end. It is passive — whoever drives it asks what to show and calls `Advance` or `Choose` — and `DialogueRunner.Start` already applies the first line's effects. Conditions are evaluated when they are reached, so the effects of earlier lines count; a line's effects apply when it is shown, and an option's when it is chosen.
 - **`DialogueValidator`** checks every conversation against the catalogue and against each other, and reports every problem instead of the first: flags that are not declared or are used with the wrong type, ids that repeat, nodes nothing leads to, and anywhere the player could be left stuck. Every choice must offer an option with no condition, and from every node there must be a way to `END` that depends on none. That is strict on purpose: two options with opposite conditions would also always leave a way out, and are still rejected. `EveryConversationInTheProject_IsValid` runs it over `Dialogue/Conversations/`, so a broken conversation fails the `build` check. `DialogueValidator.ValidateText` checks the other half: that each conversation has its table beside it, with a text for every line and option and nothing else, and that every speaker but `narrator` has a name. `EveryConversationInTheProject_HasItsText` runs it.
 
-Conditions read flags and effects write them through `IFlagStore`, which the decision registry will implement for the game. The tests use an in-memory stand-in that rejects any name it was not given, as the registry will.
+Conditions read flags and effects write them through `IFlagStore`, which the decision registry's `DecisionState` implements for the game (see [Decision Registry](#decision-registry)). The tests use an in-memory stand-in that rejects any name it was not given, as the registry does.
 
 ## Localization
 
@@ -283,11 +283,61 @@ _enemyHpLabel.Text = TextTemplate.Fill(Tr("ui.combat.hp"), ("name", Tr(EnemyData
   - any table `project.godot` does not register, or registers when the file does not exist.
 
   `EveryTableInTheProject_IsValid` runs it over the project.
-- **`GameKeysTests`** checks every key the code, scenes and resources name against the shared tables, by searching for quoted strings that start with a table's name. Keys built at run time are invisible to that search, so each kind needs a test of its own; for the worlds' names, that test is `EveryWorld_HasAName`.
+- **`GameKeysTests`** checks every key the code, scenes and resources name against the shared tables, by searching for quoted strings that start with a table's name. Keys built at run time are invisible to that search, so each kind needs a test of its own; for the worlds' names, that test is `EveryWorld_HasAName`. It skips the flag names in calls such as `SetFlag("world.fantasy_closed", true)`, which `GameFlagsTests` checks instead.
+
+## Decision Registry
+
+The decision registry is what the game remembers of the player: every flag of the catalogue, the fights, and which optional worlds those open. It is in memory for now; saving it is M9's job, and the snapshot below is what M9 will save.
+
+It follows the split of `CombatResolver` and `Combat`. The logic is engine-free in `Decisions/`, and the `DecisionRegistry` autoload is a thin node around it:
+
+- **`DecisionState`** holds every flag's value and the history of fights, and implements `IFlagStore`, so the dialogue runner reads and writes it directly.
+- **`WorldAccess`** reads `Decisions/world_access.json` and computes which optional worlds are open.
+- **`DecisionRegistry`** loads both files in `_EnterTree`, through `FileAccess`, for the same reason `GameState` sets its `Instance` there: `Main` reads the autoloads from its own `_EnterTree`. It re-emits `DecisionState.FlagChanged` as a Godot signal, and starts each new cycle on `GameState.CycleChanged`. Outside code uses its `State`, rather than methods repeated on the node.
+
+### Flags at run time
+
+- **Only declared flags exist.** A name the catalogue does not declare, or one used with the wrong type, throws `ArgumentException`, whose message says which. It never answers with a default, so a misspelt flag cannot read as `false`.
+- **A counter never goes below 0.** Taking 5 from 2 leaves 0, as with HP, and it also stops at `int.MaxValue` instead of overflowing. Throwing instead would cut a conversation short over an authoring mistake, and the debug tooling is where a counter that hit the floor shows. The floor is part of `IFlagStore`'s contract, so the tests' `InMemoryFlagStore` keeps it too.
+- **`FlagChanged` fires only when a value actually changes,** once per flag. When one call changes several, it fires after all of them have their new values, so a listener never sees half a change.
+
+Code names a flag as a string, as it does a translation key: `State.SetFlag("world.fantasy_closed", true)`. `GameFlagsTests` finds those calls by searching the source, and checks each name against the catalogue with its type. It searches for the calls, not for any string that starts like a flag, because `world.` is both a group of flags and the worlds' translation table; `GameKeysTests` skips the same calls for the same reason. A name built at run time is invisible to both.
+
+### Lifetimes and the slot's snapshot
+
+- **`StartCycle`** resets every `cycle` flag, and nothing else. The autoload calls it on `GameState.CycleChanged`, which `GameState` emits before `WorldChanged` for exactly this: the new world's scene loads with the cycle's flags already cleared.
+- **`TakeSnapshot`** copies what belongs to a save slot into a `SlotSnapshot`: the `cycle` and `run` flags and the history of fights. Persistent flags are never in it, since they belong to the game rather than to a slot. In memory a `run` flag and a `persistent` one behave the same; the snapshot is where they differ.
+- **`Restore`** puts a snapshot back and leaves the persistent flags alone. A flag the snapshot does not mention goes back to its starting value. It refuses, and changes nothing, a snapshot that names an undeclared or persistent flag, uses a flag with the wrong type, or holds a negative counter. That is strict enough while every snapshot comes from the same catalogue; loading a save from an older version of the game is M9's to decide.
+
+### Fights
+
+`Main` calls `RecordCombat` when a fight ends, with the world, the cycle, the enemy's `Id` and the result. It adds a `CombatRecord` to the history and 1 to `combat.wins` or `combat.losses`, always together, so the totals and the history never disagree. The two counters are declared in the catalogue, and `DecisionState` refuses a catalogue without them. Dialogue can read the totals like any counter. The history is not a flag: only code reads it, it belongs to the slot like the `run` flags, and each entry keeps its cycle, so "in this cycle" is a filter.
+
+**It is the last step of `Main.OnCombatFinished`, after unpausing,** on purpose. An exception thrown in a signal handler is logged with its stack, and the game goes on, but the rest of that handler does not run (verified headless). Anywhere earlier, a failure would leave the game paused under the combat overlay. There, the worst it can do is leave one fight out of the history.
+
+An enemy's `Id` is a lowercase word in its `EnemyData`, separate from its `NameKey`, so the history keeps meaning the same when the name's text changes. It is empty by default, and `GameFlagsTests` requires every `EnemyData` resource to have one of its own.
+
+### World access
+
+`Decisions/world_access.json` holds one condition per optional world, in the dialogue's condition language:
+
+```json
+{
+	"format": 1,
+	"worlds": {
+		"fantasy": "not world.fantasy_closed",
+		"nightmare": "not world.nightmare_closed"
+	}
+}
+```
+
+It holds exactly `fantasy` and `nightmare`; the Real world has no condition, since every cycle starts there. `WorldAccess.Read` reads it through `StrictJson` like the catalogue, and `Validate` checks its flags against the catalogue, in the same words `DialogueValidator` uses; both share `FlagUses`. A test runs it over the project's file.
+
+**That the Nightmare world needs the Fantasy world is code, not data:** `Unlocks` closes the Nightmare world whenever the Fantasy world is closed, whatever its own condition says, so no file can break the order. `GameState.Advance` asks the registry for the unlocks at the moment of moving on, with the flags as they are then, and stores nothing. The two `world.` flags are `cycle` flags that start `false`, so a cycle in which nothing sets them plays all three worlds.
 
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, and the reading and checking of the translation tables in `Localization/`. The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, and the decision registry's state and world access in `Decisions/`. The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
@@ -315,6 +365,6 @@ The file is stored in the format VS Code's C# Dev Kit writes (a newline after th
 
 ## Stats as Resources
 
-Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). A new enemy type is a new `.tres` file, plus its name in the two `Localization/enemy.*.po` tables, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
+Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). A new enemy type is a new `.tres` file, with an `Id` of its own for the decision registry's history of fights, plus its name in the two `Localization/enemy.*.po` tables, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
 
 Global player state is the exception: it lives in the `PlayerStats` Autoload, since it has to persist across scenes.

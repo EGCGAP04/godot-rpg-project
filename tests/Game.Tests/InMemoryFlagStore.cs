@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace GodotRPGProject.Tests;
@@ -64,7 +65,7 @@ public sealed class InMemoryFlagStore : IFlagStore
 		if (!_counters.ContainsKey(name))
 			throw new KeyNotFoundException($"'{name}' was never declared as a counter.");
 
-		_counters[name] += amount;
+		_counters[name] = Math.Max(_counters[name] + amount, 0);
 		Writes++;
 	}
 }

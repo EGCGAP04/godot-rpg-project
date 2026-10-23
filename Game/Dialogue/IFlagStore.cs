@@ -21,7 +21,8 @@ public interface IFlagStore
 
 	/// <summary>
 	/// Adds <paramref name="amount"/> to the counter <paramref name="name"/>. A negative
-	/// amount subtracts.
+	/// amount subtracts, but a counter never goes below 0: taking 5 from 2 leaves 0, as
+	/// with HP.
 	/// </summary>
 	void AddToCounter(string name, int amount);
 }

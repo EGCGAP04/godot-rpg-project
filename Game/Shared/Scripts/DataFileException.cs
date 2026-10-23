@@ -1,12 +1,13 @@
 using System;
 
 /// <summary>
-/// One of the game's data files is malformed: a conversation or the flag catalogue. The
-/// message says which file, where in it, and what is wrong, in that order.
+/// One of the game's data files is malformed: a conversation, the flag catalogue or the
+/// world access file. The message says which file, where in it, and what is wrong, in
+/// that order.
 /// </summary>
 public sealed class DataFileException : Exception
 {
-	/// <param name="file">Which file: a conversation's id, or the catalogue's file name.</param>
+	/// <param name="file">Which file: a conversation's id, or the file name of the catalogue or the world access file.</param>
 	/// <param name="location">
 	/// Where in it, such as "node 'start', line 2 ('greet')". Empty when the problem is the
 	/// file as a whole.
@@ -19,7 +20,7 @@ public sealed class DataFileException : Exception
 		Location = location;
 	}
 
-	/// <summary>Which file: a conversation's id, or the catalogue's file name.</summary>
+	/// <summary>Which file: a conversation's id, or the file name of the catalogue or the world access file.</summary>
 	public string File { get; }
 
 	/// <summary>Where in the file, or empty when the problem is the file as a whole.</summary>

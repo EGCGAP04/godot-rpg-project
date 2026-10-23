@@ -18,11 +18,10 @@ public static class CycleProgression
 	/// of the remaining worlds are unlocked.
 	/// </summary>
 	/// <remarks>
-	/// Taking the unlocks as an input costs one parameter today and is what keeps M6
-	/// from having to change this signature: in the design, reaching the Fantasy and
-	/// Nightmare worlds depends on what the player did, and some endings close a cycle
-	/// before its later worlds are ever played. In M5 every caller passes
-	/// <see cref="WorldUnlocks.All"/>.
+	/// The unlocks are an input because reaching the Fantasy and Nightmare worlds depends
+	/// on what the player did, and some endings close a cycle before its later worlds are
+	/// ever played. The game passes what <see cref="WorldAccess"/> computes from the
+	/// decision registry's flags (#73), which needed no change here.
 	/// </remarks>
 	/// <exception cref="ArgumentOutOfRangeException">
 	/// <paramref name="current"/> names a world that is not declared, or a cycle below
