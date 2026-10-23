@@ -7,6 +7,8 @@
 		"example.promised_help": { "type": "bool", "lifetime": "run", "description": "The player promised to look for the key and has not handed it back yet. Refusing withdraws the promise." },
 		"example.key_returned": { "type": "bool", "lifetime": "run", "description": "The key was handed back." },
 		"example.times_met": { "type": "counter", "lifetime": "run", "description": "How many times the first meeting has been completed in this playthrough." },
-		"example.met_before": { "type": "bool", "lifetime": "persistent", "description": "The stranger was met in some playthrough. Survives loading an earlier save." }
+		"example.met_before": { "type": "bool", "lifetime": "persistent", "description": "The stranger was met in some playthrough. Survives loading an earlier save." },
+		"world.fantasy_closed": { "type": "bool", "lifetime": "cycle", "description": "The Fantasy world cannot be reached tonight, so the Nightmare world cannot either. Read by world_access.json." },
+		"world.nightmare_closed": { "type": "bool", "lifetime": "cycle", "description": "The Nightmare world cannot be reached tonight, even after the Fantasy world. Read by world_access.json." }
 	}
 }

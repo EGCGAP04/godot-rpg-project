@@ -1,0 +1,7 @@
+{
+	"format": 1,
+	"worlds": {
+		"fantasy": "not world.fantasy_closed",
+		"nightmare": "not world.nightmare_closed"
+	}
+}

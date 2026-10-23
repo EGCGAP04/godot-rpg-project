@@ -242,7 +242,7 @@ public static class DialogueValidator
 		{
 			foreach ((string name, FlagType type) in uses)
 			{
-				string problem = CheckUse(catalogue, name, type, inEffect);
+				string problem = FlagUses.Problem(catalogue, name, type, inEffect);
 
 				if (problem != null)
 					problems.Add($"{conversation.Id}: {where}: {problem}.");
@@ -255,61 +255,22 @@ public static class DialogueValidator
 			{
 				DialogueLine line = node.Lines[i];
 				string where = $"node '{node.Id}', line {i + 1} ('{line.Name}')";
-				Check($"{where}, if", Uses(line.Condition), false);
+				Check($"{where}, if", FlagUses.InCondition(line.Condition), false);
 
 				for (int k = 0; k < line.Effects.Count; k++)
-					Check($"{where}, do {k + 1}", new[] { Use(line.Effects[k]) }, true);
+					Check($"{where}, do {k + 1}", new[] { FlagUses.InEffect(line.Effects[k]) }, true);
 			}
 
 			for (int i = 0; i < node.Choices.Count; i++)
 			{
 				DialogueOption option = node.Choices[i];
 				string where = $"node '{node.Id}', option {i + 1} ('{option.Name}')";
-				Check($"{where}, if", Uses(option.Condition), false);
+				Check($"{where}, if", FlagUses.InCondition(option.Condition), false);
 
 				for (int k = 0; k < option.Effects.Count; k++)
-					Check($"{where}, do {k + 1}", new[] { Use(option.Effects[k]) }, true);
+					Check($"{where}, do {k + 1}", new[] { FlagUses.InEffect(option.Effects[k]) }, true);
 			}
 		}
-	}
-
-	// Each flag a condition reads, with the type the reading needs. The tree is plain data,
-	// so walking it is a switch over the kinds of node.
-	private static IEnumerable<(string Name, FlagType Type)> Uses(FlagCondition condition) => condition switch
-	{
-		null => Enumerable.Empty<(string, FlagType)>(),
-		FlagCondition.IsSet isSet => new[] { (isSet.Flag, FlagType.Bool) },
-		FlagCondition.Comparison comparison => new[] { (comparison.Counter, FlagType.Counter) },
-		FlagCondition.Not negation => Uses(negation.Operand),
-		FlagCondition.And both => Uses(both.Left).Concat(Uses(both.Right)),
-		FlagCondition.Or either => Uses(either.Left).Concat(Uses(either.Right)),
-		_ => throw new ArgumentOutOfRangeException(nameof(condition), condition, "Not a known kind of condition.")
-	};
-
-	// The flag an effect writes, with the type the writing needs.
-	private static (string Name, FlagType Type) Use(FlagEffect effect) => effect switch
-	{
-		FlagEffect.Set setting => (setting.Flag, FlagType.Bool),
-		FlagEffect.Add addition => (addition.Counter, FlagType.Counter),
-		_ => throw new ArgumentOutOfRangeException(nameof(effect), effect, "Not a known kind of effect.")
-	};
-
-	/// <returns>What is wrong with this use of a flag, or null when nothing is.</returns>
-	private static string CheckUse(FlagCatalogue catalogue, string name, FlagType needed, bool inEffect)
-	{
-		if (!catalogue.Flags.TryGetValue(name, out FlagDeclaration declaration))
-			return $"'{name}' is not declared in {FlagCatalogue.FileName}";
-
-		if (declaration.Type == needed)
-			return null;
-
-		return (declaration.Type, inEffect) switch
-		{
-			(FlagType.Counter, false) => $"'{name}' is a counter, so it is compared with a number, as in '{name} >= 1'",
-			(FlagType.Bool, false) => $"'{name}' is a boolean flag, so it is tested on its own, without a comparison",
-			(FlagType.Counter, true) => $"'{name}' is a counter, so it changes with 'add', not with 'set' or 'clear'",
-			_ => $"'{name}' is a boolean flag, so it changes with 'set' or 'clear', not with 'add'"
-		};
 	}
 
 	private static void CheckPaths(Conversation conversation, List<string> problems)

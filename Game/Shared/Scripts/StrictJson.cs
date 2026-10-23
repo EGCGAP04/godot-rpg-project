@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text.Json;
 
 /// <summary>
-/// Strict reading of the game's JSON data files, shared by <see cref="ConversationReader"/>
-/// and <see cref="FlagCatalogue"/>.
+/// Strict reading of the game's JSON data files, shared by <see cref="ConversationReader"/>,
+/// <see cref="FlagCatalogue"/> and <see cref="WorldAccess"/>.
 /// </summary>
 /// <remarks>
 /// Every object is read property by property instead of deserialized into a class. JSON
