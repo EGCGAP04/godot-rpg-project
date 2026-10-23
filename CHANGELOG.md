@@ -58,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enemies have an `Id`, which the history of fights records, separate from their translated name
 - The test of translation keys skips flag names, since `world.` is both a group of flags and the worlds' table
 - The player does not move or turn during a conversation
+- The game window opens at 1280x720, twice the base resolution, which stays 640x360
 
 ### Fixed
 
