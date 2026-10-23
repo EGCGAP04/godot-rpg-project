@@ -21,7 +21,7 @@ This is a personal learning project, with no deadline, developed following profe
 - **Engine:** Godot 4.6.2
 - **Language:** C# (.NET 8)
 - **Genre:** Turn-based RPG, with possible real-time combat exceptions later on
-- **Base resolution:** 640x360, in a window that opens at twice that size (1280x720)
+- **Base resolution:** 640x360, in a window that opens at twice that size (1280x720); everything is laid out at 640x360 and drawn at the window's size, so text stays sharp
 - **Tile size:** 16x16 px
 
 ## Requirements to run the project
