@@ -4,7 +4,8 @@ using Godot;
 /// The base every world scene is built on, so <c>Main</c> can drive the Real,
 /// Fantasy and Nightmare worlds through one type instead of knowing each concrete
 /// scene. A world owns where the player starts, forwards its enemies' combat
-/// triggers, and asks to be left when the player reaches its exit.
+/// triggers and its interactables' conversations, and asks to be left when the
+/// player reaches its exit.
 /// </summary>
 /// <remarks>
 /// The three placeholder scenes attach this script directly rather than each
@@ -25,6 +26,19 @@ public partial class WorldScene : Node2D
 	[Signal]
 	public delegate void TransitionRequestedEventHandler();
 
+	/// <summary>Raised when the player asks one of this world's interactables for its conversation.</summary>
+	[Signal]
+	public delegate void ConversationRequestedEventHandler(string conversation);
+
+	/// <summary>
+	/// A conversation the game starts, forced, each time the player arrives in this world,
+	/// once the fade in has finished. Empty for none. A conversation whose lines all have
+	/// conditions that do not hold shows nothing, so this can be set on a world that only
+	/// sometimes has something to say.
+	/// </summary>
+	[Export]
+	public string OpeningConversation { get; set; } = "";
+
 	/// <summary>
 	/// Where the player starts, and where they are sent back to after losing a fight.
 	/// Resolved on access rather than cached in <c>_Ready</c>, because <c>Main</c>
@@ -40,5 +54,10 @@ public partial class WorldScene : Node2D
 	private void OnExitTriggered()
 	{
 		EmitSignal(SignalName.TransitionRequested);
+	}
+
+	private void OnInteractionTriggered(string conversation)
+	{
+		EmitSignal(SignalName.ConversationRequested, conversation);
 	}
 }

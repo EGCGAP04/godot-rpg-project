@@ -1,0 +1,12 @@
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#. Said the morning after the player chose to stay up.
+msgid "demo_morning.start.stayed_up"
+msgstr "Qué mala cara tienes. No dormiste en toda la noche, ¿verdad?"
+
+#. Said the morning after the player chose to sleep.
+msgid "demo_morning.start.slept"
+msgstr "¡Buenos días! Se nota que descansaste."

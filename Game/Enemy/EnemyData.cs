@@ -4,6 +4,12 @@ using Godot;
 /// Stats for a single enemy type, authored as a .tres Resource so new enemies
 /// are created by duplicating a file instead of editing code or scene properties.
 /// </summary>
+/// <remarks>
+/// Every default is empty or zero, never a real enemy's value. The editor leaves out of a
+/// <c>.tres</c> each property that equals its default, so when these were the weak
+/// enemy's stats, saving <c>weak_enemy.tres</c> dropped them from the file. Empty
+/// defaults also make a new enemy that is missing a value fail a test.
+/// </remarks>
 [GlobalClass]
 public partial class EnemyData : Resource
 {
@@ -21,11 +27,11 @@ public partial class EnemyData : Resource
 	/// A new enemy type needs its two entries there, one per language, and no code.
 	/// </summary>
 	[Export]
-	public string NameKey { get; set; } = "enemy.weak";
+	public string NameKey { get; set; } = "";
 
 	[Export]
-	public int MaxHp { get; set; } = 10;
+	public int MaxHp { get; set; }
 
 	[Export]
-	public int AttackPower { get; set; } = 3;
+	public int AttackPower { get; set; }
 }

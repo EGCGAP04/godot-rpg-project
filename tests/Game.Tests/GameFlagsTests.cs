@@ -37,9 +37,11 @@ public class GameFlagsTests
 	{
 		FlagCatalogue catalogue = FlagCatalogue.Read(ProjectFiles.ReadText("Decisions", "flags.json"));
 		var problems = new List<string>();
+		var searched = new List<string>();
 
 		foreach (string path in GameFiles(".cs"))
 		{
+			searched.Add(Path.GetRelativePath(ProjectFiles.GameDirectory, path).Replace('\\', '/'));
 			string[] lines = File.ReadAllLines(path);
 
 			for (int i = 0; i < lines.Length; i++)
@@ -57,8 +59,13 @@ public class GameFlagsTests
 			}
 		}
 
-		// No call names a flag yet, so finding none cannot be required here; #74's demo
-		// adds the first one, and with it the check that the search still finds it.
+		// No code names a flag yet: the demo's flags are set by its conversations. So the
+		// search cannot be required to find a call. Instead it must have read the code that
+		// would hold one, and the pattern must match the shape of a call, or a broken
+		// search would pass as a clean game.
+		Assert.Contains("Main.cs", searched);
+		Assert.Contains("Autoloads/DecisionRegistry.cs", searched);
+		Assert.Equal("world.fantasy_closed", FlagCall.Match("state.SetFlag(\"world.fantasy_closed\", true);").Groups[2].Value);
 		Assert.Empty(problems);
 	}
 

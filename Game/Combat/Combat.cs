@@ -39,9 +39,9 @@ public partial class Combat : CanvasLayer
 
 	public override void _Ready()
 	{
-		// Falls back to the resource defaults so combat.tscn can still be run on
-		// its own for testing, without Main setting the stats first.
-		EnemyData ??= new EnemyData();
+		// Falls back to the weak enemy so combat.tscn can still be run on its own
+		// for testing, without Main setting the stats first.
+		EnemyData ??= GD.Load<EnemyData>("res://Enemy/weak_enemy.tres");
 		_resolver = new CombatResolver(
 			PlayerStats.Instance.CurrentHp,
 			PlayerStats.Instance.AttackPower,

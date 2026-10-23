@@ -19,13 +19,28 @@ public partial class Player : CharacterBody2D
 
 	/// <summary>
 	/// Which way the player is facing, which outlives the movement that set it.
-	/// Nothing reads this yet — it is what the four-directional sprite animations will
-	/// be driven from once there is art.
+	/// <see cref="Interactable"/> reads it to decide whether the player is facing what
+	/// they want to talk to, and the four-directional sprite animations will be driven
+	/// from it once there is art.
 	/// </summary>
 	public Direction Facing => _directions.Facing;
 
+	/// <summary>
+	/// Whether the player answers to the movement actions. <c>Main</c> turns it off for a
+	/// conversation, which keeps the player still even when the world keeps running.
+	/// </summary>
+	/// <remarks>
+	/// While it is off, held directions are not even read, so moving through a choice's
+	/// options does not turn the player. Since they are polled rather than tracked by
+	/// edges, they are right again on the first frame it is back on.
+	/// </remarks>
+	public bool CanMove { get; set; } = true;
+
 	public override void _PhysicsProcess(double delta)
 	{
+		if (!CanMove)
+			return;
+
 		SyncHeldDirections();
 
 		Velocity = ToVector(_directions.Active) * Speed;

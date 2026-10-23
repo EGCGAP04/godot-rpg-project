@@ -30,7 +30,7 @@ public class DialogueRunnerTests
 	/// was shown: each line's name, narration in parentheses, and each choice as the options
 	/// offered and the one picked.
 	/// </summary>
-	private static string[] Play(Conversation conversation, IFlagStore flags, params string[] picks)
+	internal static string[] Play(Conversation conversation, IFlagStore flags, params string[] picks)
 	{
 		var shown = new List<string>();
 		var remaining = new Queue<string>(picks);

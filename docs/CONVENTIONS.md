@@ -13,7 +13,7 @@ Game/ (res://)
 ├── Player/          # Player character: movement, sprite, input handling
 ├── Enemy/           # Enemy scenes and stats, contact detection on the map
 ├── Combat/          # Turn-based combat system: turn order, actions
-├── World/           # Exploration maps: tilemaps, collisions, transitions
+├── World/           # Exploration maps: tilemaps, collisions, transitions, things to talk to
 ├── Dialogue/        # Branching dialogue: the conversation files, their reader, runner and validator
 ├── Decisions/       # The flag catalogue, the decision registry's state, and what opens each world
 ├── Localization/    # Translation tables of no single conversation, their reader and validator
@@ -123,6 +123,35 @@ What works is refusing the trigger: `Main` ignores combat requests while a trans
 
 **Do not "simplify" this by removing the guards and relying on ordering.** It has been tried.
 
+## Dialogue Flow
+
+A conversation is the third thing `Main` coordinates, next to combat and world transitions, and it follows their shape:
+
+1. An `Interactable` (an `Area2D`, `World/interactable.tscn`) holds the id of a conversation. When the player stands inside it, faces it and presses `confirm`, it emits `InteractionTriggered(conversation)` and marks the press as handled.
+2. The `WorldScene` re-emits it as `ConversationRequested(conversation)`.
+3. `Main` checks it can start, loads the file through `ConversationLoader`, starts a `DialogueRunner` on `DecisionRegistry.Instance.State`, and adds `UI/dialogue_box.tscn` with the runner in it.
+4. When the runner reaches the end, the `DialogueBox` emits `Finished`, and `Main` frees it and gives the world back.
+
+An interactable's area is wider than the thing it holds, which has a `StaticBody2D` of its own, so the player stops next to it rather than inside it. Facing it is `Facing.IsToward`: the target lies further along the player's `Facing` than along the other axis, with the exact diagonal counting for both.
+
+### Two kinds of conversation
+
+- **A voluntary conversation**, started by the player, leaves the world running: enemies keep moving and timers keep counting, so talking is never a pause.
+- **A forced conversation**, started by the game, pauses the tree, which stops every fight and every timer on the tree's clock. The only way to start one today is a world's `OpeningConversation`, which `Main` starts each time the player arrives there, from the fade in's callback, so never before the world is visible.
+
+Both keep the player still, through `Player.CanMove`, and every exit closed. Held directions are not even read while it is off, so moving through a choice's options does not turn the player; since they are polled, they are right again on the first frame back.
+
+**Whether a fight, a conversation or a transition can start is decided by `ConversationRules`,** an engine-free class, from a `GameActivity` that `Main` builds from its own state at that moment. The guards that existed before conversations (a fight running or pending, a transition, the cooldown) come first and still refuse a fight. Otherwise, **a fight requested during a conversation is queued, never dropped,** and starts as soon as the conversation ends. An area does not report a body already inside it a second time, so a dropped request would leave the enemy standing on the player with no fight.
+
+### The box and its input
+
+- **The box reads input in `_Input`, and marks every press it uses as handled.** `_Input` runs before any node's `_UnhandledInput`, which is where the interactables listen. Without it, the `confirm` that ends a conversation reaches the character the player was talking to and starts the conversation again, on the same press (verified headless by removing it).
+- `confirm` moves past a line or picks the highlighted option, and `move_up` / `move_down` move the highlight, going round at either end. A choice keeps the last line on screen, since that line is usually the question.
+- **Every text is a key, and the labels translate themselves,** so a change of language shows at once. A narration line shows no name.
+- The box is a `CanvasLayer` with `process_mode = Always`, because a forced conversation pauses the tree around it.
+
+**A conversation that shows nothing ends at once, without a box.** When no line's condition holds and the start node goes straight to `END`, `DialogueRunner.Start` is already at the end. That is what lets a world have an opening conversation that only sometimes has something to say, as the demo's morning does. A conversation that fails to load is read before anything changes, so the game carries on as it was, with the error in the log.
+
 ## Dialogue Format
 
 Branching dialogue is written in a JSON format of the project's own. Godot's localization system handles text, but has no notion of which line follows which or of what unlocks a branch, so that structure needs a format. Ink and Yarn Spinner were the alternatives, and both would have brought validation and editor tooling for free; this is a learning project, and designing the format teaches more here than integrating one. The cost is that the tooling has to be built. The validator below is where most of it is paid: with around a hundred endings planned, a dangling jump or a misspelt flag has to fail CI, not turn up in play. Both tools remain references — Ink for flow control, Yarn Spinner for line ids and localization.
@@ -197,7 +226,7 @@ A flag's name is a **group and a fact**, joined by a dot. The group says what th
 ### Reading, running and validating
 
 - **`ConversationReader`** reads one file and checks that it is well formed: the right properties with the right types, valid names, conditions and effects that parse, a `start` node, and jumps to nodes that exist. Every JSON object is read property by property, through `StrictJson`, instead of being deserialized. JSON allows a repeated property and `JsonDocument` accepts one without complaint (verified), while a deserializer would quietly keep one of the two. The reader takes the file's text, not a path: the game reads files through `FileAccess`, which sees inside the packed `res://` of an export, and the tests read them from disk.
-- **`DialogueRunner`** walks one conversation a step at a time: a line, a choice, or the end. It is passive — whoever drives it asks what to show and calls `Advance` or `Choose` — and `DialogueRunner.Start` already applies the first line's effects. Conditions are evaluated when they are reached, so the effects of earlier lines count; a line's effects apply when it is shown, and an option's when it is chosen.
+- **`DialogueRunner`** walks one conversation a step at a time: a line, a choice, or the end. It is passive — whoever drives it asks what to show and calls `Advance` or `Choose`; in the game that is the dialogue box (see [Dialogue Flow](#dialogue-flow)) — and `DialogueRunner.Start` already applies the first line's effects. Conditions are evaluated when they are reached, so the effects of earlier lines count; a line's effects apply when it is shown, and an option's when it is chosen.
 - **`DialogueValidator`** checks every conversation against the catalogue and against each other, and reports every problem instead of the first: flags that are not declared or are used with the wrong type, ids that repeat, nodes nothing leads to, and anywhere the player could be left stuck. Every choice must offer an option with no condition, and from every node there must be a way to `END` that depends on none. That is strict on purpose: two options with opposite conditions would also always leave a way out, and are still rejected. `EveryConversationInTheProject_IsValid` runs it over `Dialogue/Conversations/`, so a broken conversation fails the `build` check. `DialogueValidator.ValidateText` checks the other half: that each conversation has its table beside it, with a text for every line and option and nothing else, and that every speaker but `narrator` has a name. `EveryConversationInTheProject_HasItsText` runs it.
 
 Conditions read flags and effects write them through `IFlagStore`, which the decision registry's `DecisionState` implements for the game (see [Decision Registry](#decision-registry)). The tests use an in-memory stand-in that rejects any name it was not given, as the registry does.
@@ -301,7 +330,7 @@ It follows the split of `CombatResolver` and `Combat`. The logic is engine-free 
 - **A counter never goes below 0.** Taking 5 from 2 leaves 0, as with HP, and it also stops at `int.MaxValue` instead of overflowing. Throwing instead would cut a conversation short over an authoring mistake, and the debug tooling is where a counter that hit the floor shows. The floor is part of `IFlagStore`'s contract, so the tests' `InMemoryFlagStore` keeps it too.
 - **`FlagChanged` fires only when a value actually changes,** once per flag. When one call changes several, it fires after all of them have their new values, so a listener never sees half a change.
 
-Code names a flag as a string, as it does a translation key: `State.SetFlag("world.fantasy_closed", true)`. `GameFlagsTests` finds those calls by searching the source, and checks each name against the catalogue with its type. It searches for the calls, not for any string that starts like a flag, because `world.` is both a group of flags and the worlds' translation table; `GameKeysTests` skips the same calls for the same reason. A name built at run time is invisible to both.
+Code names a flag as a string, as it does a translation key: `State.SetFlag("world.fantasy_closed", true)`. `GameFlagsTests` finds those calls by searching the source, and checks each name against the catalogue with its type. It searches for the calls, not for any string that starts like a flag, because `world.` is both a group of flags and the worlds' translation table; `GameKeysTests` skips the same calls for the same reason. A name built at run time is invisible to both. No code names a flag yet, since the demo's flags are set by its conversations, so `GameFlagsTests` cannot require finding a call; it requires having read `Main.cs` and `DecisionRegistry.cs` instead, and its pattern to match a sample call, so a broken search cannot pass as a clean game.
 
 ### Lifetimes and the slot's snapshot
 
@@ -337,7 +366,7 @@ It holds exactly `fantasy` and `nightmare`; the Real world has no condition, sin
 
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, and the decision registry's state and world access in `Decisions/`. The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
@@ -366,5 +395,7 @@ The file is stored in the format VS Code's C# Dev Kit writes (a newline after th
 ## Stats as Resources
 
 Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). A new enemy type is a new `.tres` file, with an `Id` of its own for the decision registry's history of fights, plus its name in the two `Localization/enemy.*.po` tables, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
+
+A resource's defaults are empty or zero, never one real entity's values. The editor leaves out of a `.tres` every property that equals its default, so when `EnemyData`'s defaults were the weak enemy's stats, saving `weak_enemy.tres` emptied it of them. `EnemyDataTests` requires every enemy to write its name and HP.
 
 Global player state is the exception: it lives in the `PlayerStats` Autoload, since it has to persist across scenes.

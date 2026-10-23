@@ -1,0 +1,24 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "demo_evening.start.greet"
+msgstr "Evening! Off to bed soon?"
+
+msgid "demo_evening.start.greet_again"
+msgstr "Changed your mind about tonight?"
+
+#. An option: the player's answer.
+msgid "demo_evening.start.sleep"
+msgstr "Yes, I'm tired."
+
+#. An option: the player's answer. It skips tonight's dream.
+msgid "demo_evening.start.stay_up"
+msgstr "No, I'll stay up all night."
+
+msgid "demo_evening.sleep.good_night"
+msgstr "Sleep well, then. Sweet dreams."
+
+msgid "demo_evening.stay_up.no_dreams"
+msgstr "Suit yourself. No dreams for you tonight."

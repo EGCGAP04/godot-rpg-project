@@ -12,7 +12,7 @@
 
 🚧 In development — foundation phase.
 
-The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost. All art is placeholder (solid-colour rectangles and tinted tiles).
+The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. All art is placeholder (solid-colour rectangles and tinted tiles).
 
 This is a personal learning project, with no deadline, developed following professional version control and code organization standards.
 
@@ -21,7 +21,7 @@ This is a personal learning project, with no deadline, developed following profe
 - **Engine:** Godot 4.6.2
 - **Language:** C# (.NET 8)
 - **Genre:** Turn-based RPG, with possible real-time combat exceptions later on
-- **Base resolution:** 640x360
+- **Base resolution:** 640x360, in a window that opens at twice that size (1280x720); everything is laid out at 640x360 and drawn at the window's size, so text stays sharp
 - **Tile size:** 16x16 px
 
 ## Requirements to run the project
@@ -95,6 +95,12 @@ godot-rpg-project/
 │   │
 │   ├── Dialogue/
 │   │   ├── Conversations/                 # one JSON file per conversation, its text beside it
+│   │   │   ├── demo_evening.en.po
+│   │   │   ├── demo_evening.es.po
+│   │   │   ├── demo_evening.json          # M6's demo: talking to the neighbor, a voluntary conversation
+│   │   │   ├── demo_morning.en.po
+│   │   │   ├── demo_morning.es.po
+│   │   │   ├── demo_morning.json          # the next morning, forced: it remembers the answer
 │   │   │   ├── example_first_meeting.en.po # its text, one table per language
 │   │   │   ├── example_first_meeting.es.po
 │   │   │   ├── example_first_meeting.json # the format's reference example, in two parts
@@ -103,7 +109,9 @@ godot-rpg-project/
 │   │   │   └── example_second_meeting.json
 │   │   │
 │   │   ├── Conversation.cs (+.uid)        # engine-free: a conversation's nodes, lines and options
+│   │   ├── ConversationLoader.cs (+.uid)  # reads a conversation by its id, through FileAccess
 │   │   ├── ConversationReader.cs (+.uid)  # engine-free: a conversation's JSON → Conversation
+│   │   ├── ConversationRules.cs (+.uid)   # engine-free: what each kind of conversation allows
 │   │   ├── DialogueNames.cs (+.uid)       # the format's naming rules and special names
 │   │   ├── DialogueRunner.cs (+.uid)      # engine-free: walks a conversation, line by line and choice by choice
 │   │   ├── DialogueValidator.cs (+.uid)   # engine-free: checks every conversation against the catalogue and its text
@@ -142,6 +150,7 @@ godot-rpg-project/
 │   ├── Player/
 │   │   ├── Direction.cs (+.uid)
 │   │   ├── DirectionResolver.cs (+.uid) # engine-free: strongest direction wins, last pressed breaks ties
+│   │   ├── Facing.cs (+.uid)            # engine-free: whether the player is facing something
 │   │   ├── Player.cs (+.uid)
 │   │   └── player.tscn
 │   │
@@ -154,11 +163,14 @@ godot-rpg-project/
 │   │   └── Theme/                         # .gitkeep only so far
 │   │
 │   ├── UI/
+│   │   ├── DialogueBox.cs (+.uid)      # shows a conversation and reads its input
 │   │   ├── ScreenFade.cs (+.uid)       # shared fade, used by combat and transitions
+│   │   ├── dialogue_box.tscn
 │   │   └── screen_fade.tscn
 │   ├── World/
 │   │   ├── CyclePosition.cs (+.uid)    # engine-free: a world plus its cycle number
 │   │   ├── CycleProgression.cs (+.uid) # engine-free: which world comes next
+│   │   ├── Interactable.cs (+.uid)     # Area2D the player talks to by facing it
 │   │   ├── World.cs (+.uid)            # the Real / Fantasy / Nightmare enum
 │   │   ├── WorldExit.cs (+.uid)        # Area2D that ends a world on contact
 │   │   ├── WorldScene.cs (+.uid)       # base class the three world scenes share
@@ -167,8 +179,9 @@ godot-rpg-project/
 │   │   ├── wall_placeholder.png (+.import)
 │   │   ├── tileset.tres
 │   │   ├── fantasy_world.tscn          # the old test room, tinted; keeps both enemies
+│   │   ├── interactable.tscn           # something to talk to, with a body of its own
 │   │   ├── nightmare_world.tscn        # placeholder room, dark tint, no enemies yet
-│   │   ├── real_world.tscn             # placeholder room, holds the bed
+│   │   ├── real_world.tscn             # placeholder room, holds the bed and the neighbor
 │   │   └── world_exit.tscn             # reusable bed / exit trigger
 │   │
 │   ├── Godot RPG Project.csproj
@@ -185,12 +198,16 @@ godot-rpg-project/
 │   └── Game.Tests/
 │       ├── CombatResolverTests.cs
 │       ├── ConversationReaderTests.cs
+│       ├── ConversationRulesTests.cs
 │       ├── CycleProgressionTests.cs
 │       ├── DecisionStateTests.cs
+│       ├── DemoConversationsTests.cs # plays M6's demo against the real registry
 │       ├── DialogueNamesTests.cs
 │       ├── DialogueRunnerTests.cs
 │       ├── DialogueValidatorTests.cs # includes the tests that check every conversation and its text
 │       ├── DirectionResolverTests.cs
+│       ├── EnemyDataTests.cs       # every enemy writes its name and HP
+│       ├── FacingTests.cs
 │       ├── FlagCatalogueTests.cs
 │       ├── FlagConditionParserTests.cs
 │       ├── FlagConditionTests.cs
