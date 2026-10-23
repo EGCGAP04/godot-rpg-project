@@ -2,9 +2,11 @@ using Godot;
 
 /// <summary>
 /// Coordinates the run: which world scene is loaded, the player that outlives every
-/// one of them, and the combat overlay. It is the only node that sees all three, and
-/// it talks to <see cref="WorldScene"/> rather than to any concrete world, so adding
-/// or changing a world is scene work rather than code here.
+/// one of them, the combat overlay and the dialogue box. It is the only node that sees
+/// all of them, and it talks to <see cref="WorldScene"/> rather than to any concrete
+/// world, so adding or changing a world is scene work rather than code here. Whether a
+/// fight, a conversation or a transition can start is decided by
+/// <see cref="ConversationRules"/>, from what is going on at that moment.
 /// </summary>
 public partial class Main : Node2D
 {
@@ -35,6 +37,17 @@ public partial class Main : Node2D
 	private Enemy _pendingEnemy;
 	private bool _combatOnCooldown;
 	private bool _transitioning;
+	private DialogueBox _dialogue;
+	private ConversationKind? _conversationKind;
+	private Enemy _queuedEnemy;
+
+	/// <summary>What is going on right now, for <see cref="ConversationRules"/> to decide on.</summary>
+	private GameActivity Activity => new(
+		InCombat: _combat != null || _pendingEnemy != null,
+		Transitioning: _transitioning,
+		OnCombatCooldown: _combatOnCooldown,
+		Conversation: _conversationKind,
+		FightQueued: _queuedEnemy != null);
 
 	// Runs in _EnterTree, not _Ready, on purpose: a CharacterBody2D registers its
 	// transform with the physics server when it enters the tree, and a parent's
@@ -58,7 +71,7 @@ public partial class Main : Node2D
 	public override void _Ready()
 	{
 		GameState.Instance.WorldChanged += OnWorldChanged;
-		_fade.FadeTo(ScreenFade.Clear);
+		_fade.FadeTo(ScreenFade.Clear, StartOpeningConversation);
 	}
 
 	// --- World transitions ---
@@ -67,8 +80,8 @@ public partial class Main : Node2D
 	{
 		// A fight in progress owns the enemy nodes the outgoing world is about to free,
 		// and a transition already under way must not be restarted by a second contact
-		// with the exit before the world is gone.
-		if (_transitioning || _combat != null || _pendingEnemy != null)
+		// with the exit before the world is gone. A conversation keeps every exit closed.
+		if (!ConversationRules.CanTransition(Activity))
 			return;
 
 		_transitioning = true;
@@ -122,7 +135,11 @@ public partial class Main : Node2D
 		EnterWorld((World)world);
 		StartCombatCooldown();
 
-		_fade.FadeTo(ScreenFade.Clear, () => _transitioning = false);
+		_fade.FadeTo(ScreenFade.Clear, () =>
+		{
+			_transitioning = false;
+			StartOpeningConversation();
+		});
 	}
 
 	/// <summary>
@@ -133,6 +150,7 @@ public partial class Main : Node2D
 		WorldScene next = SceneFor(world).Instantiate<WorldScene>();
 		next.CombatRequested += OnCombatRequested;
 		next.TransitionRequested += OnTransitionRequested;
+		next.ConversationRequested += OnConversationRequested;
 
 		AddChild(next);
 		MoveChild(next, 0);
@@ -172,11 +190,19 @@ public partial class Main : Node2D
 
 	private void OnCombatRequested(Enemy enemy)
 	{
-		if (_combat != null || _pendingEnemy != null || _combatOnCooldown || _transitioning)
-			return;
+		switch (ConversationRules.OnCombatRequest(Activity))
+		{
+			case CombatRequestOutcome.Start:
+				_pendingEnemy = enemy;
+				CallDeferred(MethodName.StartCombat, enemy.Data);
+				break;
 
-		_pendingEnemy = enemy;
-		CallDeferred(MethodName.StartCombat, enemy.Data);
+			// The enemy is still touching the player, and its area will not report that
+			// again, so the fight is kept for when the conversation ends.
+			case CombatRequestOutcome.Queue:
+				_queuedEnemy = enemy;
+				break;
+		}
 	}
 
 	private void StartCombat(EnemyData enemyData)
@@ -227,5 +253,77 @@ public partial class Main : Node2D
 		// started before unpausing on purpose: it must already be active on the
 		// first physics frame the world map runs again.
 		GetTree().CreateTimer(CombatCooldown).Timeout += () => _combatOnCooldown = false;
+	}
+
+	// --- Conversations ---
+
+	private void OnConversationRequested(string conversation)
+	{
+		StartConversation(conversation, ConversationKind.Voluntary);
+	}
+
+	// Runs from a fade's callback, like clearing _transitioning, so the conversation never
+	// starts before the world is visible. A killed tween skips its callback; nothing else
+	// fades this instance while a transition is under way, but a third caller of the fade
+	// would have to account for it.
+	private void StartOpeningConversation()
+	{
+		if (_world.OpeningConversation.Length > 0)
+			StartConversation(_world.OpeningConversation, ConversationKind.Forced);
+	}
+
+	/// <summary>
+	/// Starts a conversation, if one can start now. The player stops answering to movement
+	/// either way; a forced conversation also pauses the world.
+	/// </summary>
+	/// <remarks>
+	/// The conversation is read and started before anything changes here, so a file that
+	/// fails to load leaves the game as it was, with the error in the log. One that shows
+	/// nothing at all, because no line's condition holds, ends there without a box.
+	/// </remarks>
+	private void StartConversation(string id, ConversationKind kind)
+	{
+		if (!ConversationRules.CanStartConversation(Activity))
+			return;
+
+		DialogueRunner runner = DialogueRunner.Start(ConversationLoader.Load(id), DecisionRegistry.Instance.State);
+
+		if (runner.Step == DialogueStep.End)
+			return;
+
+		_dialogue = GD.Load<PackedScene>("res://UI/dialogue_box.tscn").Instantiate<DialogueBox>();
+		_dialogue.Begin(runner);
+		_dialogue.Finished += OnConversationFinished;
+		_conversationKind = kind;
+		_player.CanMove = false;
+
+		AddChild(_dialogue);
+
+		if (ConversationRules.PausesWorld(kind))
+			GetTree().Paused = true;
+	}
+
+	private void OnConversationFinished()
+	{
+		bool paused = ConversationRules.PausesWorld(_conversationKind.Value);
+
+		_dialogue.QueueFree();
+		_dialogue = null;
+		_conversationKind = null;
+		_player.CanMove = true;
+
+		if (paused)
+			GetTree().Paused = false;
+
+		// A fight requested during the conversation starts now, bypassing the guards that
+		// would have refused a new request: it was accepted when it arrived.
+		Enemy queued = _queuedEnemy;
+		_queuedEnemy = null;
+
+		if (queued != null && IsInstanceValid(queued))
+		{
+			_pendingEnemy = queued;
+			CallDeferred(MethodName.StartCombat, queued.Data);
+		}
 	}
 }
