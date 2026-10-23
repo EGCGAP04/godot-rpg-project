@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_jwrdx")
+Id = "weak"
 NameKey = "enemy.weak"
 MaxHp = 10
 AttackPower = 3

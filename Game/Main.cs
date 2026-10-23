@@ -191,6 +191,9 @@ public partial class Main : Node2D
 
 	private void OnCombatFinished(bool playerWon)
 	{
+		// Read now: the enemy is forgotten below, and may be freed.
+		string enemyId = _pendingEnemy.Data.Id;
+
 		PlayerStats.Instance.FullHeal();
 
 		if (playerWon)
@@ -208,6 +211,12 @@ public partial class Main : Node2D
 
 		StartCombatCooldown();
 		GetTree().Paused = false;
+
+		// Last, on purpose. An exception thrown in a signal handler is logged and the game
+		// goes on, but the rest of the handler does not run: anywhere earlier, a failure
+		// here would leave the game paused under the overlay. Here, the worst it can do
+		// is leave this one fight out of the history.
+		DecisionRegistry.Instance.State.RecordCombat(GameState.Instance.CurrentWorld, GameState.Instance.CurrentCycle, enemyId, playerWon);
 	}
 
 	private void StartCombatCooldown()

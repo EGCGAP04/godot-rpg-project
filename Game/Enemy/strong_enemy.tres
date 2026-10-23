@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_ikmei")
+Id = "strong"
 NameKey = "enemy.strong"
 MaxHp = 40
 AttackPower = 7

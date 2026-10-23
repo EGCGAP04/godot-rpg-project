@@ -11,8 +11,8 @@ using System;
 /// </remarks>
 public readonly record struct WorldUnlocks(bool Fantasy, bool Nightmare)
 {
-	/// <summary>Everything reachable. This is what M5 always uses — the conditions that
-	/// actually gate the two optional worlds arrive with the decision registry in M6.</summary>
+	/// <summary>Everything reachable: what the game's own conditions give while every flag
+	/// is at its starting value.</summary>
 	public static WorldUnlocks All => new(Fantasy: true, Nightmare: true);
 
 	/// <summary>Whether <paramref name="world"/> can be entered this cycle.</summary>

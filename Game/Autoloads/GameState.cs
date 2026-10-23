@@ -29,13 +29,6 @@ public partial class GameState : Node
 	[Signal]
 	public delegate void CycleChangedEventHandler(int cycle);
 
-	/// <summary>
-	/// Which of this cycle's optional worlds the player can reach. Always
-	/// <see cref="WorldUnlocks.All"/> in M5 — the decision registry starts driving it
-	/// in M6, which is why <see cref="CycleProgression"/> already takes it as an input.
-	/// </summary>
-	public WorldUnlocks Unlocks { get; set; } = WorldUnlocks.All;
-
 	/// <summary>The world being played. No signal is emitted for the starting value;
 	/// read this directly when setting up.</summary>
 	public World CurrentWorld { get; private set; } = World.Real;
@@ -57,17 +50,22 @@ public partial class GameState : Node
 	/// Moves the run to whatever comes next: the next unlocked world of this cycle, or
 	/// the start of the following one.
 	/// </summary>
+	/// <remarks>
+	/// Which worlds are unlocked is asked of <see cref="DecisionRegistry"/> now, with the
+	/// flags as they are at this moment, and never stored here.
+	/// </remarks>
 	public void Advance()
 	{
-		CyclePosition next = CycleProgression.Next(new CyclePosition(CurrentWorld, CurrentCycle), Unlocks);
+		CyclePosition next = CycleProgression.Next(new CyclePosition(CurrentWorld, CurrentCycle), DecisionRegistry.Instance.Unlocks);
 
 		bool cycleChanged = next.Cycle != CurrentCycle;
 
 		CurrentWorld = next.World;
 		CurrentCycle = next.Cycle;
 
-		// Cycle first, on purpose: anything scoped to a cycle has to be reset before a
-		// listener reacts to the new world by loading its scene.
+		// Cycle first, on purpose: anything scoped to a cycle, such as the registry's
+		// cycle flags, has to be reset before a listener reacts to the new world by
+		// loading its scene.
 		if (cycleChanged)
 			EmitSignal(SignalName.CycleChanged, CurrentCycle);
 
