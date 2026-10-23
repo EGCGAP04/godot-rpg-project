@@ -1,0 +1,12 @@
+{
+	"format": 1,
+	"nodes": {
+		"start": {
+			"lines": [
+				{ "speaker": "demo_neighbor", "line": "stayed_up", "if": "demo.asked and demo.stayed_up" },
+				{ "speaker": "demo_neighbor", "line": "slept", "if": "demo.asked and not demo.stayed_up" }
+			],
+			"next": "END"
+		}
+	}
+}

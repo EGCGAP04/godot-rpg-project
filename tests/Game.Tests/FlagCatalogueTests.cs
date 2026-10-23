@@ -18,7 +18,7 @@ public class FlagCatalogueTests
 		var catalogue = FlagCatalogue.Read(ProjectFiles.ReadText("Decisions", "flags.json"));
 
 		Assert.Equal(
-			new[] { "combat.losses", "combat.wins", "example.has_key", "example.key_returned", "example.met_before", "example.promised_help", "example.times_met", "world.fantasy_closed", "world.nightmare_closed" },
+			new[] { "combat.losses", "combat.wins", "demo.asked", "demo.stayed_up", "example.has_key", "example.key_returned", "example.met_before", "example.promised_help", "example.times_met", "world.fantasy_closed", "world.nightmare_closed" },
 			catalogue.Flags.Keys.Order());
 		Assert.Equal(FlagLifetime.Cycle, catalogue.Flags["example.has_key"].Lifetime);
 		Assert.Equal(FlagLifetime.Persistent, catalogue.Flags["example.met_before"].Lifetime);

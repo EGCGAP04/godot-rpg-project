@@ -5,3 +5,6 @@ msgstr ""
 
 msgid "speaker.example_stranger"
 msgstr "Stranger"
+
+msgid "speaker.demo_neighbor"
+msgstr "Neighbor"

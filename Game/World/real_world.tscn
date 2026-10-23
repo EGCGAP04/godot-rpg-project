@@ -3,9 +3,11 @@
 [ext_resource type="TileSet" uid="uid://chigtr8ylsw32" path="res://World/tileset.tres" id="1_tileset"]
 [ext_resource type="Script" uid="uid://c7atfmo0m3awh" path="res://World/WorldScene.cs" id="2_script"]
 [ext_resource type="PackedScene" uid="uid://ojvb3ure7une" path="res://World/world_exit.tscn" id="3_exit"]
+[ext_resource type="PackedScene" path="res://World/interactable.tscn" id="4_interactable"]
 
 [node name="RealWorld" type="Node2D" unique_id=497447458]
 script = ExtResource("2_script")
+OpeningConversation = "demo_morning"
 
 [node name="FloorLayer" type="TileMapLayer" parent="." unique_id=1632078997]
 modulate = Color(1, 0.97, 0.9, 1)
@@ -23,4 +25,9 @@ position = Vector2(72, 56)
 [node name="Bed" parent="." unique_id=1565085134 instance=ExtResource("3_exit")]
 position = Vector2(88, 136)
 
+[node name="Neighbor" parent="." instance=ExtResource("4_interactable")]
+position = Vector2(120, 56)
+Conversation = "demo_evening"
+
 [connection signal="ExitTriggered" from="Bed" to="." method="OnExitTriggered"]
+[connection signal="InteractionTriggered" from="Neighbor" to="." method="OnInteractionTriggered"]

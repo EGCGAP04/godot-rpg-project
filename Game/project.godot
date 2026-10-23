@@ -87,7 +87,7 @@ open_menu={
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://Localization/enemy.en.po", "res://Localization/enemy.es.po", "res://Localization/speaker.en.po", "res://Localization/speaker.es.po", "res://Localization/ui.en.po", "res://Localization/ui.es.po", "res://Localization/world.en.po", "res://Localization/world.es.po", "res://Dialogue/Conversations/example_first_meeting.en.po", "res://Dialogue/Conversations/example_first_meeting.es.po", "res://Dialogue/Conversations/example_second_meeting.en.po", "res://Dialogue/Conversations/example_second_meeting.es.po")
+locale/translations=PackedStringArray("res://Localization/enemy.en.po", "res://Localization/enemy.es.po", "res://Localization/speaker.en.po", "res://Localization/speaker.es.po", "res://Localization/ui.en.po", "res://Localization/ui.es.po", "res://Localization/world.en.po", "res://Localization/world.es.po", "res://Dialogue/Conversations/demo_evening.en.po", "res://Dialogue/Conversations/demo_evening.es.po", "res://Dialogue/Conversations/demo_morning.en.po", "res://Dialogue/Conversations/demo_morning.es.po", "res://Dialogue/Conversations/example_first_meeting.en.po", "res://Dialogue/Conversations/example_first_meeting.es.po", "res://Dialogue/Conversations/example_second_meeting.en.po", "res://Dialogue/Conversations/example_second_meeting.es.po")
 
 [physics]
 

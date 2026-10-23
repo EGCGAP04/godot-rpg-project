@@ -1,0 +1,27 @@
+{
+	"format": 1,
+	"nodes": {
+		"start": {
+			"lines": [
+				{ "speaker": "demo_neighbor", "line": "greet", "if": "not demo.asked" },
+				{ "speaker": "demo_neighbor", "line": "greet_again", "if": "demo.asked" }
+			],
+			"choices": [
+				{ "option": "sleep", "do": ["set demo.asked", "clear demo.stayed_up", "clear world.fantasy_closed"], "next": "sleep" },
+				{ "option": "stay_up", "do": ["set demo.asked", "set demo.stayed_up", "set world.fantasy_closed"], "next": "stay_up" }
+			]
+		},
+		"sleep": {
+			"lines": [
+				{ "speaker": "demo_neighbor", "line": "good_night" }
+			],
+			"next": "END"
+		},
+		"stay_up": {
+			"lines": [
+				{ "speaker": "demo_neighbor", "line": "no_dreams" }
+			],
+			"next": "END"
+		}
+	}
+}
