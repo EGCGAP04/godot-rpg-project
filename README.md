@@ -43,7 +43,7 @@ dotnet build --configuration Debug
 
 Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
-The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format and the translation tables — are covered by unit tests that run without it. Some of them check every conversation and every translation table in the project, so a broken conversation or a missing translation fails the build. The solution includes the test project, so from the same `Game/` folder:
+The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables and the decision registry — are covered by unit tests that run without it. Some of them check every conversation, every translation table and every data file in the project, so a broken conversation, a missing translation or a misspelt flag fails the build. The solution includes the test project, so from the same `Game/` folder:
 
 ```bash
 dotnet test "Godot RPG Project.sln" --configuration Debug
@@ -75,6 +75,7 @@ godot-rpg-project/
 │
 ├── Game/                       # res:// — the Godot project
 │   ├── Autoloads/
+│   │   ├── DecisionRegistry.cs (+.uid) # global singleton: loads the decision registry, starts each cycle
 │   │   ├── GameState.cs (+.uid)        # global singleton: current world and cycle
 │   │   └── PlayerStats.cs (+.uid)      # global singleton: player HP and attack
 │   │
@@ -84,8 +85,13 @@ godot-rpg-project/
 │   │   └── combat.tscn                 # overlay scene, not a scene swap
 │   │
 │   ├── Decisions/
+│   │   ├── CombatRecord.cs (+.uid)        # engine-free: one fight in the history
+│   │   ├── DecisionState.cs (+.uid)       # engine-free: every flag's value, the fights, the lifetimes
 │   │   ├── FlagCatalogue.cs (+.uid)       # engine-free: reads the catalogue of flags
-│   │   └── flags.json                     # every flag, with its type and lifetime
+│   │   ├── SlotSnapshot.cs (+.uid)        # engine-free: what one save slot keeps
+│   │   ├── WorldAccess.cs (+.uid)         # engine-free: reads world_access.json, computes the unlocks
+│   │   ├── flags.json                     # every flag, with its type and lifetime
+│   │   └── world_access.json              # the condition that opens each optional world
 │   │
 │   ├── Dialogue/
 │   │   ├── Conversations/                 # one JSON file per conversation, its text beside it
@@ -107,11 +113,12 @@ godot-rpg-project/
 │   │   ├── FlagEffectParser.cs (+.uid)    # engine-free: effect text → effect
 │   │   ├── FlagSyntaxException.cs (+.uid) # a malformed condition or effect, and its column
 │   │   ├── FlagTokenizer.cs (+.uid)       # engine-free: splits condition and effect text into tokens
+│   │   ├── FlagUses.cs (+.uid)            # engine-free: the flags a condition reads or an effect writes
 │   │   └── IFlagStore.cs (+.uid)          # where conditions read flags and effects write them
 │   │
 │   ├── Enemy/
 │   │   ├── Enemy.cs (+.uid)
-│   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding stats and the name's key
+│   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding the id, stats and the name's key
 │   │   ├── enemy.tscn
 │   │   ├── strong_enemy.tres           # 40 HP, 7 atk — the player loses
 │   │   └── weak_enemy.tres             # 10 HP, 3 atk — the player wins
@@ -179,6 +186,7 @@ godot-rpg-project/
 │       ├── CombatResolverTests.cs
 │       ├── ConversationReaderTests.cs
 │       ├── CycleProgressionTests.cs
+│       ├── DecisionStateTests.cs
 │       ├── DialogueNamesTests.cs
 │       ├── DialogueRunnerTests.cs
 │       ├── DialogueValidatorTests.cs # includes the tests that check every conversation and its text
@@ -189,7 +197,9 @@ godot-rpg-project/
 │       ├── FlagEffectParserTests.cs
 │       ├── FlagEffectTests.cs
 │       ├── FlagTokenizerTests.cs
+│       ├── FlagUsesTests.cs
 │       ├── Game.Tests.csproj
+│       ├── GameFlagsTests.cs       # every flag the code names is declared; every enemy has an id
 │       ├── GameKeysTests.cs        # every key the game's code and scenes name has its text
 │       ├── InMemoryFlagStore.cs    # stand-in for the decision registry
 │       ├── LocalizationValidatorTests.cs # includes the test that checks every table
@@ -197,6 +207,7 @@ godot-rpg-project/
 │       ├── ProjectFiles.cs         # finds Game/ and its data files from inside a test run
 │       ├── TextTemplateTests.cs
 │       ├── TranslationTableReaderTests.cs
+│       ├── WorldAccessTests.cs
 │       └── WorldUnlocksTests.cs
 │
 ├── .editorconfig
