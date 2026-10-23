@@ -1,6 +1,8 @@
 {
 	"format": 1,
 	"flags": {
+		"combat.wins": { "type": "counter", "lifetime": "run", "description": "Fights the player has won in this playthrough. Only the registry writes it, when a fight ends." },
+		"combat.losses": { "type": "counter", "lifetime": "run", "description": "Fights the player has lost in this playthrough. A lost fight is a death: the whole party falls. Only the registry writes it." },
 		"example.has_key": { "type": "bool", "lifetime": "cycle", "description": "The player is carrying the stranger's key. Set outside dialogue, when the key is picked up." },
 		"example.promised_help": { "type": "bool", "lifetime": "run", "description": "The player promised to look for the key and has not handed it back yet. Refusing withdraws the promise." },
 		"example.key_returned": { "type": "bool", "lifetime": "run", "description": "The key was handed back." },
