@@ -90,6 +90,7 @@ godot-rpg-project/
 │   │   │
 │   │   ├── DebugArguments.cs (+.uid)      # engine-free: reads the arguments after -- on the command line
 │   │   ├── DebugPreset.cs (+.uid)         # engine-free: reads a preset, checks it, applies it
+│   │   ├── DebugTools.cs (+.uid)          # global singleton: applies the startup preset
 │   │   └── SnapshotShelf.cs (+.uid)       # engine-free: the debug tooling's named snapshots
 │   │
 │   ├── Decisions/

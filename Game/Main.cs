@@ -71,6 +71,7 @@ public partial class Main : Node2D
 	public override void _Ready()
 	{
 		GameState.Instance.WorldChanged += OnWorldChanged;
+		GameState.Instance.JumpRequested += OnJumpRequested;
 		_fade.FadeTo(ScreenFade.Clear, StartOpeningConversation);
 	}
 
@@ -86,6 +87,22 @@ public partial class Main : Node2D
 
 		_transitioning = true;
 		_fade.FadeTo(ScreenFade.Opaque, () => GameState.Instance.Advance());
+	}
+
+	// The debug tooling's jump (#75) takes the same road as an exit: the same guards, the
+	// same fade, and the swap through WorldChanged. A jump that skipped them would bring
+	// back the phantom contact of #61, and the tool would produce fights the game never
+	// could. A refused jump is only reported in the log, since a signal has no answer.
+	private void OnJumpRequested(World world, int cycle)
+	{
+		if (!ConversationRules.CanTransition(Activity))
+		{
+			GD.Print($"Debug: jump to {world}, cycle {cycle} refused: a fight, a transition or a conversation is in progress.");
+			return;
+		}
+
+		_transitioning = true;
+		_fade.FadeTo(ScreenFade.Opaque, () => GameState.Instance.JumpTo(new CyclePosition(world, cycle)));
 	}
 
 	private void OnWorldChanged(World world)
