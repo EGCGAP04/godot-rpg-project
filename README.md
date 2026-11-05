@@ -51,6 +51,12 @@ dotnet test "Godot RPG Project.sln" --configuration Debug
 
 CI runs this on every pull request into `main` and every push to it, along with `dotnet format --verify-no-changes`, so a formatting mismatch fails the build too. CodeQL also scans the C# code and the workflows on those same events and once a week, and reports what it finds as code scanning alerts rather than failing the build.
 
+In a debug build, F3 opens a debug overlay that shows every flag of the decision registry and lets them be changed, takes and restores snapshots, jumps to any world and cycle, and switches the language. A run can also start in a chosen state from the command line, with a preset from `Game/Debug/Presets/`; the *Debug Tooling* section of [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) has the syntax:
+
+```bash
+godot --path . -- --preset res://Debug/Presets/no_fantasy.json
+```
+
 ## Project Structure
 
 The project follows a **feature-based** folder structure: each system has its own folder containing its scenes, scripts, and assets together, instead of splitting by file type. The Godot project itself lives inside `Game/`, keeping the repository root limited to project metadata (README, LICENSE, CHANGELOG, security policy, docs, GitHub config).

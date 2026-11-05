@@ -27,7 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `LocalizationValidator`, which checks every table together: file names and headers, key prefixes, fuzzy or empty texts, a table or a key missing in one language, mismatched placeholders, and registration in `project.godot`. A test runs it over the whole project, so a missing translation fails CI
 - `DialogueValidator.ValidateText`, which checks that every conversation has its table beside it, with a text for each line and option, and that every speaker has a name
 - A test that checks every key the game's code, scenes and resources name against the tables
-- F2 switches the language while playing, as a temporary aid until the debug tooling of #75
 - A Localization section in `docs/CONVENTIONS.md`: the tables, the key convention, placeholders, the runtime switch and pseudolocalization
 - The decision registry, in memory: `DecisionState` holds every flag of the catalogue and the history of fights, resets the cycle flags when a new cycle starts, and takes and restores a save slot's snapshot (the cycle and run flags and the fights, never the persistent flags). The `DecisionRegistry` autoload loads it and re-emits each change as a signal
 - Every fight is recorded with its world, cycle, enemy and result, and counted in two new counters, `combat.wins` and `combat.losses`
@@ -40,6 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - M6's demo: a neighbor in the Real world asks whether the player is going to bed. Staying up skips that night's dream, and the next morning opens with a line that remembers the answer
 - `ConversationRules` and `Facing`, engine-free and tested: what each kind of conversation allows, and whether the player is facing something
 - A Dialogue Flow section in `docs/CONVENTIONS.md`
+- Debug tooling, in debug builds only. F3 opens an overlay that lists every flag with its value and lifetime and lets them be changed, takes several named snapshots of the save slot's flags and restores them, resets the persistent flags, jumps to any world and cycle through the normal world transition, switches the language, and shows the fights
+- Debug presets: a run can start in a chosen world and cycle with chosen flags, from a preset file in `Debug/Presets/` or from `--world`, `--cycle` and `--do` after `--` on the command line. A preset that cannot be applied stops the game with exit code 1, and a test checks every preset in the project
+- A Debug Tooling section in `docs/CONVENTIONS.md`
 
 ### Changed
 
@@ -58,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enemies have an `Id`, which the history of fights records, separate from their translated name
 - The test of translation keys skips flag names, since `world.` is both a group of flags and the worlds' table
 - The player does not move or turn during a conversation
+- The dialogue box and the combat overlay ignore input while the debug overlay is open
 - The game window opens at 1280x720, twice the base resolution, which stays 640x360. The stretch mode is now `canvas_items` instead of `viewport`: everything is still laid out at 640x360, but drawn at the window's size, so text stays sharp instead of being scaled up pixel by pixel
 
 ### Fixed
