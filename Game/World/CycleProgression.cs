@@ -13,6 +13,14 @@ public static class CycleProgression
 	public const int FirstCycle = 1;
 
 	/// <summary>
+	/// Whether <paramref name="position"/> can be played: a declared world, and a cycle
+	/// from <see cref="FirstCycle"/> on. The debug tooling (#75) checks a position given
+	/// by hand with it before starting or jumping there.
+	/// </summary>
+	public static bool IsValid(CyclePosition position) =>
+		Enum.IsDefined(position.World) && position.Cycle >= FirstCycle;
+
+	/// <summary>
 	/// Returns the position that follows <paramref name="current"/>: the next unlocked
 	/// world in the same cycle, or <see cref="World.Real"/> of the next cycle when none
 	/// of the remaining worlds are unlocked.

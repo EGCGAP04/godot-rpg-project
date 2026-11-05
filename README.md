@@ -84,6 +84,9 @@ godot-rpg-project/
 │   │   ├── CombatResolver.cs (+.uid)   # engine-free, covered by tests
 │   │   └── combat.tscn                 # overlay scene, not a scene swap
 │   │
+│   ├── Debug/                         # debug builds only (#75)
+│   │   └── SnapshotShelf.cs (+.uid)       # engine-free: the debug tooling's named snapshots
+│   │
 │   ├── Decisions/
 │   │   ├── CombatRecord.cs (+.uid)        # engine-free: one fight in the history
 │   │   ├── DecisionState.cs (+.uid)       # engine-free: every flag's value, the fights, the lifetimes
@@ -222,6 +225,7 @@ godot-rpg-project/
 │       ├── LocalizationValidatorTests.cs # includes the test that checks every table
 │       ├── PoText.cs               # writes small .po tables for tests
 │       ├── ProjectFiles.cs         # finds Game/ and its data files from inside a test run
+│       ├── SnapshotShelfTests.cs
 │       ├── TextTemplateTests.cs
 │       ├── TranslationTableReaderTests.cs
 │       ├── WorldAccessTests.cs

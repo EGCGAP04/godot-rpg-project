@@ -10,6 +10,25 @@ namespace GodotRPGProject.Tests;
 /// </summary>
 public class CycleProgressionTests
 {
+	[Theory]
+	[InlineData(World.Real, 1)]
+	[InlineData(World.Fantasy, 2)]
+	[InlineData(World.Nightmare, 10)]
+	public void IsValid_AcceptsADeclaredWorldInACycleFromTheFirst(World world, int cycle)
+	{
+		Assert.True(CycleProgression.IsValid(new CyclePosition(world, cycle)));
+	}
+
+	[Theory]
+	[InlineData(World.Real, 0)]
+	[InlineData(World.Fantasy, -1)]
+	[InlineData((World)3, 1)]
+	[InlineData((World)(-1), 1)]
+	public void IsValid_RejectsAnUndeclaredWorldOrACycleBeforeTheFirst(World world, int cycle)
+	{
+		Assert.False(CycleProgression.IsValid(new CyclePosition(world, cycle)));
+	}
+
 	[Fact]
 	public void Next_FromRealGoesToFantasyInTheSameCycle()
 	{
