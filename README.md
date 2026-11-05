@@ -85,6 +85,11 @@ godot-rpg-project/
 │   │   └── combat.tscn                 # overlay scene, not a scene swap
 │   │
 │   ├── Debug/                         # debug builds only (#75)
+│   │   ├── Presets/
+│   │   │   └── no_fantasy.json            # starts with the Fantasy world closed tonight
+│   │   │
+│   │   ├── DebugArguments.cs (+.uid)      # engine-free: reads the arguments after -- on the command line
+│   │   ├── DebugPreset.cs (+.uid)         # engine-free: reads a preset, checks it, applies it
 │   │   └── SnapshotShelf.cs (+.uid)       # engine-free: the debug tooling's named snapshots
 │   │
 │   ├── Decisions/
@@ -203,6 +208,8 @@ godot-rpg-project/
 │       ├── ConversationReaderTests.cs
 │       ├── ConversationRulesTests.cs
 │       ├── CycleProgressionTests.cs
+│       ├── DebugArgumentsTests.cs
+│       ├── DebugPresetTests.cs     # includes the test that checks every preset
 │       ├── DecisionStateTests.cs
 │       ├── DemoConversationsTests.cs # plays M6's demo against the real registry
 │       ├── DialogueNamesTests.cs

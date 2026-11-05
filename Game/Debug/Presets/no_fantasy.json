@@ -1,0 +1,9 @@
+{
+	"format": 1,
+	"description": "Starts on the first evening with the Fantasy world closed, so the bed leads straight to the next morning.",
+	"world": "real",
+	"cycle": 1,
+	"do": [
+		"set world.fantasy_closed"
+	]
+}
