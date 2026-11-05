@@ -53,6 +53,9 @@
     <Compile Include="..\..\Game\Decisions\SlotSnapshot.cs" Link="GameLogic\SlotSnapshot.cs" />
     <Compile Include="..\..\Game\Decisions\DecisionState.cs" Link="GameLogic\DecisionState.cs" />
     <Compile Include="..\..\Game\Decisions\WorldAccess.cs" Link="GameLogic\WorldAccess.cs" />
+    <Compile Include="..\..\Game\Debug\SnapshotShelf.cs" Link="GameLogic\SnapshotShelf.cs" />
+    <Compile Include="..\..\Game\Debug\DebugPreset.cs" Link="GameLogic\DebugPreset.cs" />
+    <Compile Include="..\..\Game\Debug\DebugArguments.cs" Link="GameLogic\DebugArguments.cs" />
     <Compile Include="..\..\Game\Shared\Scripts\DataFileException.cs" Link="GameLogic\DataFileException.cs" />
     <Compile Include="..\..\Game\Shared\Scripts\StrictJson.cs" Link="GameLogic\StrictJson.cs" />
     <Compile Include="..\..\Game\Localization\TranslationTable.cs" Link="GameLogic\TranslationTable.cs" />

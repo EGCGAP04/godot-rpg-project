@@ -29,6 +29,14 @@ public partial class GameState : Node
 	[Signal]
 	public delegate void CycleChangedEventHandler(int cycle);
 
+	/// <summary>
+	/// Emitted when the debug tooling asks to jump to a world and cycle (#75). <c>Main</c>
+	/// decides whether it can happen now and, if so, fades out and calls
+	/// <see cref="JumpTo"/>, as it does with an exit and <see cref="Advance"/>.
+	/// </summary>
+	[Signal]
+	public delegate void JumpRequestedEventHandler(World world, int cycle);
+
 	/// <summary>The world being played. No signal is emitted for the starting value;
 	/// read this directly when setting up.</summary>
 	public World CurrentWorld { get; private set; } = World.Real;
@@ -54,10 +62,53 @@ public partial class GameState : Node
 	/// Which worlds are unlocked is asked of <see cref="DecisionRegistry"/> now, with the
 	/// flags as they are at this moment, and never stored here.
 	/// </remarks>
-	public void Advance()
-	{
-		CyclePosition next = CycleProgression.Next(new CyclePosition(CurrentWorld, CurrentCycle), DecisionRegistry.Instance.Unlocks);
+	public void Advance() => MoveTo(CycleProgression.Next(new CyclePosition(CurrentWorld, CurrentCycle), DecisionRegistry.Instance.Unlocks));
 
+	/// <summary>
+	/// Sets where the run starts, without any signal: for the debug tooling's preset (#75),
+	/// before the main scene reads the position. Since no signal is emitted, the cycle
+	/// flags are not reset either, so a preset can set them.
+	/// </summary>
+	/// <exception cref="System.InvalidOperationException">The main scene is already in the tree.</exception>
+	/// <exception cref="System.ArgumentOutOfRangeException">The position is not one the game can be in.</exception>
+	public void StartAt(CyclePosition start)
+	{
+		// The main scene is already the current scene while the autoloads enter the tree
+		// (seen headless), so what matters is whether it has entered it too.
+		if (GetTree().CurrentScene?.IsInsideTree() == true)
+			throw new System.InvalidOperationException("The run's start can only be set before the main scene enters the tree.");
+
+		Valid(start);
+		CurrentWorld = start.World;
+		CurrentCycle = start.Cycle;
+	}
+
+	/// <summary>Asks for a jump to <paramref name="target"/>, which <c>Main</c> carries out if it can (#75).</summary>
+	/// <exception cref="System.ArgumentOutOfRangeException">The position is not one the game can be in.</exception>
+	public void RequestJump(CyclePosition target)
+	{
+		Valid(target);
+		EmitSignal(SignalName.JumpRequested, Variant.From(target.World), target.Cycle);
+	}
+
+	/// <summary>
+	/// Moves the run to <paramref name="target"/> with the same signals <see cref="Advance"/>
+	/// emits, so a jump to another cycle resets its cycle flags as playing there would.
+	/// Called by <c>Main</c>, once it has faded out; ask with <see cref="RequestJump"/>.
+	/// </summary>
+	/// <remarks>
+	/// It does not ask whether the world is open: the debug tooling can reach a closed one,
+	/// and says so on screen.
+	/// </remarks>
+	/// <exception cref="System.ArgumentOutOfRangeException">The position is not one the game can be in.</exception>
+	public void JumpTo(CyclePosition target)
+	{
+		Valid(target);
+		MoveTo(target);
+	}
+
+	private void MoveTo(CyclePosition next)
+	{
 		bool cycleChanged = next.Cycle != CurrentCycle;
 
 		CurrentWorld = next.World;
@@ -70,5 +121,11 @@ public partial class GameState : Node
 			EmitSignal(SignalName.CycleChanged, CurrentCycle);
 
 		EmitSignal(SignalName.WorldChanged, Variant.From(CurrentWorld));
+	}
+
+	private static void Valid(CyclePosition position)
+	{
+		if (!CycleProgression.IsValid(position))
+			throw new System.ArgumentOutOfRangeException(nameof(position), position, "Not a position the game can be in.");
 	}
 }

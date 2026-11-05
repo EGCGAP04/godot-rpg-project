@@ -65,6 +65,11 @@ public partial class Combat : CanvasLayer
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
+		// A confirm pressed in the debug overlay still reached this, even with a control
+		// of the overlay holding the focus (measured headless, #75).
+		if (DebugTools.Instance?.IsOpen == true)
+			return;
+
 		if (@event.IsActionPressed("confirm"))
 		{
 			TryPlayerAttack();

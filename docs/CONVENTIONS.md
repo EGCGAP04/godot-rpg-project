@@ -17,6 +17,7 @@ Game/ (res://)
 ├── Dialogue/        # Branching dialogue: the conversation files, their reader, runner and validator
 ├── Decisions/       # The flag catalogue, the decision registry's state, and what opens each world
 ├── Localization/    # Translation tables of no single conversation, their reader and validator
+├── Debug/           # The debug tooling: presets, the overlay and its autoload (debug builds only)
 ├── UI/              # Menus, HUD, dialogue boxes, the shared screen fade
 ├── Shared/
 │   ├── Fonts/        # Shared fonts used across the project
@@ -149,6 +150,7 @@ Both keep the player still, through `Player.CanMove`, and every exit closed. Hel
 - `confirm` moves past a line or picks the highlighted option, and `move_up` / `move_down` move the highlight, going round at either end. A choice keeps the last line on screen, since that line is usually the question.
 - **Every text is a key, and the labels translate themselves,** so a change of language shows at once. A narration line shows no name.
 - The box is a `CanvasLayer` with `process_mode = Always`, because a forced conversation pauses the tree around it.
+- **The box ignores input while the debug overlay is open,** and so does `Combat`. Godot runs every node's `_Input` before any control sees the event, so without that a key pressed in the overlay also moved the conversation behind it; `Combat`, which listens in `_UnhandledInput`, still received `confirm` with an overlay control holding the focus (both measured headless).
 
 **A conversation that shows nothing ends at once, without a box.** When no line's condition holds and the start node goes straight to `END`, `DialogueRunner.Start` is already at the end. That is what lets a world have an opening conversation that only sometimes has something to say, as the demo's morning does. A conversation that fails to load is read before anything changes, so the game carries on as it was, with the error in the log.
 
@@ -290,7 +292,8 @@ _enemyHpLabel.Text = TextTemplate.Fill(Tr("ui.combat.hp"), ("name", Tr(EnemyData
 - **The starting language needs no code.** Godot starts in the system's language when a table exists for it (`es_AR` finds `es`) and falls back to English otherwise, and English is already Godot's default fallback, so `project.godot` does not repeat it. Remembering the player's choice waits for a place to store settings, in M9 at the latest.
 - **A fixed text is a key, and Godot translates it by itself.** A `Control` whose `text` is a key shows its translation, and updates when the language changes: the Attack button holds `ui.combat.attack` in `combat.tscn`, and `Combat` assigns the result's key to its label.
 - **A text built in code goes through `Tr()` and `TextTemplate`,** as the HP labels and the world and cycle label do. Those labels have `auto_translate_mode` set to *Disabled*; otherwise Godot would look the finished text up as a key again, and pseudolocalization would rewrite it twice. They are rebuilt on `NotificationTranslationChanged`, which Godot sends every node when the language changes.
-- **F2 switches to the next language,** on every screen and while a fight pauses the tree. This is `Localization/LocaleSwitchKey.cs`, a temporary autoload. #75's debug tooling replaces it, and removing it means deleting that file and its line under `[autoload]`.
+- **The debug overlay switches the language** (see [Debug Tooling](#debug-tooling)), on every screen and while a fight pauses the tree. It replaced F2, a temporary key from #72.
+- **The debug overlay's own text is the one exception to "every text is a key".** It is a tool, not part of the game, so it is in English, its panel has auto-translation off, and `GameKeysTests` skips `Debug/`.
 - **Pseudolocalization checks that no text bypasses the tables.** It rewrites every translated text with accents and brackets (`[Åŧáćáŕ]`), so any text on screen without brackets did not come from a table. Turn it on for one run with an `override.cfg` beside `project.godot`, which `.gitignore` already lists:
 
   ```ini
@@ -364,9 +367,73 @@ It holds exactly `fantasy` and `nightmare`; the Real world has no condition, sin
 
 **That the Nightmare world needs the Fantasy world is code, not data:** `Unlocks` closes the Nightmare world whenever the Fantasy world is closed, whatever its own condition says, so no file can break the order. `GameState.Advance` asks the registry for the unlocks at the moment of moving on, with the flags as they are then, and stores nothing. The two `world.` flags are `cycle` flags that start `false`, so a cycle in which nothing sets them plays all three worlds.
 
+## Debug Tooling
+
+With around a hundred endings planned, checking them by playing each through by hand is not viable, so the decision registry has tooling of its own (#75). It is small on purpose and grows with the game. It exists in debug builds only: the `DebugTools` autoload frees itself when `OS.IsDebugBuild()` is false, and `DebugTools.Instance` stays null. Confirming nothing of it reaches a release export waits for the export configuration.
+
+The logic is engine-free, as in the rest of the game. `DebugPreset` reads and checks a preset, `DebugArguments` reads the command line and `SnapshotShelf` keeps the snapshots, all three covered by tests. `DebugTools` and `DebugOverlay` are the nodes around them.
+
+### The overlay
+
+**F3 (the `debug_overlay` action) opens and closes `Debug/debug_overlay.tscn`.** `DebugTools` reads the action in `_Input`, so a focused text field in the overlay cannot swallow it, and adds the overlay under the root, after the main scene. It shows:
+
+- where the run is, and a jump to any world and cycle, with a warning when the flags keep that world closed tonight;
+- the language;
+- every flag of the catalogue with its lifetime and a check box or a number, and its description as a tooltip;
+- the snapshots, with a name of their own or a number, each with Restore and Delete;
+- a button that resets the persistent flags;
+- the history of fights.
+
+**Every change goes through the registry's API,** so its signals fire as if the game had made it: a number is set by adding the difference with `AddToCounter`. The overlay follows `FlagChanged`, so a change the game makes while it is open shows too. Its rows are built from the catalogue each time it opens.
+
+**Opening pauses the tree unless something already had, and closing unpauses it only if opening paused it,** so a fight or a forced conversation stays paused behind it. The one gap: a forced conversation that starts while the overlay is open, which only a world's fade in can do, is unpaused when it closes. While the box and `Combat` ignore input, nothing behind the overlay reacts to a key pressed in it (see [The box and its input](#the-box-and-its-input)).
+
+### Snapshots and the persistent flags
+
+A snapshot is `DecisionState.TakeSnapshot`'s: the cycle and run flags and the fights. The shelf keeps several in memory, each with a name or the lowest free number, and the world and cycle it was taken in; a name already on the shelf replaces that snapshot. **Restoring brings back the flags and the fights, not the world and cycle.** Jumping is a separate step, because a jump to another cycle resets the cycle flags, and a restore that also jumped would undo part of itself depending on the order of the two.
+
+Persistent flags are shared by every save slot, so nothing in a slot can bring them back to a clean slate. `DecisionState.ResetPersistent` does, leaving the slot's flags and the fights alone.
+
+### The jump
+
+**A jump takes the same road as an exit:** `GameState.RequestJump` emits `JumpRequested`, and `Main` answers it as it answers a `WorldExit`, with the same guards from `ConversationRules`, the same fade, and then `GameState.JumpTo`, which moves the run with the signals `Advance` emits. A jump to another cycle therefore resets its cycle flags, and the swap keeps the guards against the phantom contact (see [World and Cycle Coordination](#world-and-cycle-coordination)); a jump that skipped them would produce fights the game never could. It can reach a world the flags keep closed, which is the one place the tool steps outside the game's rules, and the overlay says so. A jump `Main` refuses, during a fight, a transition or a conversation, is only printed, since a signal has no answer.
+
+### Presets
+
+A preset is a state for the game to start in. The project's presets live in `Debug/Presets/`:
+
+```json
+{
+	"format": 1,
+	"description": "Starts on the first evening with the Fantasy world closed, so the bed leads straight to the next morning.",
+	"world": "real",
+	"cycle": 1,
+	"do": [
+		"set world.fantasy_closed"
+	]
+}
+```
+
+- `format` and `description` are required; `world` (`real`, `fantasy` or `nightmare`), `cycle` (from 1) and `do` are not. The run starts in the Real world, cycle 1, unless the preset says otherwise.
+- `do` holds effects in the dialogue's effect language (see [Conditions and effects](#conditions-and-effects)). Every flag starts at its starting value, so `add example.times_met 3` sets the counter to 3. A preset may change a persistent flag, since it describes the whole game, not one slot.
+- It is read through `StrictJson` and `FlagEffectParser`, and `Validate` checks its flags against the catalogue in `FlagUses`' words. `EveryPresetInTheProject_IsValid` runs it over every preset in the project, and fails when it finds none.
+
+**A preset is applied from the command line,** with the arguments after `--`, which Godot hands the game through `OS.GetCmdlineUserArgs()`:
+
+```bash
+godot --headless --path . --quit-after 800 -- --preset res://Debug/Presets/no_fantasy.json
+godot --headless --path . --quit-after 800 -- --world fantasy --cycle 2 --do "set demo.stayed_up"
+```
+
+`--preset` takes a `res://` or an absolute path, once. `--world` and `--cycle` appear once at most, and `--do` as often as wanted; all three apply on top of the file, the effects after its own. **Anything else is an error, never skipped,** since a run that quietly ignored a misspelt argument would start in another state than the one asked for and look as if it had worked.
+
+**`DebugTools` applies it in `_EnterTree`,** registered after `DecisionRegistry` under `[autoload]`, so the registry exists and `Main` has not yet read `GameState`. `GameState.StartAt` sets the start without any signal, so the preset's cycle flags are not reset; it refuses once the main scene is in the tree (the main scene is already `CurrentScene` while the autoloads enter, so it checks `IsInsideTree`). Then it prints the world, the cycle and every flag, so a headless run leaves its state in the log.
+
+**A preset that cannot be applied stops the game with exit code 1,** and says why: a file that cannot be read or is malformed, an unknown argument, or a flag misused. A run that went on in the default state would look like one that worked, the same false result the terminal marker of a headless run exists to catch.
+
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 

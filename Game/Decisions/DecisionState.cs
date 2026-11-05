@@ -126,20 +126,17 @@ public sealed class DecisionState : IFlagStore
 	/// Starts a new cycle: every flag whose lifetime is <see cref="FlagLifetime.Cycle"/>
 	/// goes back to its starting value. The rest, and the history, stay as they are.
 	/// </summary>
-	public void StartCycle()
-	{
-		var changed = new List<string>();
+	public void StartCycle() => ResetLifetime(FlagLifetime.Cycle);
 
-		foreach (FlagDeclaration flag in Catalogue.Flags.Values.Where(flag => flag.Lifetime == FlagLifetime.Cycle))
-		{
-			bool wasChanged = flag.Type == FlagType.Bool ? Assign(flag.Name, false) : Assign(flag.Name, 0);
-
-			if (wasChanged)
-				changed.Add(flag.Name);
-		}
-
-		Announce(changed);
-	}
+	/// <summary>
+	/// Every flag whose lifetime is <see cref="FlagLifetime.Persistent"/> goes back to its
+	/// starting value. The cycle and run flags, and the history, stay as they are.
+	/// </summary>
+	/// <remarks>
+	/// For the debug tooling (#75): persistent flags are shared by every save slot, so
+	/// nothing in a slot can bring them back to a clean slate.
+	/// </remarks>
+	public void ResetPersistent() => ResetLifetime(FlagLifetime.Persistent);
 
 	/// <summary>
 	/// A copy of what belongs to the save slot: the cycle and run flags, and the history.
@@ -193,6 +190,25 @@ public sealed class DecisionState : IFlagStore
 
 		_combats.Clear();
 		_combats.AddRange(snapshot.Combats);
+		Announce(changed);
+	}
+
+	/// <summary>
+	/// Every flag of <paramref name="lifetime"/> goes back to its starting value, and
+	/// <see cref="FlagChanged"/> is raised for those that changed, once all of them have.
+	/// </summary>
+	private void ResetLifetime(FlagLifetime lifetime)
+	{
+		var changed = new List<string>();
+
+		foreach (FlagDeclaration flag in Catalogue.Flags.Values.Where(flag => flag.Lifetime == lifetime))
+		{
+			bool wasChanged = flag.Type == FlagType.Bool ? Assign(flag.Name, false) : Assign(flag.Name, 0);
+
+			if (wasChanged)
+				changed.Add(flag.Name);
+		}
+
 		Announce(changed);
 	}
 

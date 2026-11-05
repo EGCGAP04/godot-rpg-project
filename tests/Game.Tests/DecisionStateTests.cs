@@ -295,6 +295,45 @@ public class DecisionStateTests
 	}
 
 	[Fact]
+	public void ResetPersistent_ResetsOnlyThePersistentFlags_AndKeepsTheHistory()
+	{
+		var state = new DecisionState(Catalogue);
+		ChangeEverything(state);
+		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+
+		state.ResetPersistent();
+
+		Assert.False(state.GetFlag("test.ever"));
+		Assert.Equal(0, state.GetCounter("test.runs"));
+		Assert.True(state.GetFlag("test.tonight"));
+		Assert.Equal(3, state.GetCounter("test.steps"));
+		Assert.True(state.GetFlag("test.promised"));
+		Assert.Equal(3, state.GetCounter("test.visits"));
+		Assert.Equal(4, state.GetCounter(DecisionState.Wins));
+		Assert.Single(state.Combats);
+	}
+
+	[Fact]
+	public void ResetPersistent_RaisesFlagChangedOnlyForTheFlagsItResets_AfterTheyAllHaveTheirValues()
+	{
+		var state = new DecisionState(Catalogue);
+		state.SetFlag("test.ever", true);
+		state.AddToCounter("test.runs", 2);
+		state.SetFlag("test.promised", true);
+
+		var changed = new List<string>();
+		state.FlagChanged += name =>
+		{
+			Assert.False(state.GetFlag("test.ever"));
+			Assert.Equal(0, state.GetCounter("test.runs"));
+			changed.Add(name);
+		};
+		state.ResetPersistent();
+
+		Assert.Equal(new[] { "test.ever", "test.runs" }, changed.Order());
+	}
+
+	[Fact]
 	public void TakeSnapshot_HoldsTheCycleAndRunFlagsAndTheHistory_ButNoPersistentFlag()
 	{
 		var state = new DecisionState(Catalogue);

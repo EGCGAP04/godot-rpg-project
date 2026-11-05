@@ -33,6 +33,20 @@ public static class ProjectFiles
 		return Find(folder, "*.json").Select(path => new ConversationFile(InsideGame(path), File.ReadAllText(path))).ToArray();
 	}
 
+	/// <summary>
+	/// Every debug preset under <c>Debug/Presets/</c>, by file name, in a fixed order. Fails
+	/// when the folder is missing, for the same reason as <see cref="ConversationFiles"/>.
+	/// </summary>
+	public static (string Name, string Json)[] PresetFiles()
+	{
+		string folder = Path.Combine(GameDirectory, "Debug", "Presets");
+
+		if (!Directory.Exists(folder))
+			throw new DirectoryNotFoundException($"There is no presets folder at {folder}.");
+
+		return Find(folder, "*.json").Select(path => (Path.GetFileName(path), File.ReadAllText(path))).ToArray();
+	}
+
 	/// <summary>Every translation table file in <c>Game/</c>, in a fixed order.</summary>
 	public static TranslationFile[] TranslationFiles() =>
 		Find(GameDirectory, "*.po").Select(path => new TranslationFile(InsideGame(path), File.ReadAllText(path))).ToArray();

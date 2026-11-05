@@ -18,7 +18,9 @@ namespace GodotRPGProject.Tests;
 /// each of those needs a test of its own, like <see cref="EveryWorld_HasAName"/>. A flag
 /// named in a call such as <c>SetFlag("world.fantasy_closed", true)</c> is skipped: the
 /// group <c>world.</c> is also the worlds' table, and <see cref="GameFlagsTests"/> checks
-/// those names against the flag catalogue instead.
+/// those names against the flag catalogue instead. <c>Debug/</c> is skipped too: the debug
+/// tooling's text is English, not keys (#75), so a string there that looks like a key, such
+/// as a flag's name in a message, is not one.
 /// </remarks>
 public class GameKeysTests
 {
@@ -49,6 +51,7 @@ public class GameKeysTests
 		IEnumerable<string> files = Directory.EnumerateFiles(ProjectFiles.GameDirectory, "*", SearchOption.AllDirectories)
 			.Where(path => Extensions.Contains(Path.GetExtension(path)))
 			.Where(path => !Path.GetRelativePath(ProjectFiles.GameDirectory, path).StartsWith(".godot"))
+			.Where(path => !Path.GetRelativePath(ProjectFiles.GameDirectory, path).StartsWith("Debug"))
 			.OrderBy(path => path, StringComparer.Ordinal);
 
 		foreach (string path in files)
