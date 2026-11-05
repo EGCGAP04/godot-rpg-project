@@ -89,9 +89,11 @@ godot-rpg-project/
 │   │   │   └── no_fantasy.json            # starts with the Fantasy world closed tonight
 │   │   │
 │   │   ├── DebugArguments.cs (+.uid)      # engine-free: reads the arguments after -- on the command line
+│   │   ├── DebugOverlay.cs (+.uid)        # the overlay: flags, snapshots, jump and language
 │   │   ├── DebugPreset.cs (+.uid)         # engine-free: reads a preset, checks it, applies it
-│   │   ├── DebugTools.cs (+.uid)          # global singleton: applies the startup preset
-│   │   └── SnapshotShelf.cs (+.uid)       # engine-free: the debug tooling's named snapshots
+│   │   ├── DebugTools.cs (+.uid)          # global singleton: the startup preset, and F3 opens the overlay
+│   │   ├── SnapshotShelf.cs (+.uid)       # engine-free: the debug tooling's named snapshots
+│   │   └── debug_overlay.tscn             # opened and closed with F3
 │   │
 │   ├── Decisions/
 │   │   ├── CombatRecord.cs (+.uid)        # engine-free: one fight in the history
@@ -141,7 +143,6 @@ godot-rpg-project/
 │   │   └── weak_enemy.tres             # 10 HP, 3 atk — the player wins
 │   │
 │   ├── Localization/                      # the tables of no single conversation, one per kind of key
-│   │   ├── LocaleSwitchKey.cs (+.uid)     # temporary: F2 switches the language, until #75
 │   │   ├── LocalizationNames.cs (+.uid)   # the languages and how a table's file is named
 │   │   ├── LocalizationValidator.cs (+.uid) # engine-free: checks every table and its registration
 │   │   ├── TextTemplate.cs (+.uid)        # engine-free: fills a text's {named} placeholders

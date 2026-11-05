@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Debug/DebugOverlay.cs" id="1_overlay"]
+
+[node name="DebugOverlay" type="CanvasLayer"]
+process_mode = 3
+layer = 100
+script = ExtResource("1_overlay")
+
+[node name="Panel" type="Panel" parent="."]
+auto_translate_mode = 2
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 632.0
+offset_bottom = 352.0
+
+[node name="Scroll" type="ScrollContainer" parent="Panel"]
+layout_mode = 0
+offset_left = 6.0
+offset_top = 6.0
+offset_right = 618.0
+offset_bottom = 338.0
+horizontal_scroll_mode = 0
+
+[node name="Content" type="VBoxContainer" parent="Panel/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3

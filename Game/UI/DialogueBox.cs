@@ -58,6 +58,12 @@ public partial class DialogueBox : CanvasLayer
 		if (_runner == null || _runner.Step == DialogueStep.End)
 			return;
 
+		// Godot hands every _Input to the nodes before the controls get the event, so
+		// without this a key pressed in the debug overlay would also move the conversation
+		// behind it (measured headless, #75). In a release build there is no overlay.
+		if (DebugTools.Instance?.IsOpen == true)
+			return;
+
 		if (@event.IsActionPressed("confirm"))
 		{
 			GetViewport().SetInputAsHandled();
