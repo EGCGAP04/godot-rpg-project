@@ -25,6 +25,7 @@ public partial class DebugOverlay : CanvasLayer
 {
 	private const int FontSize = 10;
 	private const int MaxCycle = 99;
+	private static readonly Color PanelColour = new(0.1f, 0.1f, 0.1f);
 
 	private readonly Dictionary<string, Control> _flagControls = new();
 
@@ -42,7 +43,12 @@ public partial class DebugOverlay : CanvasLayer
 	{
 		_state = DecisionRegistry.Instance.State;
 		_content = GetNode<VBoxContainer>("Panel/Scroll/Content");
-		GetNode<Control>("Panel").Theme = new Theme { DefaultFontSize = FontSize };
+		var panel = GetNode<Panel>("Panel");
+		panel.Theme = new Theme { DefaultFontSize = FontSize };
+
+		// Opaque: the default panel lets the world show through, and the check boxes were
+		// lost against the tiles behind them.
+		panel.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = PanelColour });
 
 		BuildPosition();
 		BuildLanguage();
