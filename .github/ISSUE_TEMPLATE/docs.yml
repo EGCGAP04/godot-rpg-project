@@ -35,7 +35,6 @@ body:
       # every form in this folder: add a milestone to all of them when it is
       # created, and drop it from all of them when it closes.
       options:
-        - M6 - Dialogue, Decisions and Localization
         - M7 - Characters and Stats
         - M8 - Combat v2
         - M9 - Saving

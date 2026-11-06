@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-05
+
 ### Added
 
 - Issue forms for maintenance work (`chore.yml`, `docs.yml` and `refactor.yml`), each applying its own label and title prefix, so a non-feature Issue no longer starts from the feature form and has its label corrected by hand
@@ -62,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The player does not move or turn during a conversation
 - The dialogue box and the combat overlay ignore input while the debug overlay is open
 - The game window opens at 1280x720, twice the base resolution, which stays 640x360. The stretch mode is now `canvas_items` instead of `viewport`: everything is still laid out at 640x360, but drawn at the window's size, so text stays sharp instead of being scaled up pixel by pixel
+- The Issue forms' milestone dropdown no longer offers M6, which closes with this release
 
 ### Fixed
 
@@ -167,6 +170,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Combat could be triggered more than once (two overlapping enemies, or a re-trigger before the deferred start ran), leaking an orphaned overlay on a permanently paused tree and crashing when the first fight resolved
 - `.editorconfig` declared spaces for C# files while every file in the project is tab-indented, which would have introduced mixed indentation
 
-[Unreleased]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/EGCGAP04/godot-rpg-project/releases/tag/v0.1.0
