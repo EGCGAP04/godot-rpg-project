@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The stat formulas, in a new `Stats/` folder, as engine-free classes covered by unit tests. `StatFormulas` turns a combatant's `BaseStats` into armor's damage reduction, critical chance, hit chance, critical damage, evasion rate and escape rate, each as an unrounded percentage. Nothing in the game calls them yet
+- `DiminishingReturns`, the curve `cap * stat / (stat + K)` that armor and luck go through, which approaches its cap without reaching it
+- `StatTuning`, a resource with every provisional number of the formulas (the caps, the floors, the bases and each curve's `K`), editable in the Inspector in `Stats/stat_tuning.tres`. It hands the formulas a plain `StatTuningValues`, which refuses a value that is missing or makes no sense
+- A test that reads `stat_tuning.tres` and requires it to write every value the resource has
+- A Stat Formulas section in `docs/CONVENTIONS.md`
+
 ### Changed
 
 - The pull request template opens with a comment giving the title convention, `[Type]: <summary> (Issue #N)`, which every PR with an Issue has followed since #7 without it being written anywhere

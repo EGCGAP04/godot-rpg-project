@@ -43,7 +43,7 @@ dotnet build --configuration Debug
 
 Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
-The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables and the decision registry — are covered by unit tests that run without it. Some of them check every conversation, every translation table and every data file in the project, so a broken conversation, a missing translation or a misspelt flag fails the build. The solution includes the test project, so from the same `Game/` folder:
+The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables, the decision registry and the stat formulas — are covered by unit tests that run without it. Some of them check every conversation, every translation table and every data file in the project, so a broken conversation, a missing translation or a misspelt flag fails the build. The solution includes the test project, so from the same `Game/` folder:
 
 ```bash
 dotnet test "Godot RPG Project.sln" --configuration Debug
@@ -178,6 +178,16 @@ godot-rpg-project/
 │   │   │
 │   │   └── Theme/                         # .gitkeep only so far
 │   │
+│   ├── Stats/                             # the stat formulas; engine-free but for the resource
+│   │   ├── ActionKind.cs (+.uid)          # attack or skill
+│   │   ├── BaseStats.cs (+.uid)           # the seven base stats of one combatant
+│   │   ├── ByAction.cs (+.uid)            # a tuning number with a value per kind of action
+│   │   ├── DiminishingReturns.cs (+.uid)  # cap * stat / (stat + K)
+│   │   ├── StatFormulas.cs (+.uid)        # reduction, critical, hit, evasion and escape
+│   │   ├── StatTuning.cs (+.uid)          # Resource: the tuning, editable in the Inspector
+│   │   ├── StatTuningValues.cs (+.uid)    # the tuning as plain, checked values
+│   │   └── stat_tuning.tres               # the game's tuning; every number is provisional
+│   │
 │   ├── UI/
 │   │   ├── DialogueBox.cs (+.uid)      # shows a conversation and reads its input
 │   │   ├── ScreenFade.cs (+.uid)       # shared fade, used by combat and transitions
@@ -213,6 +223,7 @@ godot-rpg-project/
 │
 ├── tests/                      # outside res:// on purpose — see CONVENTIONS.md
 │   └── Game.Tests/
+│       ├── BaseStatsTests.cs
 │       ├── CombatResolverTests.cs
 │       ├── ConversationReaderTests.cs
 │       ├── ConversationRulesTests.cs
@@ -224,6 +235,7 @@ godot-rpg-project/
 │       ├── DialogueNamesTests.cs
 │       ├── DialogueRunnerTests.cs
 │       ├── DialogueValidatorTests.cs # includes the tests that check every conversation and its text
+│       ├── DiminishingReturnsTests.cs
 │       ├── DirectionResolverTests.cs
 │       ├── EnemyDataTests.cs       # every enemy writes its name and HP
 │       ├── FacingTests.cs
@@ -242,6 +254,10 @@ godot-rpg-project/
 │       ├── PoText.cs               # writes small .po tables for tests
 │       ├── ProjectFiles.cs         # finds Game/ and its data files from inside a test run
 │       ├── SnapshotShelfTests.cs
+│       ├── StatFormulasTests.cs
+│       ├── StatTuningTests.cs      # the tuning file writes every value
+│       ├── StatTuningValuesTests.cs
+│       ├── TestTuning.cs           # the tuning and the stats the formula tests use
 │       ├── TextTemplateTests.cs
 │       ├── TranslationTableReaderTests.cs
 │       ├── WorldAccessTests.cs
