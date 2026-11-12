@@ -1,3 +1,11 @@
+<!--
+Title: [Type]: <summary> (Issue #N)
+The type names the change: [Feature], [Fix], [Chore], [Docs], [Refactor] or [Test],
+two joined as [Chore, Docs]. It is usually the Issue's own prefix. The squash commit
+on main takes this title, so it is what the history reads as. Leave out "(Issue #N)"
+only when the PR has no Issue.
+-->
+
 ## Description
 
 <!-- What does this PR change? Brief summary. -->
