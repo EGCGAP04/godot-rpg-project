@@ -1,17 +1,7 @@
-[gd_resource type="Resource" script_class="CharacterData" format=3]
+[gd_resource type="Resource" script_class="CharacterData" format=3 uid="uid://b31ho5yopdie7"]
 
 [ext_resource type="Script" uid="uid://bfjlb5q4nylok" path="res://Characters/CharacterData.cs" id="1_character"]
 [ext_resource type="Script" uid="uid://b5bocx4nil5jp" path="res://Stats/StatGrowth.cs" id="2_growth"]
-
-[sub_resource type="Resource" id="Resource_real"]
-script = ExtResource("2_growth")
-HealthPointsBase = 7.0
-HealthPointsGrowth = 3.0
-AttackDamageBase = 1.0
-AgilityBase = 4.0
-AgilityGrowth = 0.5
-LuckBase = 1.0
-HitRateBase = 90.0
 
 [sub_resource type="Resource" id="Resource_fantasy"]
 script = ExtResource("2_growth")
@@ -46,6 +36,16 @@ LuckBase = 2.0
 LuckGrowth = 0.25
 HitRateBase = 85.0
 HitRateGrowth = 0.5
+
+[sub_resource type="Resource" id="Resource_real"]
+script = ExtResource("2_growth")
+HealthPointsBase = 7.0
+HealthPointsGrowth = 3.0
+AttackDamageBase = 1.0
+AgilityBase = 4.0
+AgilityGrowth = 0.5
+LuckBase = 1.0
+HitRateBase = 90.0
 
 [resource]
 script = ExtResource("1_character")

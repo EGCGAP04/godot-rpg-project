@@ -12,6 +12,8 @@ Game/ (res://)
 ├── main.tscn        # Entry point; Main.cs coordinates worlds, player and combat
 ├── Player/          # Player character: movement, sprite, input handling
 ├── Enemy/           # Enemy scenes and stats, contact detection on the map
+├── Characters/      # The characters as resources, and the plain values the rules read
+├── Stats/           # Stat formulas, growth with the level, experience curves and their tuning
 ├── Combat/          # Turn-based combat system: turn order, actions
 ├── World/           # Exploration maps: tilemaps, collisions, transitions, things to talk to
 ├── Dialogue/        # Branching dialogue: the conversation files, their reader, runner and validator
@@ -433,7 +435,7 @@ godot --headless --path . --quit-after 800 -- --world fantasy --cycle 2 --do "se
 
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas in `Stats/`, and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas, the growth of stats and the experience curves in `Stats/`, a character's values in `Characters/`, and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
@@ -463,11 +465,11 @@ The file is stored in the format VS Code's C# Dev Kit writes (a newline after th
 
 Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). A new enemy type is a new `.tres` file, with an `Id` of its own for the decision registry's history of fights, plus its name in the two `Localization/enemy.*.po` tables, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
 
-A resource's defaults are empty or zero, never one real entity's values. The editor leaves out of a `.tres` every property that equals its default, so when `EnemyData`'s defaults were the weak enemy's stats, saving `weak_enemy.tres` emptied it of them. `EnemyDataTests` requires every enemy to write its name and HP.
+A resource's defaults are empty or zero, never one real entity's values. The editor leaves out of a `.tres` every property that equals its default, so when `EnemyData`'s defaults were the weak enemy's stats, saving `weak_enemy.tres` emptied it of them. `EnemyDataTests` requires every enemy to write its name, its HP and the experience it gives, so every enemy gives at least 1.
 
 Global player state is the exception: it lives in the `PlayerStats` Autoload, since it has to persist across scenes.
 
-A resource is a Godot type, so an engine-free class cannot take one. When plain logic needs a resource's numbers, the resource builds a plain value from them and the logic only ever sees that value: `Stats/StatTuning.cs` has a `ToValues()` that returns a `StatTuningValues`, which is what `StatFormulas` reads. See *Stat Formulas*.
+A resource is a Godot type, so an engine-free class cannot take one. When plain logic needs a resource's numbers, the resource builds a plain value from them and the logic only ever sees that value: `Stats/StatTuning.cs` has a `ToValues()` that returns a `StatTuningValues`, which is what `StatFormulas` reads. See *Stat Formulas*. A character does the same: `Characters/CharacterData.cs` builds a `CharacterValues`. See *Characters and Levels*.
 
 ## Stat Formulas
 
@@ -481,6 +483,8 @@ A resource is a Godot type, so an engine-free class cannot take one. When plain 
 | `StatTuningValues` | Every tunable number, as a plain record. `ByAction` is a number with one value against attacks and another against skills. |
 | `StatFormulas` | The formulas, built from a `StatTuningValues`. |
 | `StatTuning`, `stat_tuning.tres` | The tuning as a resource and the game's one file of it. The only part that needs the engine. |
+
+The same folder holds how stats grow with the level and what a level costs. See *Characters and Levels*.
 
 ### What they compute
 
@@ -521,3 +525,63 @@ Every number in the *Limits* column, the two bases (150 and 50) and the four `K`
 - **A new tuning number** needs four things: its export in `StatTuning`, its parameter in `StatTuningValues` with its check, its line in the file, and its name in `StatTuningTests`.
 - **The formulas' own tests do not read the file.** They use `TestTuning`, with the design's numbers and round `K`s, so that tuning the game does not break them.
 - **`ToValues()` cannot be unit-tested,** since `StatTuning` is a Godot type. That it hands each value to its own parameter was checked with a headless run; check it again when a value is added.
+
+## Characters and Levels
+
+A character is data: a `CharacterData` resource in `Game/Characters/`, authored as a `.tres` like an enemy. **Levels and stats are independent per character and per world,** so one file carries three sets of numbers. Nothing in the game uses the characters yet: the party that holds them, and what each one keeps while playing, come next in M7.
+
+| File | What it is |
+|---|---|
+| `Characters/CharacterData` | The resource: an `Id`, a `NameKey`, a `RealAge`, and a `StatGrowth` for each world, held inside the same file as sub-resources. |
+| `Stats/StatGrowth` | The resource for one world: for each of the seven stats, its value at level 1 and what each level adds. |
+| `Characters/CharacterValues` | The same character as plain, checked values. What the engine-free rules read. |
+| `Stats/StatLine`, `Stats/StatGrowthValues` | One stat's line, and the seven lines of one character in one world. |
+| `Stats/ExperienceCurve`, `Stats/ExperienceCurves` | What each level costs in one world, and the curve of each world that has one. |
+| `Stats/LevelProgress` | A level and the experience gathered towards the next. |
+
+### Stats come from the level
+
+**A stat is never stored.** It is a straight line, computed when it is needed and rounded down once:
+
+```
+stat = floor(base + growth * (level - 1))
+```
+
+So what a character keeps is a level, and changing a character's numbers changes every level of that character at once, saved games included. `CharacterValues.StatsAt(world, level)` returns the `BaseStats` the formulas read.
+
+- **Growth may be a fraction,** and the two numbers are `decimal`, not `double`, because the result is rounded down. A growth of 0.29 over 100 levels is 28.999999999999996 in `double`, which rounds to 28 and not 29. Godot exports `double`; `StatLine.From` is the one place where they become `decimal`.
+- **The rule is the same in the three worlds.** In the Real world the level is the character's age, `RealAge`, so `base` is the stat at the age of 1. `StartingLevel(world)` is the age there and 1 in the other two.
+- **Neither number may be negative,** and a level below 1 is refused. A line of 0 and 0 is a stat the character does not have.
+- **A character needs health points where they start:** 1 or more in each world at its starting level, or `CharacterValues` refuses them.
+
+### Experience
+
+Going from a level to the next costs:
+
+```
+cost = max(1, floor(base * level ^ exponent))
+```
+
+`ExperienceCurve` holds one world's `base`, `exponent` and highest level, and `Add(progress, award)` returns the new `LevelProgress`. The Fantasy and the Nightmare world each have a curve. **The Real world has none:** `ExperienceCurves.For(World.Real)` is `null`, and adding experience there returns the progress untouched.
+
+- **One award may raise several levels.** What is left over stays as experience towards the next.
+- **At the highest level nothing is kept:** the experience is 0 and the rest of the award is lost.
+- **A `LevelProgress` holds the experience gathered since the last level, not a total.** A total would tie the level to the curve, and retuning the curve would move the level of every character already played.
+- **A retuned curve never takes a level away.** If a level now costs less than a character already holds, they rise on the next award, even one of 0. If the highest level was lowered below theirs, they stay where they are.
+- **Experience is a 64-bit number, and the highest level is data,** because the design keeps open a mode that goes far past the standard highest level. A curve whose last level would not fit in 64 bits is refused when it is built, so `ToNextLevel` cannot fail in the middle of handing out a fight's experience.
+
+The six numbers (base, exponent and highest level, for each of the two worlds) are in `Stats/stat_tuning.tres`, and `StatTuning.ToExperienceCurves()` builds the curves. They are provisional, like the rest of the tuning, and follow its rules: none may be 0, and `StatTuningTests` requires the file to write each one.
+
+**Every enemy says how much experience it gives,** in `EnemyData.Experience`.
+
+### A character's file
+
+- **`Id`** is a lowercase word (letters, digits and underscores, starting with a letter), unique among the characters, and the file is named after it: `demo_hero.tres`. It is what the party, the dialogue and a save will call the character, so it never changes with the text.
+- **`NameKey`** is `speaker.<Id>`. A party member is always someone who speaks, so the name is written once, in `Localization/speaker.*.po`, in both languages.
+- **A stat of 0 is not written.** `StatGrowth`'s defaults are zero and the editor leaves out every value equal to its default, so, unlike the tuning, a line missing under a world is a 0 and not a mistake.
+- **A misspelt stat is a mistake Godot hides:** it ignores a name the resource does not have, and the stat is 0. `CharacterDataTests` refuses any name under a world that `StatGrowth` does not export.
+- **`CharacterDataTests` reads every character's file as text** and rebuilds it as a `CharacterValues`, through the same checks the game applies. It also requires the id to be unique and to match the file's name.
+- **`ToValues()` cannot be unit-tested,** on either resource. That each hands every number to its own stat was checked with a headless run; check it again when a property is added.
+- **A character written by hand has no `uid://`** until the editor saves the file, like a scene. The editor may also reorder the worlds inside the file and rename their ids, which changes nothing.
+
+The three characters in the folder (`demo_hero`, `demo_friend` and `demo_newcomer`) are **placeholders**, like M6's demo conversation: enough to build and test the party with. The placeholder protagonist starts the Fantasy world with the 20 HP and 4 attack that `PlayerStats` has today, so the two enemies keep giving one win and one loss.

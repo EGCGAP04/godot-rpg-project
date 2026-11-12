@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `StatTuning`, a resource with every provisional number of the formulas (the caps, the floors, the bases and each curve's `K`), editable in the Inspector in `Stats/stat_tuning.tres`. It hands the formulas a plain `StatTuningValues`, which refuses a value that is missing or makes no sense
 - A test that reads `stat_tuning.tres` and requires it to write every value the resource has
 - A Stat Formulas section in `docs/CONVENTIONS.md`
+- Characters as data: `CharacterData`, a resource in a new `Characters/` folder with an id, the key of its name, its age and a `StatGrowth` for each of the three worlds. `CharacterValues` is the same character as plain, checked values
+- Stats computed from the level and never stored: `base + growth * (level - 1)` for each of the seven stats, rounded down once. Growth may be a fraction, and the numbers are `decimal` so that rounding down lands where the design says
+- Experience curves, one for the Fantasy world and one for the Nightmare world: a level costs `base * level ^ exponent`, experience is a 64-bit number, and the highest level is data. One award may raise several levels, and the Real world, where a level is an age, earns none. Their six provisional numbers are in `Stats/stat_tuning.tres`
+- `EnemyData` says how much experience a win is worth, and both enemies write it: 5 and 20
+- Three placeholder characters (`demo_hero`, `demo_friend` and `demo_newcomer`), with names in English and Spanish. Nothing in the game uses them yet
+- A test that reads every character's file and rebuilds it through the same checks the game applies, refusing a stat name the resource does not have
+- A Characters and Levels section in `docs/CONVENTIONS.md`
 
 ### Changed
 
