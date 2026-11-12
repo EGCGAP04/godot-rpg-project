@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="StatTuning" format=3]
+[gd_resource type="Resource" script_class="StatTuning" format=3 uid="uid://bukw04cfg6l0w"]
 
 [ext_resource type="Script" uid="uid://ckh6asfsqrolp" path="res://Stats/StatTuning.cs" id="1_tuning"]
 
