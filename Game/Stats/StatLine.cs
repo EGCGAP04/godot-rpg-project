@@ -30,6 +30,23 @@ public readonly record struct StatLine
 		Growth = growth;
 	}
 
+	/// <summary>
+	/// A line from the two numbers as a resource holds them. Godot exports
+	/// <c>double</c>, and this is the one place where they become <c>decimal</c>: the
+	/// conversion keeps 15 significant digits, so the 0.29 typed in the Inspector is
+	/// exactly 0.29 here, without the error its binary form carries.
+	/// </summary>
+	public static StatLine From(double baseValue, double growth) =>
+		new(Exact(baseValue, nameof(baseValue)), Exact(growth, nameof(growth)));
+
+	private static decimal Exact(double value, string name)
+	{
+		if (!double.IsFinite(value) || Math.Abs(value) > int.MaxValue)
+			throw new ArgumentOutOfRangeException(name, value, "A stat's base and growth must be numbers a base stat can hold.");
+
+		return (decimal)value;
+	}
+
 	/// <summary>The stat at level 1.</summary>
 	public decimal Base { get; }
 

@@ -1,0 +1,57 @@
+[gd_resource type="Resource" script_class="CharacterData" format=3]
+
+[ext_resource type="Script" uid="uid://bfjlb5q4nylok" path="res://Characters/CharacterData.cs" id="1_character"]
+[ext_resource type="Script" uid="uid://b5bocx4nil5jp" path="res://Stats/StatGrowth.cs" id="2_growth"]
+
+[sub_resource type="Resource" id="Resource_real"]
+script = ExtResource("2_growth")
+HealthPointsBase = 10.0
+HealthPointsGrowth = 3.0
+AttackDamageBase = 1.0
+AgilityBase = 3.0
+AgilityGrowth = 0.5
+LuckBase = 2.0
+HitRateBase = 90.0
+
+[sub_resource type="Resource" id="Resource_fantasy"]
+script = ExtResource("2_growth")
+HealthPointsBase = 26.0
+HealthPointsGrowth = 5.0
+AttackDamageBase = 3.0
+AttackDamageGrowth = 0.75
+ArmorBase = 3.0
+ArmorGrowth = 0.75
+ManaPointsBase = 6.0
+ManaPointsGrowth = 1.5
+AgilityBase = 3.0
+AgilityGrowth = 0.25
+LuckBase = 4.0
+LuckGrowth = 0.5
+HitRateBase = 85.0
+HitRateGrowth = 0.5
+
+[sub_resource type="Resource" id="Resource_nightmare"]
+script = ExtResource("2_growth")
+HealthPointsBase = 20.0
+HealthPointsGrowth = 4.0
+AttackDamageBase = 2.0
+AttackDamageGrowth = 0.5
+ArmorBase = 2.0
+ArmorGrowth = 0.75
+ManaPointsBase = 5.0
+ManaPointsGrowth = 1.0
+AgilityBase = 3.0
+AgilityGrowth = 0.25
+LuckBase = 3.0
+LuckGrowth = 0.5
+HitRateBase = 80.0
+HitRateGrowth = 0.5
+
+[resource]
+script = ExtResource("1_character")
+Id = "demo_friend"
+NameKey = "speaker.demo_friend"
+RealAge = 12
+Real = SubResource("Resource_real")
+Fantasy = SubResource("Resource_fantasy")
+Nightmare = SubResource("Resource_nightmare")

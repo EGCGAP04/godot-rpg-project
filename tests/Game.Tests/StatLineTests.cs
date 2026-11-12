@@ -91,6 +91,52 @@ public class StatLineTests
 	}
 
 	[Fact]
+	public void From_TurnsTheNumbersOfAResourceIntoExactOnes()
+	{
+		StatLine line = StatLine.From(20.0, 0.29);
+
+		Assert.Equal(20m, line.Base);
+		Assert.Equal(0.29m, line.Growth);
+		Assert.Equal(new StatLine(20, 0.29m), line);
+
+		// The case a double gets wrong: 0.29 * 100 lands on 29, not on 28.
+		Assert.Equal(29, StatLine.From(0, 0.29).At(101));
+	}
+
+	[Fact]
+	public void From_KeepsEachNumberInItsOwnPlace()
+	{
+		StatLine line = StatLine.From(7, 0.5);
+
+		Assert.Equal(7m, line.Base);
+		Assert.Equal(0.5m, line.Growth);
+	}
+
+	[Theory]
+	[InlineData(double.NaN)]
+	[InlineData(double.PositiveInfinity)]
+	[InlineData(1e30)]
+	[InlineData(-1)]
+	public void From_ABaseThatIsNotAStat_IsRefused(double baseValue)
+	{
+		var exception = Assert.Throws<ArgumentOutOfRangeException>(() => StatLine.From(baseValue, 1));
+
+		Assert.Equal("baseValue", exception.ParamName);
+	}
+
+	[Theory]
+	[InlineData(double.NaN)]
+	[InlineData(double.NegativeInfinity)]
+	[InlineData(1e30)]
+	[InlineData(-0.5)]
+	public void From_AGrowthThatIsNotAStat_IsRefused(double growth)
+	{
+		var exception = Assert.Throws<ArgumentOutOfRangeException>(() => StatLine.From(10, growth));
+
+		Assert.Equal("growth", exception.ParamName);
+	}
+
+	[Fact]
 	public void Constructor_ANegativeBase_IsRefused()
 	{
 		var exception = Assert.Throws<ArgumentOutOfRangeException>(() => new StatLine(-0.01m, 1));
