@@ -20,11 +20,25 @@ internal static class TestRoster
 		Luck: default,
 		HitRate: default);
 
-	/// <summary>A character aged 12, with 20 health points in every world and 5 more per level.</summary>
+	/// <summary>
+	/// A character aged 12, with numbers of their own in each world: 40 health points and 1
+	/// more per year in the Real one (51 at 12), 20 and 5 more per level in the Fantasy one,
+	/// 30 and 10 more in the Nightmare one. Mana points: none, 10 and 2 more, 6 and 3 more.
+	/// </summary>
 	public static CharacterValues Character(string id) =>
-		new(id, $"speaker.{id}", realAge: 12, real: Growth(20, 5, 10, 2), fantasy: Growth(20, 5, 10, 2), nightmare: Growth(20, 5, 10, 2));
+		new(id, $"speaker.{id}", realAge: 12, real: Growth(40, 1), fantasy: Growth(20, 5, 10, 2), nightmare: Growth(30, 10, 6, 3));
 
 	/// <summary>A roster with <see cref="Hero"/> as the protagonist, and the others in the order given.</summary>
 	public static CharacterRosterValues With(params string[] others) =>
 		new(Character(Hero), others.Select(Character));
+
+	/// <summary>
+	/// Curves with costs to work out by hand. Fantasy: 10 times the level (10, 20, 30, 40),
+	/// up to level 5. Nightmare: 100 times the level (100, 200), up to level 3.
+	/// </summary>
+	public static ExperienceCurves Curves() =>
+		new(fantasy: new ExperienceCurve(10, 1, 5), nightmare: new ExperienceCurve(100, 1, 3));
+
+	/// <summary>A party over <see cref="With"/> and <see cref="Curves"/>.</summary>
+	public static PartyState Party(params string[] others) => new(With(others), Curves());
 }

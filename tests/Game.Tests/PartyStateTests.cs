@@ -10,7 +10,7 @@ namespace GodotRPGProject.Tests;
 public class PartyStateTests
 {
 	/// <summary>A party over a roster of six, so a full party still leaves someone out.</summary>
-	private static PartyState Party() => new(TestRoster.With("abe", "bea", "cal", "dee", "eve"));
+	private static PartyState Party() => TestRoster.Party("abe", "bea", "cal", "dee", "eve");
 
 	/// <summary>Counts how many times the party says its members changed.</summary>
 	private static Func<int> CountChanges(PartyState party)
@@ -31,9 +31,10 @@ public class PartyStateTests
 	}
 
 	[Fact]
-	public void Constructor_WithoutARoster_IsRefused()
+	public void Constructor_WithoutARosterOrCurves_IsRefused()
 	{
-		Assert.Throws<ArgumentNullException>(() => new PartyState(null));
+		Assert.Throws<ArgumentNullException>(() => new PartyState(null, TestRoster.Curves()));
+		Assert.Throws<ArgumentNullException>(() => new PartyState(TestRoster.With(), null));
 	}
 
 	[Fact]
