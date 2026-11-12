@@ -433,7 +433,7 @@ godot --headless --path . --quit-after 800 -- --world fantasy --cycle 2 --do "se
 
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas in `Stats/`, and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
@@ -466,3 +466,58 @@ Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored 
 A resource's defaults are empty or zero, never one real entity's values. The editor leaves out of a `.tres` every property that equals its default, so when `EnemyData`'s defaults were the weak enemy's stats, saving `weak_enemy.tres` emptied it of them. `EnemyDataTests` requires every enemy to write its name and HP.
 
 Global player state is the exception: it lives in the `PlayerStats` Autoload, since it has to persist across scenes.
+
+A resource is a Godot type, so an engine-free class cannot take one. When plain logic needs a resource's numbers, the resource builds a plain value from them and the logic only ever sees that value: `Stats/StatTuning.cs` has a `ToValues()` that returns a `StatTuningValues`, which is what `StatFormulas` reads. See *Stat Formulas*.
+
+## Stat Formulas
+
+`Game/Stats/` holds the formulas that turn a combatant's base stats into what a fight uses. Nothing in the game calls them yet: M7's debug panel shows their results, and M8's damage pipeline (accuracy, then evasion, then critical, then armor) is built on them. Expect M8 to change them.
+
+| File | What it is |
+|---|---|
+| `BaseStats` | The seven base stats of one combatant as integers: health points, attack damage, armor, mana points, agility, luck and hit rate. It does not know whose they are, nor the level or the world that produced them. |
+| `ActionKind` | `Attack` or `Skill`. Several formulas answer differently for the two. |
+| `DiminishingReturns` | The one curve, `cap * stat / (stat + K)`. |
+| `StatTuningValues` | Every tunable number, as a plain record. `ByAction` is a number with one value against attacks and another against skills. |
+| `StatFormulas` | The formulas, built from a `StatTuningValues`. |
+| `StatTuning`, `stat_tuning.tres` | The tuning as a resource and the game's one file of it. The only part that needs the engine. |
+
+### What they compute
+
+Every result is a percentage written as the design writes it (**90 is 90%**, not 0.9), in `double`, and **never rounded**: rounding belongs to the end of whatever applies the result. Nothing here draws a random number. A formula returns a chance, and deciding whether it comes up needs a source of randomness the tests can control, which M8 adds.
+
+| Method | Formula | Limits |
+|---|---|---|
+| `ArmorReduction(defender, kind)` | `cap * armor / (armor + K)` | approaches 90% against attacks, 80% against skills |
+| `CriticalChance(attacker, kind)` | `cap * luck / (luck + K)` | approaches 95% on attacks, 90% on skills |
+| `HitChance(attacker)` | the hit rate, 1 point is 1% | never below 25%, never above 100% |
+| `CriticalDamage(attacker, kind)` | `150 + max(0, hit rate - 100) + attack damage / 5 + luck / 5` | at most 500% for attacks, 300% for skills |
+| `EvasionRate(defender, kind)` | `armor / 30 + agility / 20 + luck / 10` | at most 50%; halved against skills |
+| `EscapeRate(allies, enemies)` | `50 + allies' average agility / 20 + allies' average luck / 10 - enemies' average agility / 20 - enemies' average luck / 10` | never below 10%, never above 90% |
+
+- **The curve needs no clamp.** It is 0 for a stat of 0, half the cap when the stat equals `K`, and approaches the cap without reaching it. `K` is the one knob of each use: the stat value that gives half the cap.
+- **Hit rate above 100 is not lost.** It no longer improves the chance to hit, and feeds critical damage instead.
+- **Evasion applies its cap first and the half after,** so a skill is evaded 25% of the time at most.
+- **Evasion is the chance to evade an action that already landed,** which is why accuracy comes before it in M8's pipeline.
+- **Escape uses each side's average,** so it does not depend on how many are on a side. Who counts on a side, such as whether a downed ally does, is the caller's to decide.
+
+### A wrong input fails loudly
+
+None of these mistakes would crash a formula. Each would return a believable percentage, so each is refused where the value is built, with an exception that names it:
+
+- **A negative stat** is refused by `BaseStats`. A stat of 0 is valid, and gives 0% wherever it is the only input.
+- **A tuning value of 0 or less, or one that is not a number,** is refused by `StatTuningValues`. So are a percentage above 100, a critical damage cap below its base, and an escape floor above its cap. A `K` of 0 would return the full cap for any stat.
+- **An escape with nobody on a side** is refused by `EscapeRate`. An average over nobody, taken as 0, would answer with the base, as if both sides were evenly matched.
+- **A kind of action that is neither** `Attack` nor `Skill` is refused, not treated as one of them.
+
+Because the two types check themselves, no formula validates its numbers again.
+
+### Tuning
+
+Every number in the *Limits* column, the two bases (150 and 50) and the four `K` are provisional, and live in `Stats/stat_tuning.tres`, a `StatTuning` resource that can be edited in the Inspector. The divisors (`/ 5`, `/ 20`, `/ 30`, `/ 10`) are constants in `StatFormulas`: they are part of each formula's shape. The four `K` are 100 only so that the file has a value; choosing them is an open design decision.
+
+- **`StatTuning`'s defaults are zero,** like every resource's (see *Stats as Resources*). No tuning value may be 0, so a value missing from the file is refused by `ToValues()` and never reaches a formula.
+- **`StatTuningTests` reads the file as text** and requires it to write every value the resource exports, nothing else, and values `StatTuningValues` accepts. It reads the list of exports from `StatTuning.cs`, so a new one without its line in the file fails.
+- **A new tuning number** needs four things: its export in `StatTuning`, its parameter in `StatTuningValues` with its check, its line in the file, and its name in `StatTuningTests`.
+- **The formulas' own tests do not read the file.** They use `TestTuning`, with the design's numbers and round `K`s, so that tuning the game does not break them.
+- **`ToValues()` cannot be unit-tested,** since `StatTuning` is a Godot type. That it hands each value to its own parameter was checked with a headless run; check it again when a value is added.

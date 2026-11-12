@@ -27,6 +27,12 @@
   -->
   <ItemGroup>
     <Compile Include="..\..\Game\Combat\CombatResolver.cs" Link="GameLogic\CombatResolver.cs" />
+    <Compile Include="..\..\Game\Stats\ActionKind.cs" Link="GameLogic\ActionKind.cs" />
+    <Compile Include="..\..\Game\Stats\BaseStats.cs" Link="GameLogic\BaseStats.cs" />
+    <Compile Include="..\..\Game\Stats\DiminishingReturns.cs" Link="GameLogic\DiminishingReturns.cs" />
+    <Compile Include="..\..\Game\Stats\ByAction.cs" Link="GameLogic\ByAction.cs" />
+    <Compile Include="..\..\Game\Stats\StatTuningValues.cs" Link="GameLogic\StatTuningValues.cs" />
+    <Compile Include="..\..\Game\Stats\StatFormulas.cs" Link="GameLogic\StatFormulas.cs" />
     <Compile Include="..\..\Game\World\World.cs" Link="GameLogic\World.cs" />
     <Compile Include="..\..\Game\World\CyclePosition.cs" Link="GameLogic\CyclePosition.cs" />
     <Compile Include="..\..\Game\World\WorldUnlocks.cs" Link="GameLogic\WorldUnlocks.cs" />

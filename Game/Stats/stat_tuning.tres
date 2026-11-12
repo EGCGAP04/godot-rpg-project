@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="StatTuning" format=3 uid="uid://bukw04cfg6l0w"]
+
+[ext_resource type="Script" uid="uid://ckh6asfsqrolp" path="res://Stats/StatTuning.cs" id="1_tuning"]
+
+[resource]
+script = ExtResource("1_tuning")
+ArmorKAttack = 100.0
+ArmorKSkill = 100.0
+ArmorReductionCapAttack = 90.0
+ArmorReductionCapSkill = 80.0
+LuckKAttack = 100.0
+LuckKSkill = 100.0
+CriticalChanceCapAttack = 95.0
+CriticalChanceCapSkill = 90.0
+HitChanceFloor = 25.0
+CriticalDamageBase = 150.0
+CriticalDamageCapAttack = 500.0
+CriticalDamageCapSkill = 300.0
+EvasionCap = 50.0
+EscapeBase = 50.0
+EscapeFloor = 10.0
+EscapeCap = 90.0
