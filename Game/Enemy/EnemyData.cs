@@ -34,4 +34,13 @@ public partial class EnemyData : Resource
 
 	[Export]
 	public int AttackPower { get; set; }
+
+	/// <summary>
+	/// The experience a win over this enemy gives. Every enemy gives at least 1: the
+	/// default is 0, which the editor leaves out of the file, and a test requires the
+	/// file to write it, so an enemy with none is a mistake and not a choice. In 64
+	/// bits, like the experience it is added to.
+	/// </summary>
+	[Export]
+	public long Experience { get; set; }
 }
