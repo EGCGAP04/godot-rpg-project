@@ -33,6 +33,8 @@
     <Compile Include="..\..\Game\Stats\ByAction.cs" Link="GameLogic\ByAction.cs" />
     <Compile Include="..\..\Game\Stats\StatTuningValues.cs" Link="GameLogic\StatTuningValues.cs" />
     <Compile Include="..\..\Game\Stats\StatFormulas.cs" Link="GameLogic\StatFormulas.cs" />
+    <Compile Include="..\..\Game\Stats\StatLine.cs" Link="GameLogic\StatLine.cs" />
+    <Compile Include="..\..\Game\Stats\StatGrowthValues.cs" Link="GameLogic\StatGrowthValues.cs" />
     <Compile Include="..\..\Game\World\World.cs" Link="GameLogic\World.cs" />
     <Compile Include="..\..\Game\World\CyclePosition.cs" Link="GameLogic\CyclePosition.cs" />
     <Compile Include="..\..\Game\World\WorldUnlocks.cs" Link="GameLogic\WorldUnlocks.cs" />
