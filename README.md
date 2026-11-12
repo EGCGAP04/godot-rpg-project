@@ -10,7 +10,7 @@
 
 ## Project status
 
-🚧 In development — foundation phase.
+🚧 In development — core systems phase.
 
 The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. Every text is in Spanish and English, and the game starts in the system's language. In a debug build, F3 opens an overlay to inspect and change the decision registry's flags, take and restore snapshots of them, jump to any world and cycle, and switch the language. All art is placeholder (solid-colour rectangles and tinted tiles).
 
@@ -183,6 +183,7 @@ godot-rpg-project/
 │   │   ├── ScreenFade.cs (+.uid)       # shared fade, used by combat and transitions
 │   │   ├── dialogue_box.tscn
 │   │   └── screen_fade.tscn
+│   │
 │   ├── World/
 │   │   ├── CyclePosition.cs (+.uid)    # engine-free: a world plus its cycle number
 │   │   ├── CycleProgression.cs (+.uid) # engine-free: which world comes next
@@ -261,7 +262,7 @@ For architectural conventions (naming, node communication patterns, scene struct
 
 ## Screenshots
 
-_(Will be added once there's playable content)_
+_(Will be added once the game has real art: everything on screen is still a placeholder)_
 
 ## Security
 

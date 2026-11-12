@@ -45,12 +45,15 @@ public partial class ScreenFade : ColorRect
 	/// tweens fighting over the same property or fire a stale callback.
 	/// </summary>
 	/// <remarks>
-	/// A killed tween never raises <c>Finished</c>, so <b>do not park state that must be
-	/// cleared in <paramref name="onFinished"/> alone</b> unless the caller is the only
-	/// one that can start a fade on this instance. <c>Main</c> gets away with it because
-	/// its two callers are mutually exclusive and combat owns a separate instance; a
-	/// third caller would strand whatever flag the interrupted callback was going to
-	/// clear.
+	/// A killed tween never raises <c>Finished</c>, so <b>state that is cleared only in
+	/// <paramref name="onFinished"/> is stranded if another call interrupts the fade</b>.
+	/// Parking state there is safe only when nothing can start a fade on this instance
+	/// while that callback is still pending. <c>Main</c> does park its transition flag
+	/// there, and what keeps it safe is a rule, not a number of callers: every request
+	/// that fades <c>Main</c>'s instance (a world exit, the debug tooling's jump) first
+	/// passes <c>ConversationRules.CanTransition</c>, which refuses while a transition
+	/// is under way, and combat owns a separate instance. Anything new that fades
+	/// <c>Main</c>'s instance has to pass the same check.
 	/// </remarks>
 	public void FadeTo(float alpha, Action onFinished = null)
 	{

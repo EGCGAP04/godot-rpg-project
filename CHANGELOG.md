@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The pull request template opens with a comment giving the title convention, `[Type]: <summary> (Issue #N)`, which every PR with an Issue has followed since #7 without it being written anywhere
+- The README's status line reads "core systems phase" instead of "foundation phase", and its Screenshots section says what it waits for: real art
+
+### Fixed
+
+- `ScreenFade.FadeTo`'s remark said `Main` could park state in a fade callback only because it had two callers, and that a third would strand it. The debug tooling's jump is a third and strands nothing, so the remark now states the rule that keeps it safe: every request that fades `Main`'s instance passes `ConversationRules.CanTransition` first
+- The README's Project Structure tree had no separator line between `UI/` and `World/`
+
 ## [0.3.0] - 2026-11-05
 
 ### Added
