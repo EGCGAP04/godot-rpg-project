@@ -10,7 +10,8 @@ namespace GodotRPGProject.Tests;
 /// <summary>
 /// Checks <c>Stats/stat_tuning.tres</c>, the file the game's tuning comes from, by
 /// reading it as text: every value the <c>StatTuning</c> resource exports is written
-/// in it, and together they make a tuning the formulas accept.
+/// in it, and together they make a tuning the formulas accept and experience curves
+/// that can be built.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,8 +22,8 @@ namespace GodotRPGProject.Tests;
 /// <para>
 /// The resource itself is a Godot type and cannot be loaded here. Its list of
 /// properties is read from its source, so a property added to it without a line in the
-/// file fails; that <c>ToValues</c> hands each one to the right parameter is not
-/// covered here and was checked with a headless run.
+/// file fails; that <c>ToValues</c> and <c>ToExperienceCurves</c> hand each one to the
+/// right parameter is not covered here and was checked with a headless run.
 /// </para>
 /// </remarks>
 public class StatTuningTests
@@ -34,7 +35,9 @@ public class StatTuningTests
 		"HitChanceFloor",
 		"CriticalDamageBase", "CriticalDamageCapAttack", "CriticalDamageCapSkill",
 		"EvasionCap",
-		"EscapeBase", "EscapeFloor", "EscapeCap"
+		"EscapeBase", "EscapeFloor", "EscapeCap",
+		"FantasyExperienceBase", "FantasyExperienceExponent", "FantasyHighestLevel",
+		"NightmareExperienceBase", "NightmareExperienceExponent", "NightmareHighestLevel"
 	};
 
 	private static string ResourceSource => ProjectFiles.ReadText("Stats", "StatTuning.cs");
@@ -43,7 +46,7 @@ public class StatTuningTests
 
 	/// <summary>The exported properties of a resource, read from its source.</summary>
 	public static string[] ExportedProperties(string source) =>
-		Regex.Matches(source, @"\[Export\]\s+public\s+double\s+(\w+)\s*\{")
+		Regex.Matches(source, @"\[Export\]\s+public\s+(?:double|int)\s+(\w+)\s*\{")
 			.Select(match => match.Groups[1].Value)
 			.ToArray();
 
@@ -112,14 +115,36 @@ public class StatTuningTests
 	}
 
 	[Fact]
+	public void TheFilesValues_MakeExperienceCurvesThatCanBeBuilt()
+	{
+		Dictionary<string, double> v = WrittenValues(TuningFile);
+
+		var curves = new ExperienceCurves(
+			fantasy: new ExperienceCurve(v["FantasyExperienceBase"], v["FantasyExperienceExponent"], WholeNumber(v, "FantasyHighestLevel")),
+			nightmare: new ExperienceCurve(v["NightmareExperienceBase"], v["NightmareExperienceExponent"], WholeNumber(v, "NightmareHighestLevel")));
+
+		// The curves work: an award large enough for the first level reaches the second.
+		foreach (ExperienceCurve curve in new[] { curves.Fantasy, curves.Nightmare })
+			Assert.Equal(new LevelProgress(2, 0), curve.Add(new LevelProgress(1, 0), curve.ToNextLevel(1)));
+	}
+
+	private static int WholeNumber(Dictionary<string, double> values, string name)
+	{
+		double value = values[name];
+		Assert.True(value == Math.Floor(value), $"stat_tuning.tres writes {name} as {value}, and it is a whole number.");
+
+		return (int)value;
+	}
+
+	[Fact]
 	public void TheReaders_FindWhatASampleHolds()
 	{
 		// The searches above are by pattern, and a pattern that matches nothing passes
 		// for a file with nothing wrong. These samples pin what each one finds.
-		string source = "\t[Export]\n\tpublic double First { get; set; }\n\n\t/// <summary>x</summary>\n\t[Export]\n\tpublic double Second { get; set; }\n\tpublic double NotExported { get; set; }\n";
+		string source = "\t[Export]\n\tpublic double First { get; set; }\n\n\t/// <summary>x</summary>\n\t[Export]\n\tpublic double Second { get; set; }\n\tpublic double NotExported { get; set; }\n\n\t[Export]\n\tpublic int Whole { get; set; }\n";
 		string file = "[gd_resource]\nNotAValue = 1.0\n\n[resource]\nscript = ExtResource(\"1\")\nFirst = 100.0\nSecond = 2.5\nThird = 7\n";
 
-		Assert.Equal(new[] { "First", "Second" }, ExportedProperties(source));
+		Assert.Equal(new[] { "First", "Second", "Whole" }, ExportedProperties(source));
 
 		Dictionary<string, double> written = WrittenValues(file);
 		Assert.Equal(new[] { "First", "Second", "Third" }, written.Keys.ToArray());

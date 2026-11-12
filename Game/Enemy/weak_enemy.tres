@@ -8,4 +8,5 @@ Id = "weak"
 NameKey = "enemy.weak"
 MaxHp = 10
 AttackPower = 3
+Experience = 5
 metadata/_custom_type_script = "uid://vwkaouolbgoh"

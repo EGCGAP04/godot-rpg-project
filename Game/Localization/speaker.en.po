@@ -8,3 +8,12 @@ msgstr "Stranger"
 
 msgid "speaker.demo_neighbor"
 msgstr "Neighbor"
+
+msgid "speaker.demo_hero"
+msgstr "Hero"
+
+msgid "speaker.demo_friend"
+msgstr "Friend"
+
+msgid "speaker.demo_newcomer"
+msgstr "Newcomer"

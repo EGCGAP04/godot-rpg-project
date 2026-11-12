@@ -43,7 +43,7 @@ dotnet build --configuration Debug
 
 Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
-The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables, the decision registry and the stat formulas — are covered by unit tests that run without it. Some of them check every conversation, every translation table and every data file in the project, so a broken conversation, a missing translation or a misspelt flag fails the build. The solution includes the test project, so from the same `Game/` folder:
+The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables, the decision registry, the stat formulas, and how characters grow and level up — are covered by unit tests that run without it. Some of them check every conversation, every translation table, every data file and every character in the project, so a broken conversation, a missing translation, a misspelt flag or a character with a misspelt stat fails the build. The solution includes the test project, so from the same `Game/` folder:
 
 ```bash
 dotnet test "Godot RPG Project.sln" --configuration Debug
@@ -84,6 +84,13 @@ godot-rpg-project/
 │   │   ├── DecisionRegistry.cs (+.uid) # global singleton: loads the decision registry, starts each cycle
 │   │   ├── GameState.cs (+.uid)        # global singleton: current world and cycle
 │   │   └── PlayerStats.cs (+.uid)      # global singleton: player HP and attack
+│   │
+│   ├── Characters/                    # the characters, as resources
+│   │   ├── CharacterData.cs (+.uid)       # [GlobalClass] Resource: id, name key, age and a growth per world
+│   │   ├── CharacterValues.cs (+.uid)     # engine-free: a character as plain, checked values
+│   │   ├── demo_friend.tres               # placeholder: the first recruit
+│   │   ├── demo_hero.tres                 # placeholder: the protagonist, 20 HP and 4 atk in the Fantasy world
+│   │   └── demo_newcomer.tres             # placeholder: the one who takes a place in the party
 │   │
 │   ├── Combat/
 │   │   ├── Combat.cs (+.uid)           # turn state, timers, input, UI
@@ -143,7 +150,7 @@ godot-rpg-project/
 │   │
 │   ├── Enemy/
 │   │   ├── Enemy.cs (+.uid)
-│   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding the id, stats and the name's key
+│   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding the id, stats, experience and the name's key
 │   │   ├── enemy.tscn
 │   │   ├── strong_enemy.tres           # 40 HP, 7 atk — the player loses
 │   │   └── weak_enemy.tres             # 10 HP, 3 atk — the player wins
@@ -178,12 +185,18 @@ godot-rpg-project/
 │   │   │
 │   │   └── Theme/                         # .gitkeep only so far
 │   │
-│   ├── Stats/                             # the stat formulas; engine-free but for the resource
+│   ├── Stats/                             # stat formulas, growth and experience; engine-free but for the resources
 │   │   ├── ActionKind.cs (+.uid)          # attack or skill
 │   │   ├── BaseStats.cs (+.uid)           # the seven base stats of one combatant
 │   │   ├── ByAction.cs (+.uid)            # a tuning number with a value per kind of action
 │   │   ├── DiminishingReturns.cs (+.uid)  # cap * stat / (stat + K)
+│   │   ├── ExperienceCurve.cs (+.uid)     # what each level costs in one world, and adding experience
+│   │   ├── ExperienceCurves.cs (+.uid)    # the curve of each world; the Real world has none
+│   │   ├── LevelProgress.cs (+.uid)       # a level and the experience towards the next
 │   │   ├── StatFormulas.cs (+.uid)        # reduction, critical, hit, evasion and escape
+│   │   ├── StatGrowth.cs (+.uid)          # Resource: base and growth of the seven stats in one world
+│   │   ├── StatGrowthValues.cs (+.uid)    # the seven stats at a level, from their lines
+│   │   ├── StatLine.cs (+.uid)            # one stat: base + growth * (level - 1), rounded down
 │   │   ├── StatTuning.cs (+.uid)          # Resource: the tuning, editable in the Inspector
 │   │   ├── StatTuningValues.cs (+.uid)    # the tuning as plain, checked values
 │   │   └── stat_tuning.tres               # the game's tuning; every number is provisional
@@ -224,6 +237,8 @@ godot-rpg-project/
 ├── tests/                      # outside res:// on purpose — see CONVENTIONS.md
 │   └── Game.Tests/
 │       ├── BaseStatsTests.cs
+│       ├── CharacterDataTests.cs   # every character's file makes a character the rules accept
+│       ├── CharacterValuesTests.cs
 │       ├── CombatResolverTests.cs
 │       ├── ConversationReaderTests.cs
 │       ├── ConversationRulesTests.cs
@@ -237,7 +252,9 @@ godot-rpg-project/
 │       ├── DialogueValidatorTests.cs # includes the tests that check every conversation and its text
 │       ├── DiminishingReturnsTests.cs
 │       ├── DirectionResolverTests.cs
-│       ├── EnemyDataTests.cs       # every enemy writes its name and HP
+│       ├── EnemyDataTests.cs       # every enemy writes its name, HP and experience
+│       ├── ExperienceCurveTests.cs
+│       ├── ExperienceCurvesTests.cs
 │       ├── FacingTests.cs
 │       ├── FlagCatalogueTests.cs
 │       ├── FlagConditionParserTests.cs
@@ -255,6 +272,8 @@ godot-rpg-project/
 │       ├── ProjectFiles.cs         # finds Game/ and its data files from inside a test run
 │       ├── SnapshotShelfTests.cs
 │       ├── StatFormulasTests.cs
+│       ├── StatGrowthValuesTests.cs
+│       ├── StatLineTests.cs
 │       ├── StatTuningTests.cs      # the tuning file writes every value
 │       ├── StatTuningValuesTests.cs
 │       ├── TestTuning.cs           # the tuning and the stats the formula tests use

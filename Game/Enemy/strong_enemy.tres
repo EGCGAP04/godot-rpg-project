@@ -8,4 +8,5 @@ Id = "strong"
 NameKey = "enemy.strong"
 MaxHp = 40
 AttackPower = 7
+Experience = 20
 metadata/_custom_type_script = "uid://vwkaouolbgoh"
