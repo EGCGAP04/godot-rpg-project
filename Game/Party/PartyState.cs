@@ -31,6 +31,12 @@ using System.Linq;
 /// are built, and the constructor here checks that every character's stats can be
 /// computed up to each world's highest level.
 /// </para>
+/// <para>
+/// <see cref="TakeSnapshot"/> and <see cref="Restore"/> carry all of it, members and
+/// progress, as a save slot will in M9. A restore is strict and atomic: a snapshot holding
+/// anything this party could never hold is refused whole, and nothing changes. What to do
+/// with a save from other characters or other curves is M9's to decide.
+/// </para>
 /// </remarks>
 public sealed class PartyState
 {
@@ -52,9 +58,7 @@ public sealed class PartyState
 			{
 				CheckHighestLevel(character, world);
 
-				int level = character.StartingLevel(world);
-				BaseStats stats = character.StatsAt(world, level);
-				_progress[(character.Id, world)] = new CharacterProgress(new LevelProgress(level, 0), stats.HealthPoints, stats.ManaPoints);
+				_progress[(character.Id, world)] = StartingProgress(character, world);
 			}
 		}
 
@@ -196,6 +200,165 @@ public sealed class PartyState
 			ProgressChanged?.Invoke(gain.Id, world);
 
 		return award;
+	}
+
+	/// <summary>
+	/// A copy of what belongs to the save slot: the members, and everyone's progress in
+	/// every world. Changing the party afterwards does not change the snapshot.
+	/// </summary>
+	public PartySnapshot TakeSnapshot()
+	{
+		var progress = new List<ProgressRecord>();
+
+		foreach (CharacterValues character in Roster.Characters)
+		{
+			foreach (World world in Enum.GetValues<World>())
+				progress.Add(new ProgressRecord(character.Id, world, _progress[(character.Id, world)]));
+		}
+
+		return new PartySnapshot(_members.ToArray(), progress.AsReadOnly());
+	}
+
+	/// <summary>
+	/// Throws unless <see cref="Restore"/> would accept this snapshot, and changes nothing
+	/// either way. It is public for whoever restores several snapshots as one step, and
+	/// has to know that all of them are good before applying the first.
+	/// </summary>
+	/// <exception cref="ArgumentException">
+	/// The snapshot holds something this party could never hold: members that break a rule
+	/// of membership, a character the roster does not have, the same character and world
+	/// twice, a level outside the ones the character can have in that world, experience
+	/// that already pays for the next level, or health points or mana points outside what
+	/// the level gives.
+	/// </exception>
+	public void CheckSnapshot(PartySnapshot snapshot)
+	{
+		ArgumentNullException.ThrowIfNull(snapshot);
+
+		if (snapshot.Members is null || snapshot.Progress is null)
+			throw new ArgumentException("The snapshot has no members or no progress.", nameof(snapshot));
+
+		CheckMembers(snapshot);
+
+		var seen = new HashSet<(string, World)>();
+
+		foreach (ProgressRecord record in snapshot.Progress)
+		{
+			if (record is null)
+				throw new ArgumentException("The snapshot holds an empty progress entry.", nameof(snapshot));
+
+			if (!Roster.Contains(record.Id))
+				throw new ArgumentException($"The snapshot holds progress for '{record.Id}', who is not in the roster.", nameof(snapshot));
+
+			if (!Enum.IsDefined(record.World))
+				throw new ArgumentException($"The snapshot holds progress for '{record.Id}' in a world that does not exist.", nameof(snapshot));
+
+			if (!seen.Add((record.Id, record.World)))
+				throw new ArgumentException($"The snapshot holds the progress of '{record.Id}' in the {record.World} world twice.", nameof(snapshot));
+
+			CheckProgress(record);
+		}
+	}
+
+	/// <summary>
+	/// Replaces the members and everyone's progress with what <paramref name="snapshot"/>
+	/// holds. A character and world the snapshot does not mention go back to where they
+	/// start. The events are raised only for what changed, once everything has its value.
+	/// </summary>
+	/// <exception cref="ArgumentException">
+	/// <see cref="CheckSnapshot"/> refuses the snapshot. Nothing changes then.
+	/// </exception>
+	public void Restore(PartySnapshot snapshot)
+	{
+		CheckSnapshot(snapshot);
+
+		Dictionary<(string, World), CharacterProgress> saved = snapshot.Progress.ToDictionary(record => (record.Id, record.World), record => record.Progress);
+		var changed = new List<(string Id, World World)>();
+
+		foreach (CharacterValues character in Roster.Characters)
+		{
+			foreach (World world in Enum.GetValues<World>())
+			{
+				(string, World) key = (character.Id, world);
+				CharacterProgress next = saved.TryGetValue(key, out CharacterProgress held) ? held : StartingProgress(character, world);
+
+				if (_progress[key] == next)
+					continue;
+
+				_progress[key] = next;
+				changed.Add(key);
+			}
+		}
+
+		bool membersChanged = !_members.SequenceEqual(snapshot.Members);
+		_members.Clear();
+		_members.AddRange(snapshot.Members);
+
+		if (membersChanged)
+			MembersChanged?.Invoke();
+
+		foreach ((string id, World world) in changed)
+			ProgressChanged?.Invoke(id, world);
+	}
+
+	private void CheckMembers(PartySnapshot snapshot)
+	{
+		IReadOnlyList<string> members = snapshot.Members;
+
+		if (members.Count == 0 || members[0] != Roster.Protagonist.Id)
+			throw new ArgumentException($"The snapshot's party does not start with the protagonist, '{Roster.Protagonist.Id}'.", nameof(snapshot));
+
+		if (members.Count > MaximumSize)
+			throw new ArgumentException($"The snapshot's party holds {members.Count}, and a party holds {MaximumSize} at most.", nameof(snapshot));
+
+		var seen = new HashSet<string>();
+
+		foreach (string id in members)
+		{
+			if (id is null || !Roster.Contains(id))
+				throw new ArgumentException($"The snapshot's party holds '{id}', who is not in the roster.", nameof(snapshot));
+
+			if (!seen.Add(id))
+				throw new ArgumentException($"The snapshot's party holds '{id}' twice.", nameof(snapshot));
+		}
+	}
+
+	private void CheckProgress(ProgressRecord record)
+	{
+		CharacterValues character = Roster.Get(record.Id);
+		World world = record.World;
+		LevelProgress level = record.Progress.Level;
+		string who = $"'{record.Id}' in the {world} world";
+
+		int lowest = character.StartingLevel(world);
+		int highest = HighestLevel(character, world);
+
+		// A LevelProgress built with default has level 0, which its constructor would refuse.
+		if (level.Level < lowest || level.Level > highest)
+			throw new ArgumentException($"The snapshot puts {who} at level {level.Level}, outside {lowest} to {highest}.", nameof(record));
+
+		ExperienceCurve curve = Curves.For(world);
+		long limit = curve is null || level.Level >= highest ? 1 : curve.ToNextLevel(level.Level);
+
+		if (level.Experience >= limit)
+			throw new ArgumentException($"The snapshot gives {who} {level.Experience} experience at level {level.Level}, where it stays below {limit}.", nameof(record));
+
+		BaseStats stats = character.StatsAt(world, level.Level);
+
+		if (record.Progress.HealthPoints < 0 || record.Progress.HealthPoints > stats.HealthPoints)
+			throw new ArgumentException($"The snapshot gives {who} {record.Progress.HealthPoints} health points, outside 0 to {stats.HealthPoints}.", nameof(record));
+
+		if (record.Progress.ManaPoints < 0 || record.Progress.ManaPoints > stats.ManaPoints)
+			throw new ArgumentException($"The snapshot gives {who} {record.Progress.ManaPoints} mana points, outside 0 to {stats.ManaPoints}.", nameof(record));
+	}
+
+	/// <summary>Where a character starts in a world: their starting level, with everything full.</summary>
+	private static CharacterProgress StartingProgress(CharacterValues character, World world)
+	{
+		int level = character.StartingLevel(world);
+		BaseStats stats = character.StatsAt(world, level);
+
+		return new CharacterProgress(new LevelProgress(level, 0), stats.HealthPoints, stats.ManaPoints);
 	}
 
 	private void Change(string id, World world, CharacterProgress next)

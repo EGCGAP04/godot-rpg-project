@@ -465,6 +465,34 @@ public class DecisionStateTests
 		Assert.Empty(changed);
 	}
 
+	[Theory]
+	[MemberData(nameof(SnapshotsThatDoNotMatch))]
+	public void CheckSnapshot_RejectsWhatRestoreRejects_InTheSameWords(SlotSnapshot snapshot, string expected)
+	{
+		var state = new DecisionState(Catalogue);
+
+		var error = Assert.Throws<ArgumentException>(() => state.CheckSnapshot(snapshot));
+
+		Assert.Contains(expected, error.Message);
+		Assert.Throws<ArgumentNullException>(() => state.CheckSnapshot(null));
+	}
+
+	[Fact]
+	public void CheckSnapshot_AGoodSnapshot_IsAccepted_AndChangesNothing()
+	{
+		var clean = new DecisionState(Catalogue).TakeSnapshot();
+		var state = Listened(out List<string> changed);
+		state.SetFlag("test.promised", true);
+		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		changed.Clear();
+
+		state.CheckSnapshot(clean);
+
+		Assert.True(state.GetFlag("test.promised"));
+		Assert.Single(state.Combats);
+		Assert.Empty(changed);
+	}
+
 	private static SlotSnapshot Snapshot(Dictionary<string, bool> flags = null, Dictionary<string, int> counters = null) =>
 		new(flags ?? new Dictionary<string, bool>(), counters ?? new Dictionary<string, int>(), Array.Empty<CombatRecord>());
 }

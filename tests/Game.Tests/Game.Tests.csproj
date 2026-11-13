@@ -43,6 +43,7 @@
     <Compile Include="..\..\Game\Party\CharacterProgress.cs" Link="GameLogic\CharacterProgress.cs" />
     <Compile Include="..\..\Game\Party\ExperienceAward.cs" Link="GameLogic\ExperienceAward.cs" />
     <Compile Include="..\..\Game\Party\PartyState.cs" Link="GameLogic\PartyState.cs" />
+    <Compile Include="..\..\Game\Party\PartySnapshot.cs" Link="GameLogic\PartySnapshot.cs" />
     <Compile Include="..\..\Game\World\World.cs" Link="GameLogic\World.cs" />
     <Compile Include="..\..\Game\World\CyclePosition.cs" Link="GameLogic\CyclePosition.cs" />
     <Compile Include="..\..\Game\World\WorldUnlocks.cs" Link="GameLogic\WorldUnlocks.cs" />

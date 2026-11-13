@@ -153,15 +153,15 @@ public sealed class DecisionState : IFlagStore
 	}
 
 	/// <summary>
-	/// Replaces everything that belongs to the save slot with what
-	/// <paramref name="snapshot"/> holds. Persistent flags stay as they are. A cycle or run
-	/// flag the snapshot does not mention goes back to its starting value.
+	/// Throws unless <see cref="Restore"/> would accept this snapshot, and changes nothing
+	/// either way. It is public for whoever restores several snapshots as one step, and
+	/// has to know that all of them are good before applying the first.
 	/// </summary>
 	/// <exception cref="ArgumentException">
 	/// The snapshot names a flag the catalogue does not declare, declares as persistent or
-	/// declares with the other type, or holds a negative counter. Nothing changes then.
+	/// declares with the other type, or holds a negative counter.
 	/// </exception>
-	public void Restore(SlotSnapshot snapshot)
+	public void CheckSnapshot(SlotSnapshot snapshot)
 	{
 		ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -175,6 +175,20 @@ public sealed class DecisionState : IFlagStore
 			if (value < 0)
 				throw new ArgumentException($"'{name}' is {value} in the snapshot, but a counter is never below 0", nameof(snapshot));
 		}
+	}
+
+	/// <summary>
+	/// Replaces everything that belongs to the save slot with what
+	/// <paramref name="snapshot"/> holds. Persistent flags stay as they are. A cycle or run
+	/// flag the snapshot does not mention goes back to its starting value.
+	/// </summary>
+	/// <exception cref="ArgumentException">
+	/// The snapshot names a flag the catalogue does not declare, declares as persistent or
+	/// declares with the other type, or holds a negative counter. Nothing changes then.
+	/// </exception>
+	public void Restore(SlotSnapshot snapshot)
+	{
+		CheckSnapshot(snapshot);
 
 		var changed = new List<string>();
 
