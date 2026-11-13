@@ -7,10 +7,6 @@ msgstr ""
 msgid "ui.combat.attack"
 msgstr "Attack"
 
-#. The player's name beside their HP, until the party exists.
-msgid "ui.combat.player"
-msgstr "Player"
-
 #. {name} is a combatant's name; {hp} and {max_hp}, numbers.
 msgid "ui.combat.hp"
 msgstr "{name}   {hp}/{max_hp}"
@@ -20,6 +16,14 @@ msgstr "Player wins."
 
 msgid "ui.combat.player_lost"
 msgstr "Player loses."
+
+#. Under the result of a fight won. {experience} is a number.
+msgid "ui.combat.experience_gained"
+msgstr "Gained {experience} experience."
+
+#. One line per character. {name} is the character's name; {level}, a number.
+msgid "ui.combat.level_reached"
+msgstr "{name} reached level {level}."
 
 #. {world} is a world's name (world.*); {cycle}, a number.
 msgid "ui.hud.world_and_cycle"

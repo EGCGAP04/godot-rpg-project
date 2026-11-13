@@ -11,8 +11,9 @@ using Godot;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Registered after <c>DecisionRegistry</c> under <c>[autoload]</c>: autoloads enter the
-/// tree in that order, and this one needs the registry's state. All of it runs in
+/// Registered after <c>DecisionRegistry</c> and <c>Party</c> under <c>[autoload]</c>:
+/// autoloads enter the tree in that order, and this one needs the registry's state, and
+/// the party's for its snapshots. All of it runs in
 /// <c>_EnterTree</c>, before <c>Main</c> reads <c>GameState</c> from its own.
 /// </para>
 /// <para>

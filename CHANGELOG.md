@@ -21,11 +21,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Three placeholder characters (`demo_hero`, `demo_friend` and `demo_newcomer`), with names in English and Spanish. Nothing in the game uses them yet
 - A test that reads every character's file and rebuilds it through the same checks the game applies, refusing a stat name the resource does not have
 - A Characters and Levels section in `docs/CONVENTIONS.md`
+- The party, as the `Party` autoload around an engine-free `PartyState` in a new `Party/` folder: who is in it, in order, and where every character stands in each of the three worlds. The protagonist never leaves, the party holds four at most, and a change that breaks a rule is refused
+- Progress for every character per world: a level with its experience, and the health points and mana points left. A character who leaves the party keeps theirs
+- `Characters/roster.tres`, the list of every character the game has, with the protagonist named. A test requires every character's file to be in it, and each character to have a name in both languages
+- Experience from fights: a fight won gives its experience, whole, to every member of the party, and the combat screen says how much and who reaches a level with it. The Real world gives none
+- Snapshots of the party, strict and atomic like the decision registry's. The debug overlay's snapshots now hold both, and restoring one checks both before changing either
+- A section on the party in `docs/CONVENTIONS.md`
 
 ### Changed
 
+- Combat fights with the placeholder protagonist's stats in the current world, read from the party, and shows the protagonist's name beside their HP instead of "Player". The numbers are the same as before: 20 HP and 4 attack in the Fantasy world
+- After a fight, the heal comes once the game is unpaused, together with the experience, so a failure there cannot leave the game paused
 - The pull request template opens with a comment giving the title convention, `[Type]: <summary> (Issue #N)`, which every PR with an Issue has followed since #7 without it being written anywhere
 - The README's status line reads "core systems phase" instead of "foundation phase", and its Screenshots section says what it waits for: real art
+
+### Removed
+
+- The `PlayerStats` autoload. The party holds what it held, for every character and every world
 
 ### Fixed
 

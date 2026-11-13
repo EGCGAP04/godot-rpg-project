@@ -17,9 +17,9 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-PlayerStats="*res://Autoloads/PlayerStats.cs"
 GameState="*res://Autoloads/GameState.cs"
 DecisionRegistry="*res://Autoloads/DecisionRegistry.cs"
+Party="*res://Autoloads/Party.cs"
 DebugTools="*res://Debug/DebugTools.cs"
 
 [display]

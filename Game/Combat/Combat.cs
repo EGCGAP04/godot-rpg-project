@@ -1,6 +1,15 @@
 using System;
 using Godot;
 
+/// <summary>
+/// The combat overlay: turn state, timers, input and labels around a
+/// <see cref="CombatResolver"/>, which owns the fight's numbers.
+/// </summary>
+/// <remarks>
+/// Combat v1 is one against one: the party fights with its protagonist's stats in the
+/// world the fight happens in, read from the <c>Party</c> autoload, and only the
+/// protagonist's health points change. M8 brings the whole party into the fight.
+/// </remarks>
 public partial class Combat : CanvasLayer
 {
 	[Signal]
@@ -31,6 +40,16 @@ public partial class Combat : CanvasLayer
 	private CombatResolver _resolver;
 	private TurnState _state = TurnState.Transition;
 
+	// Who fights, and where: read once, when the fight starts.
+	private PartyState _party;
+	private CharacterValues _fighter;
+	private World _world;
+	private int _maxHp;
+
+	// Set when the fight ends, and kept so a change of language can rebuild the result.
+	private bool? _playerWon;
+	private ExperienceAward _award;
+
 	private Label _enemyHpLabel;
 	private Label _playerHpLabel;
 	private Label _resultLabel;
@@ -42,9 +61,16 @@ public partial class Combat : CanvasLayer
 		// Falls back to the weak enemy so combat.tscn can still be run on its own
 		// for testing, without Main setting the stats first.
 		EnemyData ??= GD.Load<EnemyData>("res://Enemy/weak_enemy.tres");
+
+		_party = Party.Instance.State;
+		_fighter = _party.Roster.Protagonist;
+		_world = GameState.Instance.CurrentWorld;
+
+		BaseStats stats = _party.StatsOf(_fighter.Id, _world);
+		_maxHp = stats.HealthPoints;
 		_resolver = new CombatResolver(
-			PlayerStats.Instance.CurrentHp,
-			PlayerStats.Instance.AttackPower,
+			_party.ProgressOf(_fighter.Id, _world).HealthPoints,
+			stats.AttackDamage,
 			EnemyData.MaxHp,
 			EnemyData.AttackPower);
 
@@ -54,7 +80,7 @@ public partial class Combat : CanvasLayer
 		_attackButton = GetNode<Button>("AttackButton");
 		_fade = GetNode<ScreenFade>("ScreenFade");
 
-		GD.Print($"Combat started. Player {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp} HP vs {EnemyData.NameKey} {_resolver.EnemyHp}/{EnemyData.MaxHp} HP");
+		GD.Print($"Combat started. {_fighter.Id} {_resolver.PlayerHp}/{_maxHp} HP in the {_world} world vs {EnemyData.NameKey} {_resolver.EnemyHp}/{EnemyData.MaxHp} HP");
 		UpdateHpLabels();
 
 		// The overlay starts fully black so the world map is never cut away
@@ -122,10 +148,10 @@ public partial class Combat : CanvasLayer
 	{
 		CombatResolver.Outcome outcome = _resolver.EnemyAttack();
 
-		// The resolver owns the fight's numbers; the Autoload is where they have to
-		// end up, since it is what carries the player's HP back out to the map.
-		PlayerStats.Instance.CurrentHp = _resolver.PlayerHp;
-		GD.Print($"{EnemyData.NameKey} attacks for {_resolver.EnemyAttackPower}. Player HP: {_resolver.PlayerHp}/{PlayerStats.Instance.MaxHp}");
+		// The resolver owns the fight's numbers; the party is where they have to end
+		// up, since it is what carries the fighter's HP back out to the map.
+		_party.SetHealthPoints(_fighter.Id, _world, _resolver.PlayerHp);
+		GD.Print($"{EnemyData.NameKey} attacks for {_resolver.EnemyAttackPower}. Player HP: {_resolver.PlayerHp}/{_maxHp}");
 		UpdateHpLabels();
 
 		if (outcome == CombatResolver.Outcome.PlayerLost)
@@ -142,10 +168,20 @@ public partial class Combat : CanvasLayer
 		_state = TurnState.Finished;
 		_attackButton.Disabled = true;
 
-		// A key, not text: the label translates it itself, and again if the language
-		// changes while the result is on screen.
-		_resultLabel.Text = playerWon ? "ui.combat.player_won" : "ui.combat.player_lost";
+		// A preview: the screen announces what the party gains, and Main hands it out
+		// once the overlay is gone, with the same computation. A loss gives nothing.
+		_playerWon = playerWon;
+		_award = playerWon ? _party.PreviewAward(_world, EnemyData.Experience) : null;
+		UpdateResultLabel();
 		GD.Print($"Combat over. {(playerWon ? "Player wins." : "Player loses.")}");
+
+		if (_award != null)
+		{
+			GD.Print($"Experience: {_award.Experience}.");
+
+			foreach (MemberGain gain in _award.Gains)
+				GD.Print($"  {gain.Id}: level {gain.Before.Level} ({gain.Before.Experience}) -> level {gain.After.Level} ({gain.After.Experience})");
+		}
 
 		// Held on screen briefly rather than dismissed with confirm: the player is
 		// already mashing confirm to attack and would skip the result instantly.
@@ -167,18 +203,28 @@ public partial class Combat : CanvasLayer
 
 	public override void _Notification(int what)
 	{
-		// The HP labels are built here rather than translated by Godot, so a change of
+		// The labels are built here rather than translated by Godot, so a change of
 		// language has to rebuild them. It can arrive before _Ready has found them.
 		if (what == NotificationTranslationChanged && _resolver != null)
+		{
 			UpdateHpLabels();
+			UpdateResultLabel();
+		}
 	}
 
-	// Built from a translated template, so these two labels have auto-translation off in
+	// Built from a translated template, so the three labels have auto-translation off in
 	// combat.tscn: Godot would otherwise look the finished text up as a key again.
 	private void UpdateHpLabels()
 	{
 		_enemyHpLabel.Text = HpText(Tr(EnemyData.NameKey), _resolver.EnemyHp, EnemyData.MaxHp);
-		_playerHpLabel.Text = HpText(Tr("ui.combat.player"), _resolver.PlayerHp, PlayerStats.Instance.MaxHp);
+		_playerHpLabel.Text = HpText(Tr(_fighter.NameKey), _resolver.PlayerHp, _maxHp);
+	}
+
+	/// <summary>Nothing until the fight ends; then who won and what the party gains.</summary>
+	private void UpdateResultLabel()
+	{
+		if (_playerWon is bool playerWon)
+			_resultLabel.Text = CombatResultText.Build(playerWon, _award, _party.Roster, key => Tr(key));
 	}
 
 	private string HpText(string name, int hp, int maxHp) =>

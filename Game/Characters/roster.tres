@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CharacterRoster" format=3 uid="uid://t0wj03y6vmmh"]
+
+[ext_resource type="Script" uid="uid://bfjlb5q4nylok" path="res://Characters/CharacterData.cs" id="1_chdfi"]
+[ext_resource type="Script" uid="uid://bsmqwa235bv1q" path="res://Characters/CharacterRoster.cs" id="1_roster"]
+[ext_resource type="Resource" uid="uid://b31ho5yopdie7" path="res://Characters/demo_hero.tres" id="2_hero"]
+[ext_resource type="Resource" uid="uid://d0qn6ueybbbwk" path="res://Characters/demo_friend.tres" id="3_friend"]
+[ext_resource type="Resource" uid="uid://nxcek2lsywse" path="res://Characters/demo_newcomer.tres" id="4_newcomer"]
+
+[resource]
+script = ExtResource("1_roster")
+Protagonist = ExtResource("2_hero")
+Others = Array[ExtResource("1_chdfi")]([ExtResource("3_friend"), ExtResource("4_newcomer")])

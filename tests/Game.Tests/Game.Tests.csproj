@@ -27,6 +27,7 @@
   -->
   <ItemGroup>
     <Compile Include="..\..\Game\Combat\CombatResolver.cs" Link="GameLogic\CombatResolver.cs" />
+    <Compile Include="..\..\Game\Combat\CombatResultText.cs" Link="GameLogic\CombatResultText.cs" />
     <Compile Include="..\..\Game\Stats\ActionKind.cs" Link="GameLogic\ActionKind.cs" />
     <Compile Include="..\..\Game\Stats\BaseStats.cs" Link="GameLogic\BaseStats.cs" />
     <Compile Include="..\..\Game\Stats\DiminishingReturns.cs" Link="GameLogic\DiminishingReturns.cs" />
@@ -39,6 +40,11 @@
     <Compile Include="..\..\Game\Stats\ExperienceCurve.cs" Link="GameLogic\ExperienceCurve.cs" />
     <Compile Include="..\..\Game\Stats\ExperienceCurves.cs" Link="GameLogic\ExperienceCurves.cs" />
     <Compile Include="..\..\Game\Characters\CharacterValues.cs" Link="GameLogic\CharacterValues.cs" />
+    <Compile Include="..\..\Game\Characters\CharacterRosterValues.cs" Link="GameLogic\CharacterRosterValues.cs" />
+    <Compile Include="..\..\Game\Party\CharacterProgress.cs" Link="GameLogic\CharacterProgress.cs" />
+    <Compile Include="..\..\Game\Party\ExperienceAward.cs" Link="GameLogic\ExperienceAward.cs" />
+    <Compile Include="..\..\Game\Party\PartyState.cs" Link="GameLogic\PartyState.cs" />
+    <Compile Include="..\..\Game\Party\PartySnapshot.cs" Link="GameLogic\PartySnapshot.cs" />
     <Compile Include="..\..\Game\World\World.cs" Link="GameLogic\World.cs" />
     <Compile Include="..\..\Game\World\CyclePosition.cs" Link="GameLogic\CyclePosition.cs" />
     <Compile Include="..\..\Game\World\WorldUnlocks.cs" Link="GameLogic\WorldUnlocks.cs" />

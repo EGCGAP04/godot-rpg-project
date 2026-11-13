@@ -236,8 +236,7 @@ public partial class Main : Node2D
 	{
 		// Read now: the enemy is forgotten below, and may be freed.
 		string enemyId = _pendingEnemy.Data.Id;
-
-		PlayerStats.Instance.FullHeal();
+		long experience = _pendingEnemy.Data.Experience;
 
 		if (playerWon)
 		{
@@ -255,11 +254,24 @@ public partial class Main : Node2D
 		StartCombatCooldown();
 		GetTree().Paused = false;
 
-		// Last, on purpose. An exception thrown in a signal handler is logged and the game
-		// goes on, but the rest of the handler does not run: anywhere earlier, a failure
-		// here would leave the game paused under the overlay. Here, the worst it can do
-		// is leave this one fight out of the history.
-		DecisionRegistry.Instance.State.RecordCombat(GameState.Instance.CurrentWorld, GameState.Instance.CurrentCycle, enemyId, playerWon);
+		// Everything from here on comes last, on purpose. An exception thrown in a signal
+		// handler is logged and the game goes on, but the rest of the handler does not
+		// run: anywhere earlier, a failure here would leave the game paused under the
+		// overlay. Here, the worst it can do is lose this fight's experience or leave the
+		// fight out of the history.
+		World world = GameState.Instance.CurrentWorld;
+		PartyState party = Party.Instance.State;
+
+		// The experience first and the heal after it, so a level reached is full too.
+		// It is the award the combat screen announced: PreviewAward is the same
+		// computation, and nothing changes the party while a fight is on screen.
+		if (playerWon)
+			party.Award(world, experience);
+
+		// Combat v1 heals whoever fought after every fight, won or lost.
+		party.FullHeal(party.Roster.Protagonist.Id, world);
+
+		DecisionRegistry.Instance.State.RecordCombat(world, GameState.Instance.CurrentCycle, enemyId, playerWon);
 	}
 
 	private void StartCombatCooldown()
