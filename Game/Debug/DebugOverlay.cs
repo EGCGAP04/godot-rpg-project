@@ -202,7 +202,7 @@ public partial class DebugOverlay : CanvasLayer
 
 	private void BuildSnapshots()
 	{
-		AddHeading("Snapshots (cycle and run flags, and the fights)");
+		AddHeading("Snapshots (cycle and run flags, the fights and the party)");
 
 		var row = new HBoxContainer();
 		_snapshotName = new LineEdit { PlaceholderText = "name, or empty for a number", CustomMinimumSize = new Vector2(200, 0) };
@@ -225,7 +225,7 @@ public partial class DebugOverlay : CanvasLayer
 	private void OnTakePressed()
 	{
 		var position = new CyclePosition(GameState.Instance.CurrentWorld, GameState.Instance.CurrentCycle);
-		DebugTools.Instance.Shelf.Take(_state, position, _snapshotName.Text);
+		DebugTools.Instance.Shelf.Take(_state, Party.Instance.State, position, _snapshotName.Text);
 		_snapshotName.Text = "";
 		RefreshSnapshots();
 	}
@@ -242,7 +242,7 @@ public partial class DebugOverlay : CanvasLayer
 			row.AddChild(new Label { Text = $"{name}  ({snapshot.TakenAt.World}, cycle {snapshot.TakenAt.Cycle})", CustomMinimumSize = new Vector2(280, 0) });
 
 			var restore = new Button { Text = "Restore" };
-			restore.Pressed += () => DebugTools.Instance.Shelf.Restore(_state, name);
+			restore.Pressed += () => DebugTools.Instance.Shelf.Restore(_state, Party.Instance.State, name);
 			row.AddChild(restore);
 
 			var delete = new Button { Text = "Delete" };
