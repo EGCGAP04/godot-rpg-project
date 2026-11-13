@@ -14,6 +14,7 @@ Game/ (res://)
 ├── Enemy/           # Enemy scenes and stats, contact detection on the map
 ├── Characters/      # The characters as resources, and the plain values the rules read
 ├── Stats/           # Stat formulas, growth with the level, experience curves and their tuning
+├── Party/           # Who is in the party, and each character's progress in each world
 ├── Combat/          # Turn-based combat system: turn order, actions
 ├── World/           # Exploration maps: tilemaps, collisions, transitions, things to talk to
 ├── Dialogue/        # Branching dialogue: the conversation files, their reader, runner and validator
@@ -25,7 +26,7 @@ Game/ (res://)
 │   ├── Fonts/        # Shared fonts used across the project
 │   ├── Scripts/      # Generic utilities, extensions, helper classes
 │   └── Theme/        # Global UI theme resources
-└── Autoloads/       # Global singletons (GameState, DecisionRegistry, PlayerStats)
+└── Autoloads/       # Global singletons (GameState, DecisionRegistry, Party)
 ```
 
 `Shared/` holds anything that doesn't belong to a single feature. `Autoloads/` is kept separate since it's infrastructure, not a feature.
@@ -59,15 +60,15 @@ Godot offers several ways for nodes to communicate. This project follows a consi
 
 - **Signals** are the default for communication **between different scenes** (e.g. a `Combat` scene notifying `UI` that HP changed). Signals decouple nodes from each other — the emitter doesn't need to know who's listening.
 - **Direct references** are only used for **tight parent-child relationships within the same scene** (e.g. `Player.cs` accessing its own child `AnimationPlayer`), where the coupling doesn't matter because those nodes will always exist together.
-- **Autoloads** hold global state that needs to persist across scene changes (e.g. `PlayerStats`). Godot autoloads aren't automatically globally accessible in C# like they are in GDScript, so every Autoload script exposes a static `Instance` property set in **`_EnterTree()`**:
+- **Autoloads** hold global state that needs to persist across scene changes (e.g. `GameState`). Godot autoloads aren't automatically globally accessible in C# like they are in GDScript, so every Autoload script exposes a static `Instance` property set in **`_EnterTree()`**:
   ```csharp
-  public partial class PlayerStats : Node
+  public partial class GameState : Node
   {
-      public static PlayerStats Instance { get; private set; }
+      public static GameState Instance { get; private set; }
       public override void _EnterTree() { Instance = this; }
   }
   ```
-  Access elsewhere as `PlayerStats.Instance.SomeField`.
+  Access elsewhere as `GameState.Instance.SomeField`.
 
   **`_EnterTree`, not `_Ready`, and this is load-bearing.** Autoloads enter the tree before the main scene, but their `_Ready` has not run by the time the main scene's own `_EnterTree` does — measured, after a `NullReferenceException` from `Main._EnterTree`. `Main` has to read `GameState` that early, because `_EnterTree` is where it must place the player before any `Area2D` registers against a stale transform. Setting `Instance` in `_EnterTree` makes an Autoload usable from anywhere, including that window.
 
@@ -84,7 +85,7 @@ The flow is:
 1. `Enemy` (an `Area2D`) detects player contact and emits `CombatTriggered(enemy)`.
 2. The `WorldScene` re-emits it as `CombatRequested(enemy)`.
 3. `Main` (on `main.tscn`) handles it: it instances `combat.tscn`, sets the enemy stats, adds it as a child and sets `GetTree().Paused = true`.
-4. When the fight ends, `Combat` emits `CombatFinished(playerWon)`. `Main` applies the outcome, frees the overlay, unpauses, and only then records the fight in the decision registry (see [Fights](#fights) for why last).
+4. When the fight ends, `Combat` emits `CombatFinished(playerWon)`. `Main` applies the outcome, frees the overlay, unpauses, and only then hands out the experience and records the fight in the decision registry (see [After a fight](#after-a-fight) and [Fights](#fights) for why last).
 
 `Main` is the coordinator because it is the only node that sees both the `Player` and the world — the `Player` is a **sibling** of the world scene, not a child of it. It holds a `WorldScene`, never a concrete world, so the same flow works in all three.
 
@@ -373,7 +374,7 @@ It holds exactly `fantasy` and `nightmare`; the Real world has no condition, sin
 
 With around a hundred endings planned, checking them by playing each through by hand is not viable, so the decision registry has tooling of its own (#75). It is small on purpose and grows with the game. It exists in debug builds only: the `DebugTools` autoload frees itself when `OS.IsDebugBuild()` is false, and `DebugTools.Instance` stays null. Confirming nothing of it reaches a release export waits for the export configuration.
 
-The logic is engine-free, as in the rest of the game. `DebugPreset` reads and checks a preset, `DebugArguments` reads the command line and `SnapshotShelf` keeps the snapshots, all three covered by tests. `DebugTools` and `DebugOverlay` are the nodes around them.
+The logic is engine-free, as in the rest of the game. `DebugPreset` reads and checks a preset, `DebugArguments` reads the command line and `SnapshotShelf` keeps the snapshots of the registry and the party, all three covered by tests. `DebugTools` and `DebugOverlay` are the nodes around them.
 
 ### The overlay
 
@@ -392,7 +393,7 @@ The logic is engine-free, as in the rest of the game. `DebugPreset` reads and ch
 
 ### Snapshots and the persistent flags
 
-A snapshot is `DecisionState.TakeSnapshot`'s: the cycle and run flags and the fights. The shelf keeps several in memory, each with a name or the lowest free number, and the world and cycle it was taken in; a name already on the shelf replaces that snapshot. **Restoring brings back the flags and the fights, not the world and cycle.** Jumping is a separate step, because a jump to another cycle resets the cycle flags, and a restore that also jumped would undo part of itself depending on the order of the two.
+A snapshot holds what a save slot will: `DecisionState.TakeSnapshot`'s cycle and run flags and fights, and `PartyState.TakeSnapshot`'s members and progress. The shelf keeps several in memory, each with a name or the lowest free number, and the world and cycle it was taken in; a name already on the shelf replaces that snapshot. **Restoring is one step over the two:** both halves are checked before either is applied, so a snapshot one of them refuses changes neither. **It brings back the flags, the fights and the party, not the world and cycle.** Jumping is a separate step, because a jump to another cycle resets the cycle flags, and a restore that also jumped would undo part of itself depending on the order of the two.
 
 Persistent flags are shared by every save slot, so nothing in a slot can bring them back to a clean slate. `DecisionState.ResetPersistent` does, leaving the slot's flags and the fights alone.
 
@@ -435,11 +436,11 @@ godot --headless --path . --quit-after 800 -- --world fantasy --cycle 2 --do "se
 
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas, the growth of stats and the experience curves in `Stats/`, a character's values in `Characters/`, and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas, the growth of stats and the experience curves in `Stats/`, a character's values and the roster's in `Characters/`, the party's state in `Party/`, the text of a fight's result (`Combat/CombatResultText.cs`), and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
-When a plain class and an Autoload hold the same number, the plain class decides it and the `Node` writes the result into the Autoload — never both applying the same arithmetic. `CombatResolver` owns the fight's HP while it lasts; `Combat` copies it into `PlayerStats`, which is what carries it back out to the map.
+When a plain class and an Autoload hold the same number, the plain class decides it and the `Node` writes the result into the Autoload — never both applying the same arithmetic. `CombatResolver` owns the fight's HP while it lasts; `Combat` copies it into the party's state, which is what carries it back out to the map.
 
 ### Where the tests live
 
@@ -467,7 +468,7 @@ Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored 
 
 A resource's defaults are empty or zero, never one real entity's values. The editor leaves out of a `.tres` every property that equals its default, so when `EnemyData`'s defaults were the weak enemy's stats, saving `weak_enemy.tres` emptied it of them. `EnemyDataTests` requires every enemy to write its name, its HP and the experience it gives, so every enemy gives at least 1.
 
-Global player state is the exception: it lives in the `PlayerStats` Autoload, since it has to persist across scenes.
+What changes while playing is the exception: a resource is shared by everything that loads it, so it holds what an entity is and never its current HP. The party's levels, experience and health points live in the `Party` autoload. See *The Party*.
 
 A resource is a Godot type, so an engine-free class cannot take one. When plain logic needs a resource's numbers, the resource builds a plain value from them and the logic only ever sees that value: `Stats/StatTuning.cs` has a `ToValues()` that returns a `StatTuningValues`, which is what `StatFormulas` reads. See *Stat Formulas*. A character does the same: `Characters/CharacterData.cs` builds a `CharacterValues`. See *Characters and Levels*.
 
@@ -528,7 +529,7 @@ Every number in the *Limits* column, the two bases (150 and 50) and the four `K`
 
 ## Characters and Levels
 
-A character is data: a `CharacterData` resource in `Game/Characters/`, authored as a `.tres` like an enemy. **Levels and stats are independent per character and per world,** so one file carries three sets of numbers. Nothing in the game uses the characters yet: the party that holds them, and what each one keeps while playing, come next in M7.
+A character is data: a `CharacterData` resource in `Game/Characters/`, authored as a `.tres` like an enemy. **Levels and stats are independent per character and per world,** so one file carries three sets of numbers. The party holds them, and what each one keeps while playing: see *The Party*.
 
 | File | What it is |
 |---|---|
@@ -584,4 +585,69 @@ The six numbers (base, exponent and highest level, for each of the two worlds) a
 - **`ToValues()` cannot be unit-tested,** on either resource. That each hands every number to its own stat was checked with a headless run; check it again when a property is added.
 - **A character written by hand has no `uid://`** until the editor saves the file, like a scene. The editor may also reorder the worlds inside the file and rename their ids, which changes nothing.
 
-The three characters in the folder (`demo_hero`, `demo_friend` and `demo_newcomer`) are **placeholders**, like M6's demo conversation: enough to build and test the party with. The placeholder protagonist starts the Fantasy world with the 20 HP and 4 attack that `PlayerStats` has today, so the two enemies keep giving one win and one loss.
+The three characters in the folder (`demo_hero`, `demo_friend` and `demo_newcomer`) are **placeholders**, like M6's demo conversation: enough to build and test the party with. The placeholder protagonist starts the Fantasy world with the 20 HP and 4 attack that `PlayerStats` had, so the two enemies keep giving one win and one loss.
+
+## The Party
+
+The party is who travels with the protagonist, and where every character stands in each world. It is in memory for now; saving it is M9's job, and the snapshot below is what M9 will save. It replaced the `PlayerStats` autoload in #90.
+
+It follows the split of the decision registry. The logic is engine-free in `Party/`, and the `Party` autoload is a thin node around it:
+
+| File | What it is |
+|---|---|
+| `Characters/CharacterRoster`, `Characters/roster.tres` | The resource that lists every character the game has: the protagonist, and the others in order. |
+| `Characters/CharacterRosterValues` | The same list as plain, checked values. It refuses an id that appears twice. |
+| `Party/PartyState` | The members, in order, and everyone's progress in each world, with the rules for changing both. |
+| `Party/CharacterProgress` | What one character keeps in one world: a `LevelProgress`, and the health points and mana points left. |
+| `Party/ExperienceAward`, `MemberGain` | What an award of experience does to each member, before and after. |
+| `Party/PartySnapshot`, `ProgressRecord` | What a save slot keeps of the party. |
+| `Autoloads/Party` | The node: it loads the roster and the experience curves in `_EnterTree`, and re-emits the state's events as the signals `MembersChanged` and `ProgressChanged(id, world)`. |
+
+Outside code uses `Party.Instance.State`, rather than methods repeated on the node. `Party` is registered before `DebugTools`, which reaches it for its snapshots.
+
+### The roster
+
+**The party finds the characters through `Characters/roster.tres`,** not by searching the folder. The file names the protagonist and gives the others an order, at the cost of a second place to touch when a character is added. `CharacterRosterTests` reads it as text and requires every character's file to be listed exactly once, each to have its name in both languages, and the roster and the tuning's curves to make a party.
+
+Being in the roster is not being in the party. The party starts with the protagonist alone.
+
+### Members
+
+- **The protagonist is always in the party and never leaves.** They are the first member.
+- **The party holds four at most,** `PartyState.MaximumSize`, the protagonist included. Recruiting is optional, so a party of one is a valid party.
+- **Nobody is in it twice.**
+- **A change that breaks a rule throws and changes nothing.** `Recruit` and `Dismiss` throw `InvalidOperationException` for a broken rule and `ArgumentException` for an id the roster does not have. It is never ignored in silence: a conversation that recruits into a full party is a mistake in the game's content, and should be seen.
+- **`Members` is a list of ids,** in the order they joined. Whoever comes after a member who leaves moves up.
+
+### Progress
+
+**The party keeps the progress of every character of the roster, in the party or not, from the start.** So a character who leaves keeps their level, experience, health points and mana points without any code for it: leaving only takes them off the list of members.
+
+- **Progress is per character and per world.** Everyone starts at `StartingLevel(world)` with everything full.
+- **Stats are still computed, never stored.** `StatsOf(id, world)` computes the `BaseStats` at the level the character has there now.
+- **Health points and mana points stay between 0 and what the level gives.** `SetHealthPoints` and `SetManaPoints` clamp, so callers never have to. `FullHeal` gives both back.
+- **Levelling up does not heal.** A level reached raises what the health points and mana points can be, and leaves the ones the character has as they are.
+- **`ProgressChanged` fires only on a real change,** and once everything the call changes has its value, like the registry's `FlagChanged`.
+
+### Experience
+
+**Every member receives a fight's whole experience; it is not split,** because splitting would punish recruiting. Whoever is not in the party receives none, and the Real world gives none to anyone.
+
+- **`PreviewAward(world, experience)`** computes what each member would gain and changes nothing. **`Award`** is the same computation, applied. So what a screen announces and what the party receives cannot differ.
+- **An award cannot fail half way.** A curve is checked whole when it is built, and `PartyState`'s constructor checks that every character's stats can be computed at each world's highest level. A character whose growth overflows there is refused when the game starts, not in the middle of a fight's award.
+
+### After a fight
+
+Combat v1 is still one against one: `Combat` fights with the protagonist's stats in the world the fight happens in, and writes their health points back to the party. The whole party fights in M8.
+
+1. When the fight is won, `Combat` asks for `PreviewAward` and shows the result: who won, the experience gained, and a line for each member who reaches a level. `Combat/CombatResultText` builds those lines, engine-free. A loss gives nothing.
+2. Once the overlay is gone and the tree is unpaused, `Main.OnCombatFinished` calls `Award`, then heals whoever fought, then records the fight. The heal comes after the award so that a level reached is full too.
+
+All three come after unpausing for the reason [Fights](#fights) gives: an exception in a signal handler skips the rest of the handler, and anywhere earlier it would leave the game paused.
+
+### The slot's snapshot
+
+- **`TakeSnapshot`** copies the members and everyone's progress into a `PartySnapshot`: ids and numbers only.
+- **`Restore`** puts one back, and raises the events only for what changed. A character and world the snapshot does not mention go back to where they start, as a flag does in the registry.
+- **A restore is strict and atomic.** It refuses, and changes nothing, a snapshot the party could never hold: members that break a rule, a character outside the roster, the same character and world twice, a level outside the ones the character can have in that world, experience that already pays for the next level, or health points or mana points outside what the level gives. Loading a save made with other characters or other curves is M9's to decide.
+- **`CheckSnapshot` is that check without the restore,** on `PartyState` and on `DecisionState`. Whoever restores both as one step checks both first, as the debug tooling's shelf does: a restore cannot be undone.

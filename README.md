@@ -12,7 +12,7 @@
 
 🚧 In development — core systems phase.
 
-The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. Every text is in Spanish and English, and the game starts in the system's language. In a debug build, F3 opens an overlay to inspect and change the decision registry's flags, take and restore snapshots of them, jump to any world and cycle, and switch the language. All art is placeholder (solid-colour rectangles and tinted tiles).
+The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost, and a fight won gives the party experience. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. Every text is in Spanish and English, and the game starts in the system's language. In a debug build, F3 opens an overlay to inspect and change the decision registry's flags, take and restore snapshots of them and of the party, jump to any world and cycle, and switch the language. All art is placeholder (solid-colour rectangles and tinted tiles).
 
 This is a personal learning project, with no deadline, developed following professional version control and code organization standards.
 
@@ -43,7 +43,7 @@ dotnet build --configuration Debug
 
 Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
-The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables, the decision registry, the stat formulas, and how characters grow and level up — are covered by unit tests that run without it. Some of them check every conversation, every translation table, every data file and every character in the project, so a broken conversation, a missing translation, a misspelt flag or a character with a misspelt stat fails the build. The solution includes the test project, so from the same `Game/` folder:
+The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables, the decision registry, the stat formulas, how characters grow and level up, and the party — are covered by unit tests that run without it. Some of them check every conversation, every translation table, every data file and every character in the project, so a broken conversation, a missing translation, a misspelt flag or a character with a misspelt stat fails the build. The solution includes the test project, so from the same `Game/` folder:
 
 ```bash
 dotnet test "Godot RPG Project.sln" --configuration Debug
@@ -83,18 +83,22 @@ godot-rpg-project/
 │   ├── Autoloads/
 │   │   ├── DecisionRegistry.cs (+.uid) # global singleton: loads the decision registry, starts each cycle
 │   │   ├── GameState.cs (+.uid)        # global singleton: current world and cycle
-│   │   └── PlayerStats.cs (+.uid)      # global singleton: player HP and attack
+│   │   └── Party.cs (+.uid)            # global singleton: loads the roster, holds the party's state
 │   │
 │   ├── Characters/                    # the characters, as resources
 │   │   ├── CharacterData.cs (+.uid)       # [GlobalClass] Resource: id, name key, age and a growth per world
+│   │   ├── CharacterRoster.cs (+.uid)     # [GlobalClass] Resource: the protagonist and everyone else
+│   │   ├── CharacterRosterValues.cs (+.uid) # engine-free: the roster as plain, checked values
 │   │   ├── CharacterValues.cs (+.uid)     # engine-free: a character as plain, checked values
 │   │   ├── demo_friend.tres               # placeholder: the first recruit
 │   │   ├── demo_hero.tres                 # placeholder: the protagonist, 20 HP and 4 atk in the Fantasy world
-│   │   └── demo_newcomer.tres             # placeholder: the one who takes a place in the party
+│   │   ├── demo_newcomer.tres             # placeholder: the one who takes a place in the party
+│   │   └── roster.tres                    # every character the game has, the protagonist named
 │   │
 │   ├── Combat/
 │   │   ├── Combat.cs (+.uid)           # turn state, timers, input, UI
 │   │   ├── CombatResolver.cs (+.uid)   # engine-free, covered by tests
+│   │   ├── CombatResultText.cs (+.uid) # engine-free: what the screen says when a fight ends
 │   │   └── combat.tscn                 # overlay scene, not a scene swap
 │   │
 │   ├── Debug/                         # debug builds only (#75)
@@ -105,7 +109,7 @@ godot-rpg-project/
 │   │   ├── DebugOverlay.cs (+.uid)        # the overlay: flags, snapshots, jump and language
 │   │   ├── DebugPreset.cs (+.uid)         # engine-free: reads a preset, checks it, applies it
 │   │   ├── DebugTools.cs (+.uid)          # global singleton: the startup preset, and F3 opens the overlay
-│   │   ├── SnapshotShelf.cs (+.uid)       # engine-free: the debug tooling's named snapshots
+│   │   ├── SnapshotShelf.cs (+.uid)       # engine-free: named snapshots of the registry and the party
 │   │   └── debug_overlay.tscn             # opened and closed with F3
 │   │
 │   ├── Decisions/
@@ -169,6 +173,12 @@ godot-rpg-project/
 │   │   ├── ui.es.po
 │   │   ├── world.en.po                    # the worlds' names
 │   │   └── world.es.po
+│   │
+│   ├── Party/                             # the party's state; engine-free
+│   │   ├── CharacterProgress.cs (+.uid)   # what one character keeps in one world
+│   │   ├── ExperienceAward.cs (+.uid)     # what an award of experience does to each member
+│   │   ├── PartySnapshot.cs (+.uid)       # what one save slot keeps of the party
+│   │   └── PartyState.cs (+.uid)          # members, progress per world, experience, snapshots
 │   │
 │   ├── Player/
 │   │   ├── Direction.cs (+.uid)
@@ -238,8 +248,11 @@ godot-rpg-project/
 │   └── Game.Tests/
 │       ├── BaseStatsTests.cs
 │       ├── CharacterDataTests.cs   # every character's file makes a character the rules accept
+│       ├── CharacterRosterTests.cs # the roster lists every character once, and makes a party
+│       ├── CharacterRosterValuesTests.cs
 │       ├── CharacterValuesTests.cs
 │       ├── CombatResolverTests.cs
+│       ├── CombatResultTextTests.cs
 │       ├── ConversationReaderTests.cs
 │       ├── ConversationRulesTests.cs
 │       ├── CycleProgressionTests.cs
@@ -268,6 +281,9 @@ godot-rpg-project/
 │       ├── GameKeysTests.cs        # every key the game's code and scenes name has its text
 │       ├── InMemoryFlagStore.cs    # stand-in for the decision registry
 │       ├── LocalizationValidatorTests.cs # includes the test that checks every table
+│       ├── PartyProgressTests.cs
+│       ├── PartySnapshotTests.cs
+│       ├── PartyStateTests.cs
 │       ├── PoText.cs               # writes small .po tables for tests
 │       ├── ProjectFiles.cs         # finds Game/ and its data files from inside a test run
 │       ├── SnapshotShelfTests.cs
@@ -276,6 +292,7 @@ godot-rpg-project/
 │       ├── StatLineTests.cs
 │       ├── StatTuningTests.cs      # the tuning file writes every value
 │       ├── StatTuningValuesTests.cs
+│       ├── TestRoster.cs           # the characters, curves and party the party's tests use
 │       ├── TestTuning.cs           # the tuning and the stats the formula tests use
 │       ├── TextTemplateTests.cs
 │       ├── TranslationTableReaderTests.cs
