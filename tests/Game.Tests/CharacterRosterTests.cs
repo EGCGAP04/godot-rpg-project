@@ -179,6 +179,37 @@ public class CharacterRosterTests
 		Assert.Equal(3, roster.Characters.Count);
 	}
 
+	[Fact]
+	public void EveryCharacterOfTheRoster_HasANameInBothLanguages()
+	{
+		// The combat screen and the status screen ask for a character's NameKey at run
+		// time, so GameKeysTests' search of the source cannot see these keys.
+		Dictionary<string, string> files = CharacterFiles();
+		Listing listing = GameRoster();
+		var missing = new List<string>();
+
+		foreach (string locale in new[] { "en", "es" })
+		{
+			HashSet<string> keys = ProjectFiles.TranslationFiles()
+				.Where(file => file.Folder == LocalizationNames.SharedFolder && file.Locale == locale)
+				.SelectMany(file => TranslationTableReader.Read(file).Entries)
+				.Select(entry => entry.Key)
+				.ToHashSet();
+
+			Assert.NotEmpty(keys);
+
+			foreach (string path in listing.Others.Prepend(listing.Protagonist))
+			{
+				string nameKey = CharacterDataTests.Read(files[path]).Character.NameKey;
+
+				if (!keys.Contains(nameKey))
+					missing.Add($"{path}: '{nameKey}' has no text in '{locale}'.");
+			}
+		}
+
+		Assert.Empty(missing);
+	}
+
 	// --- The reader itself, on files written here ---
 
 	private static string File_(string resource) => $@"[gd_resource type=""Resource"" script_class=""CharacterRoster"" format=3]

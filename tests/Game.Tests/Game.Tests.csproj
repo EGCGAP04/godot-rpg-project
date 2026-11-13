@@ -27,6 +27,7 @@
   -->
   <ItemGroup>
     <Compile Include="..\..\Game\Combat\CombatResolver.cs" Link="GameLogic\CombatResolver.cs" />
+    <Compile Include="..\..\Game\Combat\CombatResultText.cs" Link="GameLogic\CombatResultText.cs" />
     <Compile Include="..\..\Game\Stats\ActionKind.cs" Link="GameLogic\ActionKind.cs" />
     <Compile Include="..\..\Game\Stats\BaseStats.cs" Link="GameLogic\BaseStats.cs" />
     <Compile Include="..\..\Game\Stats\DiminishingReturns.cs" Link="GameLogic\DiminishingReturns.cs" />

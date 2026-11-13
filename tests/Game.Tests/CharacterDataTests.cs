@@ -204,10 +204,10 @@ public class CharacterDataTests
 	}
 
 	[Fact]
-	public void ThePlaceholderProtagonist_StartsTheFantasyWorldWithTheStatsCombatUsesToday()
+	public void ThePlaceholderProtagonist_StartsTheFantasyWorldWithTheStatsTheEnemiesAreTunedTo()
 	{
-		// PlayerStats has 20 HP and 4 attack, and the two enemies are tuned to them: one
-		// win and one loss. The protagonist takes over with the same numbers.
+		// The two enemies are tuned to 20 HP and 4 attack, which PlayerStats had until
+		// #90: one win and one loss. The protagonist fights with the same numbers.
 		(CharacterValues hero, List<string> problems) = Read(CharacterFiles()["Characters/demo_hero.tres"]);
 
 		Assert.Empty(problems);
