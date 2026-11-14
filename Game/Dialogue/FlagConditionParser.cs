@@ -17,12 +17,16 @@ using System.Globalization;
 /// condition  = and_expr { "or" and_expr }
 /// and_expr   = unary { "and" unary }
 /// unary      = "not" unary | primary
-/// primary    = "(" condition ")" | name [ comparator integer ]
+/// primary    = "(" condition ")"
+///            | "in_party" name
+///            | "party_full"
+///            | name [ comparator integer ]
 /// </code>
 /// <para>
 /// Whether a name is a boolean or a counter is not decided here: a name on its own is
 /// read as a boolean and a compared one as a counter, and checking that against the
-/// flag catalogue is the validator's job.
+/// flag catalogue is the validator's job. So is checking that the name after
+/// <c>in_party</c> is a character.
 /// </para>
 /// </remarks>
 public static class FlagConditionParser
@@ -69,7 +73,7 @@ public static class FlagConditionParser
 	private static FlagCondition ParseNot(TokenReader reader) =>
 		reader.TakeKeyword("not") ? new FlagCondition.Not(ParseNot(reader)) : ParsePrimary(reader);
 
-	// primary = "(" condition ")" | name [ comparator integer ]
+	// primary = "(" condition ")" | "in_party" name | "party_full" | name [ comparator integer ]
 	private static FlagCondition ParsePrimary(TokenReader reader)
 	{
 		FlagToken token = reader.Take();
@@ -85,8 +89,25 @@ public static class FlagConditionParser
 			return inner;
 		}
 
+		if (token is { Kind: FlagTokenKind.Keyword, Text: "party_full" })
+			return new FlagCondition.PartyFull();
+
+		if (token is { Kind: FlagTokenKind.Keyword, Text: "in_party" })
+		{
+			FlagToken character = reader.Take();
+
+			if (character.Kind != FlagTokenKind.Name)
+				throw new FlagSyntaxException($"expected a character after 'in_party', but found {character.Describe()}", character.Column);
+
+			// A comparison only follows a counter, and saying so beats "unexpected '>='".
+			if (reader.Peek.Kind == FlagTokenKind.Comparator)
+				throw new FlagSyntaxException($"'in_party {character.Text}' holds or does not, so it is not compared with anything", reader.Peek.Column);
+
+			return new FlagCondition.InParty(character.Text);
+		}
+
 		if (token.Kind != FlagTokenKind.Name)
-			throw new FlagSyntaxException($"expected a flag name, 'not' or '(', but found {token.Describe()}", token.Column);
+			throw new FlagSyntaxException($"expected a flag name, 'not', 'in_party', 'party_full' or '(', but found {token.Describe()}", token.Column);
 
 		if (reader.Peek.Kind != FlagTokenKind.Comparator)
 			return new FlagCondition.IsSet(token.Text);

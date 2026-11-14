@@ -168,23 +168,37 @@ public sealed class DebugPreset
 
 		foreach (PresetEffect effect in Effects)
 		{
-			(string name, FlagType type) = FlagUses.InEffect(effect.Effect);
-			string problem = FlagUses.Problem(catalogue, name, type, inEffect: true);
+			foreach ((string name, FlagType type) in FlagUses.InEffect(effect.Effect))
+			{
+				string problem = FlagUses.Problem(catalogue, name, type, inEffect: true);
 
-			if (problem != null)
-				problems.Add($"{effect.Source}: {problem}.");
+				if (problem != null)
+					problems.Add($"{effect.Source}: {problem}.");
+			}
 		}
 
 		return problems;
 	}
 
 	/// <summary>Applies every effect to <paramref name="context"/>, in order.</summary>
+	/// <returns>
+	/// Every effect the party refused, each a sentence that starts with where the effect was
+	/// written. A refused effect changes nothing and the ones after it still apply. Empty
+	/// when everything was applied.
+	/// </returns>
 	/// <remarks>Validate first: an undeclared flag throws halfway, with the earlier effects already applied.</remarks>
-	public void Apply(DialogueContext context)
+	public IReadOnlyList<string> Apply(DialogueContext context)
 	{
 		ArgumentNullException.ThrowIfNull(context);
 
+		var refusals = new List<string>();
+
 		foreach (PresetEffect effect in Effects)
-			effect.Effect.Apply(context);
+		{
+			if (!effect.Effect.TryApply(context, out string refusal))
+				refusals.Add($"{effect.Source}: '{effect.Effect.Describe()}' was refused: {refusal}");
+		}
+
+		return refusals;
 	}
 }

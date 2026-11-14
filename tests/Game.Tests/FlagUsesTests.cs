@@ -36,6 +36,23 @@ public class FlagUsesTests
 	[InlineData("add a.n -1", "a.n", FlagType.Counter)]
 	public void InEffect_IsTheFlagItWrites_WithTheTypeTheWritingNeeds(string effect, string name, FlagType type)
 	{
-		Assert.Equal((name, type), FlagUses.InEffect(FlagEffectParser.Parse(effect)));
+		Assert.Equal(new[] { (name, type) }, FlagUses.InEffect(FlagEffectParser.Parse(effect)));
+	}
+
+	[Theory]
+	[InlineData("recruit abe")]
+	[InlineData("dismiss abe")]
+	public void InEffect_OfAnEffectOnTheParty_IsEmpty(string effect)
+	{
+		Assert.Empty(FlagUses.InEffect(FlagEffectParser.Parse(effect)));
+	}
+
+	[Fact]
+	public void InCondition_SkipsThePartyWords_AndKeepsTheFlagsAroundThem()
+	{
+		Assert.Empty(FlagUses.InCondition(FlagConditionParser.Parse("in_party abe or party_full")));
+		Assert.Equal(
+			new[] { ("a.x", FlagType.Bool), ("a.n", FlagType.Counter) },
+			FlagUses.InCondition(FlagConditionParser.Parse("a.x and not in_party abe and a.n > 1")));
 	}
 }

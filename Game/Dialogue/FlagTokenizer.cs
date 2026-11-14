@@ -5,13 +5,16 @@ using System.Globalization;
 /// <summary>The kinds of token in the language dialogue conditions and effects are written in.</summary>
 public enum FlagTokenKind
 {
-	/// <summary>A flag or counter name: lowercase words joined by dots, such as <c>example.has_key</c>.</summary>
+	/// <summary>
+	/// A name: lowercase words joined by dots. A flag or a counter, such as
+	/// <c>example.has_key</c>, or a character's id, which has no dots.
+	/// </summary>
 	Name,
 
 	/// <summary>A whole number, optionally negative.</summary>
 	Integer,
 
-	/// <summary>A reserved word: <c>and</c>, <c>or</c>, <c>not</c>, <c>set</c>, <c>clear</c> or <c>add</c>.</summary>
+	/// <summary>A reserved word: one of <see cref="FlagTokenizer.Keywords"/>.</summary>
 	Keyword,
 
 	/// <summary>One of <c>==</c>, <c>!=</c>, <c>&lt;</c>, <c>&lt;=</c>, <c>&gt;</c> or <c>&gt;=</c>.</summary>
@@ -43,8 +46,16 @@ public readonly record struct FlagToken(FlagTokenKind Kind, string Text, int Col
 /// </summary>
 public static class FlagTokenizer
 {
-	/// <summary>Words with a meaning of their own, which can never be a name or part of one.</summary>
-	public static readonly IReadOnlySet<string> Keywords = new HashSet<string> { "and", "or", "not", "set", "clear", "add" };
+	/// <summary>
+	/// Words with a meaning of their own, which can never be a name or part of one: no
+	/// flag and no character can be called by one of them.
+	/// </summary>
+	public static readonly IReadOnlySet<string> Keywords = new HashSet<string>
+	{
+		"and", "or", "not",
+		"set", "clear", "add",
+		"recruit", "dismiss", "in_party", "party_full"
+	};
 
 	/// <summary>
 	/// Returns the tokens of <paramref name="text"/>, always ending with an

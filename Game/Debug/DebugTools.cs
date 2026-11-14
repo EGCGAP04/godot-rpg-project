@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
@@ -133,7 +134,13 @@ public partial class DebugTools : Node
 		}
 
 		GameState.Instance.StartAt(preset.Start);
-		preset.Apply(new DialogueContext(state, Party.Instance.State));
+		IReadOnlyList<string> refusals = preset.Apply(new DialogueContext(state, Party.Instance.State));
+
+		if (refusals.Count > 0)
+		{
+			Stop(string.Join("\n", refusals));
+			return;
+		}
 
 		GD.Print($"Debug: preset applied; starting in {preset.Start.World}, cycle {preset.Start.Cycle}.");
 

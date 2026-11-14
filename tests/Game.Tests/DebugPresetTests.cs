@@ -73,7 +73,7 @@ public class DebugPresetTests
 	[InlineData("{ 'format': 1, 'description': 'd', 'cycle': '2' }", "test.json: 'cycle' should be a whole number, but it is text.")]
 	[InlineData("{ 'format': 1, 'description': 'd', 'do': 'set test.tonight' }", "test.json: 'do' should be a list, but it is text.")]
 	[InlineData("{ 'format': 1, 'description': 'd', 'do': ['set test.tonight', 3] }", "test.json: do 2: 'do' should be text, but it is a number.")]
-	[InlineData("{ 'format': 1, 'description': 'd', 'do': ['set test.tonight', 'toggle test.tonight'] }", "test.json: do 2: Column 1: an effect starts with 'set', 'clear' or 'add', not 'toggle'.")]
+	[InlineData("{ 'format': 1, 'description': 'd', 'do': ['set test.tonight', 'toggle test.tonight'] }", "test.json: do 2: Column 1: an effect starts with 'set', 'clear', 'add', 'recruit' or 'dismiss', not 'toggle'.")]
 	public void Read_RejectsAMalformedFile_SayingWhere(string json, string expected)
 	{
 		DataFileException error = Assert.Throws<DataFileException>(() => Read(json));
@@ -134,5 +134,38 @@ public class DebugPresetTests
 	{
 		Assert.Throws<ArgumentOutOfRangeException>(() => new DebugPreset(null, 0, Array.Empty<PresetEffect>()));
 		Assert.Throws<ArgumentOutOfRangeException>(() => new DebugPreset((World)7, null, Array.Empty<PresetEffect>()));
+	}
+
+	[Fact]
+	public void Apply_WithNothingRefused_ReturnsNoRefusals()
+	{
+		var state = new DecisionState(Catalogue);
+		var party = new InMemoryPartyStore(TestRoster.Hero, "abe");
+		DebugPreset preset = Read("{ 'format': 1, 'description': 'd', 'do': ['recruit abe', 'set test.ever'] }");
+
+		Assert.Empty(preset.Apply(new DialogueContext(state, party)));
+
+		Assert.Equal(new[] { TestRoster.Hero, "abe" }, party.Members);
+		Assert.True(state.GetFlag("test.ever"));
+	}
+
+	[Fact]
+	public void Apply_ReturnsEveryRefusal_WithWhereItWasWritten_AndAppliesTheRest()
+	{
+		var state = new DecisionState(Catalogue);
+		var party = new InMemoryPartyStore(2, TestRoster.Hero, "abe", "bea");
+		DebugPreset preset = Read("{ 'format': 1, 'description': 'd', 'do': ['dismiss abe', 'recruit abe', 'recruit bea', 'set test.ever'] }");
+
+		var refusals = preset.Apply(new DialogueContext(state, party));
+
+		Assert.Equal(
+			new[]
+			{
+				"test.json: do 1: 'dismiss abe' was refused: 'abe' is not in the party.",
+				"test.json: do 3: 'recruit bea' was refused: 'bea' cannot join: the party already holds 2."
+			},
+			refusals);
+		Assert.Equal(new[] { TestRoster.Hero, "abe" }, party.Members);
+		Assert.True(state.GetFlag("test.ever"));
 	}
 }

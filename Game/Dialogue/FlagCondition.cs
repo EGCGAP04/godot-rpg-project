@@ -39,6 +39,18 @@ public abstract record FlagCondition
 		}
 	}
 
+	/// <summary>A character is in the party: <c>in_party demo_friend</c>.</summary>
+	public sealed record InParty(string Character) : FlagCondition
+	{
+		public override bool Evaluate(DialogueContext context) => context.Party.IsMember(Character);
+	}
+
+	/// <summary>The party holds as many as it can: <c>party_full</c>.</summary>
+	public sealed record PartyFull : FlagCondition
+	{
+		public override bool Evaluate(DialogueContext context) => context.Party.IsFull;
+	}
+
 	/// <summary><c>not</c>: the operand does not hold.</summary>
 	public sealed record Not(FlagCondition Operand) : FlagCondition
 	{

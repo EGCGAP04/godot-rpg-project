@@ -17,17 +17,22 @@ public static class FlagUses
 		null => Enumerable.Empty<(string, FlagType)>(),
 		FlagCondition.IsSet isSet => new[] { (isSet.Flag, FlagType.Bool) },
 		FlagCondition.Comparison comparison => new[] { (comparison.Counter, FlagType.Counter) },
+		FlagCondition.InParty or FlagCondition.PartyFull => Enumerable.Empty<(string, FlagType)>(),
 		FlagCondition.Not negation => InCondition(negation.Operand),
 		FlagCondition.And both => InCondition(both.Left).Concat(InCondition(both.Right)),
 		FlagCondition.Or either => InCondition(either.Left).Concat(InCondition(either.Right)),
 		_ => throw new ArgumentOutOfRangeException(nameof(condition), condition, "Not a known kind of condition.")
 	};
 
-	/// <summary>The flag <paramref name="effect"/> writes, with the type the writing needs.</summary>
-	public static (string Name, FlagType Type) InEffect(FlagEffect effect) => effect switch
+	/// <summary>
+	/// The flag <paramref name="effect"/> writes, with the type the writing needs. None when
+	/// it changes the party instead.
+	/// </summary>
+	public static IEnumerable<(string Name, FlagType Type)> InEffect(FlagEffect effect) => effect switch
 	{
-		FlagEffect.Set setting => (setting.Flag, FlagType.Bool),
-		FlagEffect.Add addition => (addition.Counter, FlagType.Counter),
+		FlagEffect.Set setting => new[] { (setting.Flag, FlagType.Bool) },
+		FlagEffect.Add addition => new[] { (addition.Counter, FlagType.Counter) },
+		FlagEffect.Recruit or FlagEffect.Dismiss => Enumerable.Empty<(string, FlagType)>(),
 		_ => throw new ArgumentOutOfRangeException(nameof(effect), effect, "Not a known kind of effect.")
 	};
 

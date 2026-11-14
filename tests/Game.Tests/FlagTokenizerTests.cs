@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Xunit;
 
@@ -69,6 +70,10 @@ public class FlagTokenizerTests
 	[InlineData("set")]
 	[InlineData("clear")]
 	[InlineData("add")]
+	[InlineData("recruit")]
+	[InlineData("dismiss")]
+	[InlineData("in_party")]
+	[InlineData("party_full")]
 	public void Tokenize_ReadsReservedWordsAsKeywords(string word)
 	{
 		Assert.Equal(FlagTokenKind.Keyword, FlagTokenizer.Tokenize(word)[0].Kind);
@@ -117,5 +122,41 @@ public class FlagTokenizerTests
 		var error = Assert.Throws<FlagSyntaxException>(() => FlagTokenizer.Tokenize("!example.has_key"));
 
 		Assert.Contains("'not'", error.Message);
+	}
+
+	[Fact]
+	public void Keywords_AreTheTenReservedWords()
+	{
+		Assert.Equal(
+			new[] { "add", "and", "clear", "dismiss", "in_party", "not", "or", "party_full", "recruit", "set" },
+			FlagTokenizer.Keywords.Order(StringComparer.Ordinal));
+	}
+
+	[Fact]
+	public void Tokenize_ACharactersIdIsAName_AfterTheWordThatAsksAboutThem()
+	{
+		var tokens = FlagTokenizer.Tokenize("in_party demo_friend");
+
+		Assert.Equal(new FlagToken(FlagTokenKind.Keyword, "in_party", 1), tokens[0]);
+		Assert.Equal(new FlagToken(FlagTokenKind.Name, "demo_friend", 10), tokens[1]);
+	}
+
+	[Theory]
+	[InlineData("in_party_now")]     // longer than a reserved word
+	[InlineData("party_fuller")]
+	[InlineData("recruits.dismissed")]
+	public void Tokenize_AWordThatOnlyStartsLikeAPartyWordIsAName(string word)
+	{
+		Assert.Equal(new FlagToken(FlagTokenKind.Name, word, 1), FlagTokenizer.Tokenize(word)[0]);
+	}
+
+	[Theory]
+	[InlineData("party.recruit")]
+	[InlineData("dismiss.done")]
+	[InlineData("a.in_party")]
+	[InlineData("a.party_full.b")]
+	public void Tokenize_APartyWordAsPartOfANameIsRejected(string name)
+	{
+		Assert.Throws<FlagSyntaxException>(() => FlagTokenizer.Tokenize(name));
 	}
 }

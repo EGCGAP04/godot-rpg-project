@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 using static FlagCondition;
 
@@ -75,5 +76,69 @@ public class FlagConditionTests
 		_ = FlagConditionParser.Parse("not (a.x and b.y) or c.z >= 1").Evaluate(DialogueContext.FlagsOnly(flags));
 
 		Assert.Equal(0, flags.Writes);
+	}
+
+	[Fact]
+	public void InParty_IsWhetherTheCharacterIsAMember()
+	{
+		var context = new DialogueContext(new InMemoryFlagStore(), new InMemoryPartyStore(TestRoster.Hero, "abe", "bea").With("abe"));
+
+		Assert.True(new InParty("abe").Evaluate(context));
+		Assert.False(new InParty("bea").Evaluate(context));
+		Assert.True(new InParty(TestRoster.Hero).Evaluate(context));
+	}
+
+	[Fact]
+	public void InParty_OfACharacterThatDoesNotExist_Throws()
+	{
+		var context = new DialogueContext(new InMemoryFlagStore(), new InMemoryPartyStore(TestRoster.Hero));
+
+		Assert.Throws<ArgumentException>(() => new InParty("zed").Evaluate(context));
+	}
+
+	[Theory]
+	[InlineData(2, true)]
+	[InlineData(3, false)]
+	public void PartyFull_IsWhetherThePartyHoldsAsManyAsItCan(int maximumSize, bool expected)
+	{
+		var context = new DialogueContext(new InMemoryFlagStore(), new InMemoryPartyStore(maximumSize, TestRoster.Hero, "abe").With("abe"));
+
+		Assert.Equal(expected, new PartyFull().Evaluate(context));
+	}
+
+	[Theory]
+	[InlineData(false, false, true)]    // outside, with room: the offer shows
+	[InlineData(true, false, false)]    // already in
+	[InlineData(false, true, false)]    // no room
+	public void ThePartyWordsCombineWithTheRest(bool member, bool full, bool expected)
+	{
+		var party = new InMemoryPartyStore(full ? (member ? 2 : 1) : 4, TestRoster.Hero, "abe");
+
+		if (member)
+			party.With("abe");
+
+		var context = new DialogueContext(new InMemoryFlagStore(), party);
+
+		Assert.Equal(expected, FlagConditionParser.Parse("not in_party abe and not party_full").Evaluate(context));
+	}
+
+	[Fact]
+	public void Evaluate_NeverChangesTheParty()
+	{
+		var party = new InMemoryPartyStore(TestRoster.Hero, "abe");
+
+		_ = FlagConditionParser.Parse("in_party abe or party_full").Evaluate(new DialogueContext(new InMemoryFlagStore(), party));
+
+		Assert.Equal(0, party.Changes);
+		Assert.Equal(new[] { TestRoster.Hero }, party.Members);
+	}
+
+	[Fact]
+	public void AConditionOnTheParty_OverFlagsOnly_Throws()
+	{
+		DialogueContext context = DialogueContext.FlagsOnly(new InMemoryFlagStore());
+
+		Assert.Throws<InvalidOperationException>(() => new InParty("abe").Evaluate(context));
+		Assert.Throws<InvalidOperationException>(() => new PartyFull().Evaluate(context));
 	}
 }

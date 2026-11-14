@@ -258,7 +258,7 @@ public static class DialogueValidator
 				Check($"{where}, if", FlagUses.InCondition(line.Condition), false);
 
 				for (int k = 0; k < line.Effects.Count; k++)
-					Check($"{where}, do {k + 1}", new[] { FlagUses.InEffect(line.Effects[k]) }, true);
+					Check($"{where}, do {k + 1}", FlagUses.InEffect(line.Effects[k]), true);
 			}
 
 			for (int i = 0; i < node.Choices.Count; i++)
@@ -268,7 +268,7 @@ public static class DialogueValidator
 				Check($"{where}, if", FlagUses.InCondition(option.Condition), false);
 
 				for (int k = 0; k < option.Effects.Count; k++)
-					Check($"{where}, do {k + 1}", new[] { FlagUses.InEffect(option.Effects[k]) }, true);
+					Check($"{where}, do {k + 1}", FlagUses.InEffect(option.Effects[k]), true);
 			}
 		}
 	}
