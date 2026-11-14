@@ -22,6 +22,9 @@ public class DebugPresetTests
 		}
 	}".Replace('\'', '"'));
 
+	/// <summary>The characters there are: a protagonist and two others.</summary>
+	private static readonly CharacterRosterValues Roster = TestRoster.With("abe", "bea");
+
 	private static DebugPreset Read(string json) => DebugPreset.Read("test.json", json.Replace('\'', '"'));
 
 	[Fact]
@@ -32,7 +35,7 @@ public class DebugPresetTests
 		FlagCatalogue catalogue = FlagCatalogue.Read(ProjectFiles.ReadText("Decisions", "flags.json"));
 
 		Assert.NotEmpty(files);
-		Assert.Empty(files.SelectMany(file => DebugPreset.Read(file.Name, file.Json).Validate(catalogue)));
+		Assert.Empty(files.SelectMany(file => DebugPreset.Read(file.Name, file.Json).Validate(catalogue, CharacterRosterTests.GameRosterValues())));
 	}
 
 	[Fact]
@@ -86,7 +89,7 @@ public class DebugPresetTests
 	{
 		DebugPreset preset = Read("{ 'format': 1, 'description': 'd', 'do': ['set test.tonight', 'add test.visits 1', 'set test.ever'] }");
 
-		Assert.Empty(preset.Validate(Catalogue));
+		Assert.Empty(preset.Validate(Catalogue, Roster));
 	}
 
 	[Fact]
@@ -101,7 +104,7 @@ public class DebugPresetTests
 				"test.json: do 3: 'test.ever' is a boolean flag, so it changes with 'set' or 'clear', not with 'add'.",
 				"test.json: do 4: 'test.visits' is a counter, so it changes with 'add', not with 'set' or 'clear'."
 			},
-			preset.Validate(Catalogue));
+			preset.Validate(Catalogue, Roster));
 	}
 
 	[Fact]
@@ -167,5 +170,59 @@ public class DebugPresetTests
 			refusals);
 		Assert.Equal(new[] { TestRoster.Hero, "abe" }, party.Members);
 		Assert.True(state.GetFlag("test.ever"));
+	}
+
+	[Fact]
+	public void Validate_AcceptsEffectsOnThePartysCharacters()
+	{
+		DebugPreset preset = Read("{ 'format': 1, 'description': 'd', 'do': ['recruit abe', 'recruit bea', 'dismiss abe'] }");
+
+		Assert.Empty(preset.Validate(Catalogue, Roster));
+	}
+
+	[Fact]
+	public void Validate_ReportsEveryMisusedCharacter_InTheWordsOfTheDialogueValidator()
+	{
+		DebugPreset preset = Read("{ 'format': 1, 'description': 'd', 'do': ['recruit zed', 'recruit abe', 'dismiss hero', 'set test.missing', 'recruit hero'] }");
+
+		Assert.Equal(
+			new[]
+			{
+				"test.json: do 1: 'zed' is not a character of the roster, which has: hero, abe, bea.",
+				"test.json: do 3: 'hero' is the protagonist, who never leaves the party, so 'dismiss' is always refused.",
+				"test.json: do 4: 'test.missing' is not declared in flags.json.",
+				"test.json: do 5: 'hero' is the protagonist, who is always in the party, so 'recruit' is always refused."
+			},
+			preset.Validate(Catalogue, Roster));
+	}
+
+	[Fact]
+	public void Validate_ChecksAnEffectFromTheCommandLineToo()
+	{
+		var preset = new DebugPreset(null, null, new[] { DebugPreset.ParseEffect("recruit zed", "command line", "--do 1") });
+
+		Assert.Equal(
+			new[] { "command line: --do 1: 'zed' is not a character of the roster, which has: hero, abe, bea." },
+			preset.Validate(Catalogue, Roster));
+	}
+
+	[Fact]
+	public void Validate_WithoutACatalogueOrARoster_IsRefused()
+	{
+		Assert.Throws<System.ArgumentNullException>(() => DebugPreset.None.Validate(null, Roster));
+		Assert.Throws<System.ArgumentNullException>(() => DebugPreset.None.Validate(Catalogue, null));
+	}
+
+	[Fact]
+	public void AValidPresetOverTheRealParty_AppliesWithNoRefusal()
+	{
+		// The whole path a preset takes in the game, with PartyState instead of the stand-in.
+		PartyState party = TestRoster.Party("abe", "bea");
+		DebugPreset preset = Read("{ 'format': 1, 'description': 'd', 'do': ['recruit abe', 'recruit bea', 'dismiss abe'] }");
+
+		Assert.Empty(preset.Validate(Catalogue, party.Roster));
+		Assert.Empty(preset.Apply(new DialogueContext(new DecisionState(Catalogue), party)));
+
+		Assert.Equal(new[] { TestRoster.Hero, "bea" }, party.Members);
 	}
 }
