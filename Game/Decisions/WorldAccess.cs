@@ -18,6 +18,12 @@ using System.Text.Json;
 /// <see cref="Unlocks"/>, so no data can break it: with the Fantasy world closed, the
 /// Nightmare world is closed too, whatever its own condition says.
 /// </para>
+/// <para>
+/// A condition here may only ask about flags. One that asks about the party, with
+/// <c>in_party</c> or <c>party_full</c>, is refused when the file is read: the decision
+/// registry is what opens the worlds, and a conversation that wants a world to depend on
+/// who was recruited sets a flag beside its <c>recruit</c>.
+/// </para>
 /// </remarks>
 public sealed class WorldAccess
 {
@@ -43,7 +49,10 @@ public sealed class WorldAccess
 	public FlagCondition Nightmare { get; }
 
 	/// <summary>Reads the file from its text.</summary>
-	/// <exception cref="DataFileException">The text is not a valid file, or one of its conditions does not parse.</exception>
+	/// <exception cref="DataFileException">
+	/// The text is not a valid file, or one of its conditions does not parse or asks about
+	/// the party.
+	/// </exception>
 	public static WorldAccess Read(string json)
 	{
 		using JsonDocument document = StrictJson.Parse(FileName, json);
@@ -109,13 +118,20 @@ public sealed class WorldAccess
 		string where = $"world '{world}'";
 		string text = StrictJson.Text(worlds[world], FileName, where, world);
 
+		FlagCondition condition;
+
 		try
 		{
-			return FlagConditionParser.Parse(text);
+			condition = FlagConditionParser.Parse(text);
 		}
 		catch (FlagSyntaxException exception)
 		{
 			throw new DataFileException(FileName, where, exception.Message.TrimEnd('.'));
 		}
+
+		if (PartyUses.AsksAboutTheParty(condition))
+			throw new DataFileException(FileName, where, "the condition asks about the party, and what opens a world may only ask about flags");
+
+		return condition;
 	}
 }

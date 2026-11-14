@@ -92,6 +92,25 @@ public class CharacterRosterTests
 
 	private static Listing GameRoster() => Read(ProjectFiles.ReadText("Characters", "roster.tres"));
 
+	/// <summary>
+	/// The game's roster, rebuilt from <c>roster.tres</c> and the characters' files as the
+	/// value the rules read. Other tests use it to check what names a character.
+	/// </summary>
+	internal static CharacterRosterValues GameRosterValues()
+	{
+		Dictionary<string, string> files = CharacterFiles();
+		Listing listing = GameRoster();
+
+		CharacterValues Character(string path)
+		{
+			(CharacterValues character, List<string> problems) = CharacterDataTests.Read(files[path]);
+			Assert.Empty(problems);
+			return character;
+		}
+
+		return new CharacterRosterValues(Character(listing.Protagonist), listing.Others.Select(Character));
+	}
+
 	/// <summary>What is wrong with a listing, given the character files there are.</summary>
 	public static List<string> Problems(Listing listing, IReadOnlyCollection<string> characterFiles)
 	{
@@ -157,17 +176,7 @@ public class CharacterRosterTests
 	{
 		// PartyState's constructor is the check: every character's stats must be computable
 		// up to each world's highest level, with the curves the game ships.
-		Dictionary<string, string> files = CharacterFiles();
-		Listing listing = GameRoster();
-
-		CharacterValues Character(string path)
-		{
-			(CharacterValues character, List<string> problems) = CharacterDataTests.Read(files[path]);
-			Assert.Empty(problems);
-			return character;
-		}
-
-		var roster = new CharacterRosterValues(Character(listing.Protagonist), listing.Others.Select(Character));
+		CharacterRosterValues roster = GameRosterValues();
 		Dictionary<string, double> tuning = StatTuningTests.WrittenValues(ProjectFiles.ReadText("Stats", "stat_tuning.tres"));
 		var curves = new ExperienceCurves(
 			fantasy: new ExperienceCurve(tuning["FantasyExperienceBase"], tuning["FantasyExperienceExponent"], (int)tuning["FantasyHighestLevel"]),
@@ -250,5 +259,23 @@ public class CharacterRosterTests
 	public void Read_AFileThatIsNotTheRoster_SaysWhy(string resource, string expected)
 	{
 		Assert.Contains(expected, Problems(Read(File_(resource)), TwoFiles));
+	}
+
+	[Fact]
+	public void EveryCharacterOfTheGame_CanBeNamedInTheDialoguesLanguage()
+	{
+		// An id that is a reserved word, like a character called "recruit", could never be
+		// written after in_party, recruit or dismiss.
+		CharacterRosterValues roster = GameRosterValues();
+
+		Assert.NotEmpty(roster.Characters);
+
+		foreach (CharacterValues character in roster.Characters)
+		{
+			IReadOnlyList<FlagToken> tokens = FlagTokenizer.Tokenize(character.Id);
+
+			Assert.Equal(new[] { FlagTokenKind.Name, FlagTokenKind.End }, tokens.Select(token => token.Kind));
+			Assert.Equal(new FlagEffect.Recruit(character.Id), FlagEffectParser.Parse($"recruit {character.Id}"));
+		}
 	}
 }
