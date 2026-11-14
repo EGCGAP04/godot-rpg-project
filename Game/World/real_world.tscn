@@ -29,5 +29,10 @@ position = Vector2(88, 136)
 position = Vector2(120, 56)
 Conversation = "demo_evening"
 
+[node name="Friend" parent="." unique_id=302353062 instance=ExtResource("4_interactable")]
+position = Vector2(200, 120)
+Conversation = "demo_recruit"
+
 [connection signal="ExitTriggered" from="Bed" to="." method="OnExitTriggered"]
 [connection signal="InteractionTriggered" from="Neighbor" to="." method="OnInteractionTriggered"]
+[connection signal="InteractionTriggered" from="Friend" to="." method="OnInteractionTriggered"]

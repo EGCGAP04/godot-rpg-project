@@ -1,0 +1,22 @@
+{
+	"format": 1,
+	"nodes": {
+		"start": {
+			"lines": [
+				{ "speaker": "demo_newcomer", "line": "offer", "if": "in_party demo_friend and not in_party demo_newcomer" },
+				{ "speaker": "demo_newcomer", "line": "nobody_to_replace", "if": "not in_party demo_friend and not in_party demo_newcomer" },
+				{ "speaker": "demo_newcomer", "line": "greet_member", "if": "in_party demo_newcomer" }
+			],
+			"choices": [
+				{ "option": "swap", "if": "in_party demo_friend and not in_party demo_newcomer", "do": ["dismiss demo_friend", "recruit demo_newcomer"], "next": "swapped" },
+				{ "option": "bye", "next": "END" }
+			]
+		},
+		"swapped": {
+			"lines": [
+				{ "speaker": "demo_newcomer", "line": "my_turn" }
+			],
+			"next": "END"
+		}
+	}
+}

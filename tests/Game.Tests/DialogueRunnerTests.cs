@@ -30,11 +30,15 @@ public class DialogueRunnerTests
 	/// was shown: each line's name, narration in parentheses, and each choice as the options
 	/// offered and the one picked.
 	/// </summary>
-	internal static string[] Play(Conversation conversation, IFlagStore flags, params string[] picks)
+	internal static string[] Play(Conversation conversation, IFlagStore flags, params string[] picks) =>
+		Play(conversation, DialogueContext.FlagsOnly(flags), picks);
+
+	/// <summary>The same, for a conversation that speaks of the party too. A refused effect fails the test.</summary>
+	internal static string[] Play(Conversation conversation, DialogueContext context, params string[] picks)
 	{
 		var shown = new List<string>();
 		var remaining = new Queue<string>(picks);
-		DialogueRunner runner = DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags));
+		DialogueRunner runner = DialogueRunner.Start(conversation, context);
 
 		for (int steps = 0; runner.Step != DialogueStep.End; steps++)
 		{

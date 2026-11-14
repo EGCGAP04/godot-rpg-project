@@ -1,0 +1,31 @@
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "demo_recruit.start.greet"
+msgstr "¿Vas a alguna parte? Podría acompañarte."
+
+msgid "demo_recruit.start.no_room"
+msgstr "Menudo grupo llevas. No hay lugar para mí."
+
+msgid "demo_recruit.start.greet_member"
+msgstr "Voy justo detrás de ti. ¿O prefieres seguir sin mí?"
+
+#. An option: the player's answer. The friend joins the party.
+msgid "demo_recruit.start.join"
+msgstr "Ven conmigo."
+
+#. An option: the player's answer. The friend leaves the party.
+msgid "demo_recruit.start.stay"
+msgstr "Espera aquí por ahora."
+
+#. An option: the player's answer. Nothing changes.
+msgid "demo_recruit.start.bye"
+msgstr "Nos vemos."
+
+msgid "demo_recruit.joined.lead_on"
+msgstr "¡Genial! Tú guías."
+
+msgid "demo_recruit.stayed.wait_here"
+msgstr "De acuerdo. Ya sabes dónde encontrarme."

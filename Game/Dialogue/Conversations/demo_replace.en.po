@@ -1,0 +1,24 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "demo_replace.start.offer"
+msgstr "Your friend looks tired. I could take their place."
+
+msgid "demo_replace.start.nobody_to_replace"
+msgstr "All by yourself? Come back with a friend and we'll talk."
+
+msgid "demo_replace.start.greet_member"
+msgstr "Still here. Shall we go on?"
+
+#. An option: the player's answer. The friend leaves the party and the newcomer joins it.
+msgid "demo_replace.start.swap"
+msgstr "Take their place."
+
+#. An option: the player's answer. Nothing changes.
+msgid "demo_replace.start.bye"
+msgstr "See you."
+
+msgid "demo_replace.swapped.my_turn"
+msgstr "My turn, then. Your friend can rest."
