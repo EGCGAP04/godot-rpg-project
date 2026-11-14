@@ -15,6 +15,9 @@ public class DialogueValidatorTests
 	private const string Catalogue =
 		"{ 'format': 1, 'flags': { 'a.flag': { 'type': 'bool', 'lifetime': 'run' }, 'a.count': { 'type': 'counter', 'lifetime': 'run' } } }";
 
+	/// <summary>The characters there are: a protagonist and two others.</summary>
+	private static readonly CharacterRosterValues Roster = TestRoster.With("abe", "bea");
+
 	/// <summary>A valid conversation: one line, then the end. Each test changes one thing in it.</summary>
 	private const string Valid = "{ 'format': 1, 'nodes': { 'start': { 'lines': [ { 'speaker': 'guide', 'line': 'hi' } ], 'next': 'END' } } }";
 
@@ -23,7 +26,7 @@ public class DialogueValidatorTests
 		new($"Dialogue/Conversations/{id}.json", json.Replace('\'', '"'));
 
 	private static IReadOnlyList<string> Validate(params ConversationFile[] files) =>
-		DialogueValidator.Validate(Catalogue.Replace('\'', '"'), files);
+		DialogueValidator.Validate(Catalogue.Replace('\'', '"'), Roster, files);
 
 	/// <summary>The valid conversation, with extra properties added to its only line.</summary>
 	private static ConversationFile WithLine(string extraProperties) =>
@@ -37,7 +40,7 @@ public class DialogueValidatorTests
 		ConversationFile[] files = ProjectFiles.ConversationFiles();
 
 		Assert.NotEmpty(files);
-		Assert.Empty(DialogueValidator.Validate(ProjectFiles.ReadText("Decisions", "flags.json"), files));
+		Assert.Empty(DialogueValidator.Validate(ProjectFiles.ReadText("Decisions", "flags.json"), CharacterRosterTests.GameRosterValues(), files));
 	}
 
 	[Fact]
@@ -70,6 +73,61 @@ public class DialogueValidatorTests
 	public void AFlag_MustBeDeclaredAndUsedWithItsType(string extraProperties, string expected)
 	{
 		Assert.Contains(expected, Assert.Single(Validate(WithLine(extraProperties))));
+	}
+
+	// Characters
+
+	[Theory]
+	[InlineData("'if': 'in_party abe'")]
+	[InlineData("'if': 'not in_party bea and not party_full'")]
+	[InlineData("'if': 'in_party hero'")]
+	[InlineData("'do': [ 'recruit abe' ]")]
+	[InlineData("'do': [ 'dismiss abe', 'recruit bea' ]")]
+	public void ACharacterOfTheRoster_CanBeAskedAboutAndChanged(string extraProperties)
+	{
+		Assert.Empty(Validate(WithLine(extraProperties)));
+	}
+
+	[Theory]
+	[InlineData("'if': 'in_party abbe'", "test: node 'start', line 1 ('hi'), if: 'abbe' is not a character of the roster, which has: hero, abe, bea.")]
+	[InlineData("'if': 'a.flag and not in_party zed'", "if: 'zed' is not a character of the roster")]
+	[InlineData("'if': 'in_party a.flag'", "'a.flag' is not a character of the roster")]
+	[InlineData("'do': [ 'recruit zed' ]", "test: node 'start', line 1 ('hi'), do 1: 'zed' is not a character of the roster, which has: hero, abe, bea.")]
+	[InlineData("'do': [ 'set a.flag', 'dismiss zed' ]", "do 2: 'zed' is not a character of the roster")]
+	[InlineData("'do': [ 'recruit hero' ]", "do 1: 'hero' is the protagonist, who is always in the party, so 'recruit' is always refused.")]
+	[InlineData("'do': [ 'dismiss hero' ]", "do 1: 'hero' is the protagonist, who never leaves the party, so 'dismiss' is always refused.")]
+	public void ACharacter_MustBeInTheRoster_AndTheProtagonistIsNeverRecruitedOrDismissed(string extraProperties, string expected)
+	{
+		Assert.Contains(expected, Assert.Single(Validate(WithLine(extraProperties))));
+	}
+
+	[Fact]
+	public void AnOptionsCharacters_AreCheckedToo()
+	{
+		var conversation = Source("test", "{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'join', 'if': 'not in_party zed', 'do': [ 'recruit zoe' ], 'next': 'END' }, { 'option': 'bye', 'next': 'END' } ] } } }");
+
+		Assert.Equal(
+			new[]
+			{
+				"test: node 'start', option 1 ('join'), if: 'zed' is not a character of the roster, which has: hero, abe, bea.",
+				"test: node 'start', option 1 ('join'), do 1: 'zoe' is not a character of the roster, which has: hero, abe, bea."
+			},
+			Validate(conversation));
+	}
+
+	[Fact]
+	public void ACharactersProblems_AreReportedEvenWithoutACatalogue()
+	{
+		var problems = DialogueValidator.Validate("{ \"format\": 2, \"flags\": {} }", Roster, new[] { WithLine("'do': [ 'recruit zed' ]") });
+
+		Assert.Equal(2, problems.Count);
+		Assert.Contains("'zed' is not a character of the roster", problems[1]);
+	}
+
+	[Fact]
+	public void Validate_WithoutARoster_IsRefused()
+	{
+		Assert.Throws<System.ArgumentNullException>(() => DialogueValidator.Validate(Catalogue.Replace('\'', '"'), null, new[] { Source("test", Valid) }));
 	}
 
 	[Fact]
@@ -297,7 +355,7 @@ public class DialogueValidatorTests
 	[Fact]
 	public void AnInvalidCatalogue_IsReportedOnce_InsteadOfBlamingEveryFlag()
 	{
-		var problems = DialogueValidator.Validate("{ \"format\": 2, \"flags\": {} }", new[] { WithLine("'if': 'a.flag'") });
+		var problems = DialogueValidator.Validate("{ \"format\": 2, \"flags\": {} }", Roster, new[] { WithLine("'if': 'a.flag'") });
 
 		Assert.Equal("flags.json: format 2 is not supported; this game reads format 1.", Assert.Single(problems));
 	}

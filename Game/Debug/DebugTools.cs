@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 
@@ -103,6 +104,7 @@ public partial class DebugTools : Node
 	private void ApplyStartupPreset()
 	{
 		DecisionState state = DecisionRegistry.Instance.State;
+		PartyState party = Party.Instance.State;
 		DebugPreset preset;
 
 		try
@@ -124,7 +126,7 @@ public partial class DebugTools : Node
 			return;
 		}
 
-		string[] problems = preset.Validate(state.Catalogue).ToArray();
+		string[] problems = preset.Validate(state.Catalogue, party.Roster).ToArray();
 
 		if (problems.Length > 0)
 		{
@@ -133,7 +135,13 @@ public partial class DebugTools : Node
 		}
 
 		GameState.Instance.StartAt(preset.Start);
-		preset.Apply(state);
+		IReadOnlyList<string> refusals = preset.Apply(new DialogueContext(state, party));
+
+		if (refusals.Count > 0)
+		{
+			Stop(string.Join("\n", refusals));
+			return;
+		}
 
 		GD.Print($"Debug: preset applied; starting in {preset.Start.World}, cycle {preset.Start.Cycle}.");
 
@@ -142,6 +150,8 @@ public partial class DebugTools : Node
 			string value = flag.Type == FlagType.Bool ? (state.GetFlag(flag.Name) ? "true" : "false") : state.GetCounter(flag.Name).ToString(System.Globalization.CultureInfo.InvariantCulture);
 			GD.Print($"Debug:   {flag.Name} = {value}");
 		}
+
+		GD.Print($"Debug:   party: {string.Join(", ", party.Members)}");
 	}
 
 	private void Stop(string problem)

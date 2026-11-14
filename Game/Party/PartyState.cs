@@ -15,9 +15,12 @@ using System.Linq;
 /// optional, so a party of one is a valid party.
 /// </para>
 /// <para>
-/// A change that breaks a rule is refused with an exception and changes nothing. It is
-/// never ignored in silence: a conversation that recruits into a full party is a mistake
-/// in the game's content, and should be seen.
+/// A change that breaks a rule is refused and changes nothing. It is never ignored in
+/// silence: a conversation that recruits into a full party is a mistake in the game's
+/// content, and should be seen. <see cref="TryRecruit"/> and <see cref="TryDismiss"/>
+/// answer with the reason, for the dialogue, which goes on; <see cref="Recruit"/> and
+/// <see cref="Dismiss"/> throw it, for code that should never get there. A character
+/// the roster does not have throws in all four.
 /// </para>
 /// <para>
 /// Progress is kept for every character of the roster, in the party or not, from the
@@ -38,7 +41,7 @@ using System.Linq;
 /// with a save from other characters or other curves is M9's to decide.
 /// </para>
 /// </remarks>
-public sealed class PartyState
+public sealed class PartyState : IPartyStore
 {
 	/// <summary>How many characters the party holds at most, the protagonist included.</summary>
 	public const int MaximumSize = 4;
@@ -99,14 +102,34 @@ public sealed class PartyState
 	/// <exception cref="InvalidOperationException">The character is already in the party, or the party is full.</exception>
 	public void Recruit(string id)
 	{
+		if (!TryRecruit(id, out string refusal))
+			throw new InvalidOperationException(refusal);
+	}
+
+	/// <summary>Adds a character to the party, last, unless a rule forbids it.</summary>
+	/// <returns>
+	/// Whether they joined. When they are already in the party, or it is full, nothing
+	/// changes and <paramref name="refusal"/> says which; otherwise it is null.
+	/// </returns>
+	/// <exception cref="ArgumentException">The roster has no character with this id.</exception>
+	public bool TryRecruit(string id, out string refusal)
+	{
 		if (IsMember(id))
-			throw new InvalidOperationException($"'{id}' is already in the party.");
+		{
+			refusal = $"'{id}' is already in the party.";
+			return false;
+		}
 
 		if (IsFull)
-			throw new InvalidOperationException($"'{id}' cannot join: the party already holds {MaximumSize}.");
+		{
+			refusal = $"'{id}' cannot join: the party already holds {MaximumSize}.";
+			return false;
+		}
 
+		refusal = null;
 		_members.Add(id);
 		MembersChanged?.Invoke();
+		return true;
 	}
 
 	/// <summary>Takes a character out of the party. Those after them move up.</summary>
@@ -114,13 +137,33 @@ public sealed class PartyState
 	/// <exception cref="InvalidOperationException">The character is the protagonist, or is not in the party.</exception>
 	public void Dismiss(string id)
 	{
+		if (!TryDismiss(id, out string refusal))
+			throw new InvalidOperationException(refusal);
+	}
+
+	/// <summary>Takes a character out of the party, unless a rule forbids it. Those after them move up.</summary>
+	/// <returns>
+	/// Whether they left. When they are the protagonist, or are not in the party, nothing
+	/// changes and <paramref name="refusal"/> says which; otherwise it is null.
+	/// </returns>
+	/// <exception cref="ArgumentException">The roster has no character with this id.</exception>
+	public bool TryDismiss(string id, out string refusal)
+	{
 		if (Roster.Get(id).Id == Roster.Protagonist.Id)
-			throw new InvalidOperationException($"'{id}' is the protagonist, who never leaves the party.");
+		{
+			refusal = $"'{id}' is the protagonist, who never leaves the party.";
+			return false;
+		}
 
 		if (!_members.Remove(id))
-			throw new InvalidOperationException($"'{id}' is not in the party.");
+		{
+			refusal = $"'{id}' is not in the party.";
+			return false;
+		}
 
+		refusal = null;
 		MembersChanged?.Invoke();
+		return true;
 	}
 
 	/// <summary>Where a character stands in a world, whether they are in the party or not.</summary>

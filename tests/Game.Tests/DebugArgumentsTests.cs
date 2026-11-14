@@ -67,4 +67,22 @@ public class DebugArgumentsTests
 
 		Assert.Equal($"command line: {expected}.", error.Message);
 	}
+
+	[Fact]
+	public void Parse_ADoCanChangeTheParty()
+	{
+		DebugArguments parsed = DebugArguments.Parse(new[] { "--do", "recruit abe", "--do", "dismiss abe" });
+
+		Assert.Equal(
+			new FlagEffect[] { new FlagEffect.Recruit("abe"), new FlagEffect.Dismiss("abe") },
+			parsed.Overrides.Effects.Select(effect => effect.Effect));
+	}
+
+	[Fact]
+	public void Parse_ADoWithAConditionsWord_IsRefused()
+	{
+		var error = Assert.Throws<DataFileException>(() => DebugArguments.Parse(new[] { "--do", "in_party abe" }));
+
+		Assert.Contains("an effect starts with 'set', 'clear', 'add', 'recruit' or 'dismiss'", error.Message);
+	}
 }

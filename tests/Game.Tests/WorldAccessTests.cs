@@ -89,6 +89,9 @@ public class WorldAccessTests
 	[InlineData("{ 'format': 1, 'worlds': { 'fantasy': true, 'nightmare': 'a.n' } }", "world 'fantasy'", "'fantasy' should be text")]
 	[InlineData("{ 'format': 1, 'worlds': { 'fantasy': 'a.f', 'nightmare': 'a.n >=' } }", "world 'nightmare'", "expected a number after '>='")]
 	[InlineData("{ 'format': 1, 'worlds': { 'fantasy': '', 'nightmare': 'a.n' } }", "world 'fantasy'", "Column 1: expected a condition, but the text is empty")]
+	[InlineData("{ 'format': 1, 'worlds': { 'fantasy': 'in_party abe', 'nightmare': 'a.n' } }", "world 'fantasy'", "the condition asks about the party, and what opens a world may only ask about flags")]
+	[InlineData("{ 'format': 1, 'worlds': { 'fantasy': 'a.f', 'nightmare': 'a.n and not party_full' } }", "world 'nightmare'", "the condition asks about the party")]
+	[InlineData("{ 'format': 1, 'worlds': { 'fantasy': 'a.f or (a.g and not in_party abe)', 'nightmare': 'a.n' } }", "world 'fantasy'", "the condition asks about the party")]
 	public void Read_RejectsAFileThatIsNotValidAndSaysWhere(string json, string location, string expected)
 	{
 		var error = Assert.Throws<DataFileException>(() => Read(json));

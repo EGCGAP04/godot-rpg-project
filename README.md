@@ -12,7 +12,7 @@
 
 🚧 In development — core systems phase.
 
-The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost, and a fight won gives the party experience. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. Every text is in Spanish and English, and the game starts in the system's language. In a debug build, F3 opens an overlay to inspect and change the decision registry's flags, take and restore snapshots of them and of the party, jump to any world and cycle, and switch the language. All art is placeholder (solid-colour rectangles and tinted tiles).
+The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost, and a fight won gives the party experience. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. A friend there joins the party if asked, and a newcomer in the Fantasy world offers to take the friend's place. Every text is in Spanish and English, and the game starts in the system's language. In a debug build, F3 opens an overlay to inspect and change the decision registry's flags, take and restore snapshots of them and of the party, jump to any world and cycle, and switch the language. All art is placeholder (solid-colour rectangles and tinted tiles).
 
 This is a personal learning project, with no deadline, developed following professional version control and code organization standards.
 
@@ -55,6 +55,7 @@ In a debug build, F3 opens a debug overlay that shows every flag of the decision
 
 ```bash
 godot --path . -- --preset res://Debug/Presets/no_fantasy.json
+godot --path . -- --preset res://Debug/Presets/with_friend.json
 ```
 
 ## Project Structure
@@ -103,7 +104,8 @@ godot-rpg-project/
 │   │
 │   ├── Debug/                         # debug builds only (#75)
 │   │   ├── Presets/
-│   │   │   └── no_fantasy.json            # starts with the Fantasy world closed tonight
+│   │   │   ├── no_fantasy.json            # starts with the Fantasy world closed tonight
+│   │   │   └── with_friend.json           # starts in the Fantasy world with the friend recruited
 │   │   │
 │   │   ├── DebugArguments.cs (+.uid)      # engine-free: reads the arguments after -- on the command line
 │   │   ├── DebugOverlay.cs (+.uid)        # the overlay: flags, snapshots, jump and language
@@ -129,6 +131,12 @@ godot-rpg-project/
 │   │   │   ├── demo_morning.en.po
 │   │   │   ├── demo_morning.es.po
 │   │   │   ├── demo_morning.json          # the next morning, forced: it remembers the answer
+│   │   │   ├── demo_recruit.en.po
+│   │   │   ├── demo_recruit.es.po
+│   │   │   ├── demo_recruit.json          # M7's demo: a friend who joins the party if asked
+│   │   │   ├── demo_replace.en.po
+│   │   │   ├── demo_replace.es.po
+│   │   │   ├── demo_replace.json          # a newcomer who takes the friend's place
 │   │   │   ├── example_first_meeting.en.po # its text, one table per language
 │   │   │   ├── example_first_meeting.es.po
 │   │   │   ├── example_first_meeting.json # the format's reference example, in two parts
@@ -140,17 +148,20 @@ godot-rpg-project/
 │   │   ├── ConversationLoader.cs (+.uid)  # reads a conversation by its id, through FileAccess
 │   │   ├── ConversationReader.cs (+.uid)  # engine-free: a conversation's JSON → Conversation
 │   │   ├── ConversationRules.cs (+.uid)   # engine-free: what each kind of conversation allows
+│   │   ├── DialogueContext.cs (+.uid)     # engine-free: the flags and the party, as conditions and effects see them
 │   │   ├── DialogueNames.cs (+.uid)       # the format's naming rules and special names
 │   │   ├── DialogueRunner.cs (+.uid)      # engine-free: walks a conversation, line by line and choice by choice
-│   │   ├── DialogueValidator.cs (+.uid)   # engine-free: checks every conversation against the catalogue and its text
+│   │   ├── DialogueValidator.cs (+.uid)   # engine-free: checks every conversation against the catalogue, the roster and its text
 │   │   ├── FlagCondition.cs (+.uid)       # engine-free: a condition as a tree, and its evaluation
 │   │   ├── FlagConditionParser.cs (+.uid) # engine-free: condition text → tree, by recursive descent
-│   │   ├── FlagEffect.cs (+.uid)          # engine-free: set, clear or add a flag
+│   │   ├── FlagEffect.cs (+.uid)          # engine-free: set, clear or add a flag; recruit or dismiss a character
 │   │   ├── FlagEffectParser.cs (+.uid)    # engine-free: effect text → effect
 │   │   ├── FlagSyntaxException.cs (+.uid) # a malformed condition or effect, and its column
 │   │   ├── FlagTokenizer.cs (+.uid)       # engine-free: splits condition and effect text into tokens
 │   │   ├── FlagUses.cs (+.uid)            # engine-free: the flags a condition reads or an effect writes
-│   │   └── IFlagStore.cs (+.uid)          # where conditions read flags and effects write them
+│   │   ├── IFlagStore.cs (+.uid)          # where conditions read flags and effects write them
+│   │   ├── IPartyStore.cs (+.uid)         # where conditions ask about the party and effects change it
+│   │   └── PartyUses.cs (+.uid)           # engine-free: the characters a condition or an effect names
 │   │
 │   ├── Enemy/
 │   │   ├── Enemy.cs (+.uid)
@@ -260,6 +271,8 @@ godot-rpg-project/
 │       ├── DebugPresetTests.cs     # includes the test that checks every preset
 │       ├── DecisionStateTests.cs
 │       ├── DemoConversationsTests.cs # plays M6's demo against the real registry
+│       ├── DemoRecruitmentTests.cs # plays M7's demo against the game's roster and a real party
+│       ├── DialogueContextTests.cs
 │       ├── DialogueNamesTests.cs
 │       ├── DialogueRunnerTests.cs
 │       ├── DialogueValidatorTests.cs # includes the tests that check every conversation and its text
@@ -280,10 +293,13 @@ godot-rpg-project/
 │       ├── GameFlagsTests.cs       # every flag the code names is declared; every enemy has an id
 │       ├── GameKeysTests.cs        # every key the game's code and scenes name has its text
 │       ├── InMemoryFlagStore.cs    # stand-in for the decision registry
+│       ├── InMemoryPartyStore.cs   # stand-in for the party, in dialogue tests
 │       ├── LocalizationValidatorTests.cs # includes the test that checks every table
 │       ├── PartyProgressTests.cs
 │       ├── PartySnapshotTests.cs
 │       ├── PartyStateTests.cs
+│       ├── PartyStoreContractTests.cs # the party and its stand-in behave alike
+│       ├── PartyUsesTests.cs
 │       ├── PoText.cs               # writes small .po tables for tests
 │       ├── ProjectFiles.cs         # finds Game/ and its data files from inside a test run
 │       ├── SnapshotShelfTests.cs

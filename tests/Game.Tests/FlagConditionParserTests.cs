@@ -108,4 +108,53 @@ public class FlagConditionParserTests
 		Assert.Equal(15, error.Column);
 		Assert.Contains("'(' at column 1", error.Message);
 	}
+
+	[Fact]
+	public void Parse_InPartyAsksAboutACharacter()
+	{
+		Assert.Equal(new InParty("demo_friend"), FlagConditionParser.Parse("in_party demo_friend"));
+	}
+
+	[Fact]
+	public void Parse_PartyFullStandsOnItsOwn()
+	{
+		Assert.Equal(new PartyFull(), FlagConditionParser.Parse("party_full"));
+	}
+
+	[Fact]
+	public void Parse_ThePartyWordsCombineLikeAnyOtherCondition()
+	{
+		Assert.Equal(
+			new And(new Not(new InParty("demo_friend")), new Not(new PartyFull())),
+			FlagConditionParser.Parse("not in_party demo_friend and not party_full"));
+
+		Assert.Equal(
+			new Or(new IsSet("a.x"), new And(new InParty("abe"), new Comparison("a.n", Comparator.GreaterOrEqual, 2))),
+			FlagConditionParser.Parse("a.x or (in_party abe and a.n >= 2)"));
+	}
+
+	[Theory]
+	[InlineData("in_party", 9)]              // nobody named
+	[InlineData("in_party 3", 10)]           // a number where the character goes
+	[InlineData("in_party not abe", 10)]     // a keyword where the character goes
+	[InlineData("in_party abe bea", 14)]     // one character per question
+	[InlineData("in_party abe > 2", 14)]     // membership is not a number
+	[InlineData("party_full abe", 12)]       // party_full takes nobody
+	[InlineData("party_full == 1", 12)]      // nor a comparison
+	[InlineData("recruit abe", 1)]           // an effect is not a condition
+	[InlineData("a.x and dismiss abe", 9)]
+	public void Parse_RejectsAMalformedPartyConditionAndSaysWhere(string text, int column)
+	{
+		var error = Assert.Throws<FlagSyntaxException>(() => FlagConditionParser.Parse(text));
+
+		Assert.Equal(column, error.Column);
+	}
+
+	[Fact]
+	public void Parse_SaysThatMembershipIsNotCompared()
+	{
+		var error = Assert.Throws<FlagSyntaxException>(() => FlagConditionParser.Parse("in_party abe >= 1"));
+
+		Assert.Contains("'in_party abe' holds or does not, so it is not compared with anything", error.Message);
+	}
 }

@@ -203,22 +203,45 @@ The key of a line or an option is its conversation, its node and its own name: `
 
 ### Conditions and effects
 
-Conditions and effects are written in a small language over flags, not as general expressions:
+Conditions and effects are written in a small language over the flags and the party, not as general expressions:
 
 ```text
 example.has_key                       a boolean flag is set
 not example.met_before
 example.times_met >= 1                a counter compared with a number: == != < <= > >=
 example.promised_help and not (example.key_returned or example.has_key)
+in_party demo_friend                  a character is in the party
+not in_party demo_friend and not party_full
 
 set example.promised_help             effects set or clear a boolean flag,
-clear example.has_key                 or add to a counter (a negative amount subtracts, down to 0)
+clear example.has_key                 or add to a counter (a negative amount subtracts, down to 0),
 add example.times_met 1
+recruit demo_friend                   or change the party
+dismiss demo_friend
 ```
 
-`not` applies before `and` and `and` before `or`, as in C#, and parentheses group first. `and`, `or`, `not`, `set`, `clear` and `add` are reserved, so no name can use them.
+`not` applies before `and` and `and` before `or`, as in C#, and parentheses group first. Ten words are reserved, so no flag and no character can be named after one or use one as a part of its name: `and`, `or`, `not`, `set`, `clear`, `add`, `recruit`, `dismiss`, `in_party` and `party_full`.
 
-`FlagTokenizer` splits the text into tokens. `FlagConditionParser` builds a `FlagCondition` tree from them by recursive descent: one method per rule of the grammar, each asking the rule below it for its operands, which is where the precedence comes from. `FlagEffectParser` checks the three fixed shapes of an effect. Every error names the column where it starts.
+`FlagTokenizer` splits the text into tokens. `FlagConditionParser` builds a `FlagCondition` tree from them by recursive descent: one method per rule of the grammar, each asking the rule below it for its operands, which is where the precedence comes from. `FlagEffectParser` checks the five fixed shapes of an effect. Every error names the column where it starts.
+
+### The party in a conversation
+
+The name after `in_party`, `recruit` and `dismiss` is a character's id, as the roster has it (see [The Party](#the-party)). The party owns its state: who is in it is asked of the party, never derived from a flag, so nothing can leave the two disagreeing.
+
+**A replacement is a `dismiss` and a `recruit` in the same `do` list,** applied in order, which is what lets it work in a full party:
+
+```json
+{ "option": "swap", "if": "in_party demo_friend and not in_party demo_newcomer", "do": ["dismiss demo_friend", "recruit demo_newcomer"], "next": "swapped" }
+```
+
+**An effect on the party can be refused,** when the party's rules do not allow it: recruiting someone already in it or into a full party, dismissing someone who is not in it. A refused effect does not throw. A full party is ordinary state that a conversation can run into, and an exception there would cut the conversation short. Instead the effect changes nothing and answers with the reason, the rest of the list still applies, and whoever applied it decides what a refusal means:
+
+- In a conversation, the runner hands a sentence to the function `DialogueRunner.Start` was given, and goes on. `Main` logs it as an error: `Conversation 'demo_recruit', node 'start': 'recruit demo_friend' was refused: 'demo_friend' cannot join: the party already holds 4.` The function is given to `Start`, not subscribed to afterwards, because the first line's effects apply before `Start` returns. Without one, a refusal throws instead of passing in silence.
+- In a debug preset, the game stops (see [Presets](#presets)).
+
+A refusal is still a mistake in the content, so the conversation's own conditions should keep it from happening: the option that recruits is offered only with `not in_party … and not party_full`. `demo_recruit` and `demo_replace` are the models.
+
+A character that does not exist is not a refusal. It throws when it is reached, like an undeclared flag, and the validator is what keeps it from getting there.
 
 ### Flags
 
@@ -232,9 +255,16 @@ A flag's name is a **group and a fact**, joined by a dot. The group says what th
 
 - **`ConversationReader`** reads one file and checks that it is well formed: the right properties with the right types, valid names, conditions and effects that parse, a `start` node, and jumps to nodes that exist. Every JSON object is read property by property, through `StrictJson`, instead of being deserialized. JSON allows a repeated property and `JsonDocument` accepts one without complaint (verified), while a deserializer would quietly keep one of the two. The reader takes the file's text, not a path: the game reads files through `FileAccess`, which sees inside the packed `res://` of an export, and the tests read them from disk.
 - **`DialogueRunner`** walks one conversation a step at a time: a line, a choice, or the end. It is passive — whoever drives it asks what to show and calls `Advance` or `Choose`; in the game that is the dialogue box (see [Dialogue Flow](#dialogue-flow)) — and `DialogueRunner.Start` already applies the first line's effects. Conditions are evaluated when they are reached, so the effects of earlier lines count; a line's effects apply when it is shown, and an option's when it is chosen.
-- **`DialogueValidator`** checks every conversation against the catalogue and against each other, and reports every problem instead of the first: flags that are not declared or are used with the wrong type, ids that repeat, nodes nothing leads to, and anywhere the player could be left stuck. Every choice must offer an option with no condition, and from every node there must be a way to `END` that depends on none. That is strict on purpose: two options with opposite conditions would also always leave a way out, and are still rejected. `EveryConversationInTheProject_IsValid` runs it over `Dialogue/Conversations/`, so a broken conversation fails the `build` check. `DialogueValidator.ValidateText` checks the other half: that each conversation has its table beside it, with a text for every line and option and nothing else, and that every speaker but `narrator` has a name. `EveryConversationInTheProject_HasItsText` runs it.
+- **`DialogueValidator`** checks every conversation against the catalogue, the roster and each other, and reports every problem instead of the first: flags that are not declared or are used with the wrong type, characters that are not in the roster, a `recruit` or a `dismiss` of the protagonist (which the party would refuse every time), ids that repeat, nodes nothing leads to, and anywhere the player could be left stuck. Every choice must offer an option with no condition, and from every node there must be a way to `END` that depends on none. That is strict on purpose: two options with opposite conditions would also always leave a way out, and are still rejected. `EveryConversationInTheProject_IsValid` runs it over `Dialogue/Conversations/`, so a broken conversation fails the `build` check. `DialogueValidator.ValidateText` checks the other half: that each conversation has its table beside it, with a text for every line and option and nothing else, and that every speaker but `narrator` has a name. `EveryConversationInTheProject_HasItsText` runs it.
 
-Conditions read flags and effects write them through `IFlagStore`, which the decision registry's `DecisionState` implements for the game (see [Decision Registry](#decision-registry)). The tests use an in-memory stand-in that rejects any name it was not given, as the registry does.
+Conditions and effects reach the game through a `DialogueContext`, which carries two seams:
+
+- **`IFlagStore`**, where they read and write flags. The decision registry's `DecisionState` implements it (see [Decision Registry](#decision-registry)).
+- **`IPartyStore`**, where they ask about the party and change it. `PartyState` implements it (see [The Party](#the-party)).
+
+A condition is evaluated against the context and an effect is applied to it, so the day the language speaks of something else, such as items, the context gains a property and no signature changes again. The tests use in-memory stand-ins for both, `InMemoryFlagStore` and `InMemoryPartyStore`, which reject any name they were not given. `PartyStoreContractTests` runs the same tests over `PartyState` and its stand-in, refusal words included, so a dialogue test over the stand-in says something about the game.
+
+`FlagUses` lists the flags a condition or an effect names, and `PartyUses` the characters. The validators of conversations, world access and presets all go through them, so the same mistake reads the same wherever it is written.
 
 ## Localization
 
@@ -366,7 +396,7 @@ An enemy's `Id` is a lowercase word in its `EnemyData`, separate from its `NameK
 }
 ```
 
-It holds exactly `fantasy` and `nightmare`; the Real world has no condition, since every cycle starts there. `WorldAccess.Read` reads it through `StrictJson` like the catalogue, and `Validate` checks its flags against the catalogue, in the same words `DialogueValidator` uses; both share `FlagUses`. A test runs it over the project's file.
+It holds exactly `fantasy` and `nightmare`; the Real world has no condition, since every cycle starts there. **A condition here may only ask about flags:** one with `in_party` or `party_full` is refused when the file is read. The decision registry is what opens the worlds, so a conversation that wants a world to depend on who was recruited sets a flag beside its `recruit`. Allowing the party here later would break no file, and forbidding it later would. `WorldAccess.Read` reads it through `StrictJson` like the catalogue, and `Validate` checks its flags against the catalogue, in the same words `DialogueValidator` uses; both share `FlagUses`. A test runs it over the project's file.
 
 **That the Nightmare world needs the Fantasy world is code, not data:** `Unlocks` closes the Nightmare world whenever the Fantasy world is closed, whatever its own condition says, so no file can break the order. `GameState.Advance` asks the registry for the unlocks at the moment of moving on, with the flags as they are then, and stores nothing. The two `world.` flags are `cycle` flags that start `false`, so a cycle in which nothing sets them plays all three worlds.
 
@@ -419,7 +449,8 @@ A preset is a state for the game to start in. The project's presets live in `Deb
 
 - `format` and `description` are required; `world` (`real`, `fantasy` or `nightmare`), `cycle` (from 1) and `do` are not. The run starts in the Real world, cycle 1, unless the preset says otherwise.
 - `do` holds effects in the dialogue's effect language (see [Conditions and effects](#conditions-and-effects)). Every flag starts at its starting value, so `add example.times_met 3` sets the counter to 3. A preset may change a persistent flag, since it describes the whole game, not one slot.
-- It is read through `StrictJson` and `FlagEffectParser`, and `Validate` checks its flags against the catalogue in `FlagUses`' words. `EveryPresetInTheProject_IsValid` runs it over every preset in the project, and fails when it finds none.
+- `do` can change the party too: `recruit demo_friend` starts with the friend recruited, as `with_friend.json` does. The party starts with the protagonist alone, so a `dismiss` only makes sense after a `recruit`.
+- It is read through `StrictJson` and `FlagEffectParser`, and `Validate` checks its flags against the catalogue in `FlagUses`' words and its characters against the roster in `PartyUses`'. `EveryPresetInTheProject_IsValid` runs it over every preset in the project, and fails when it finds none.
 
 **A preset is applied from the command line,** with the arguments after `--`, which Godot hands the game through `OS.GetCmdlineUserArgs()`:
 
@@ -430,9 +461,9 @@ godot --headless --path . --quit-after 800 -- --world fantasy --cycle 2 --do "se
 
 `--preset` takes a `res://` or an absolute path, once. `--world` and `--cycle` appear once at most, and `--do` as often as wanted; all three apply on top of the file, the effects after its own. **Anything else is an error, never skipped,** since a run that quietly ignored a misspelt argument would start in another state than the one asked for and look as if it had worked.
 
-**`DebugTools` applies it in `_EnterTree`,** registered after `DecisionRegistry` under `[autoload]`, so the registry exists and `Main` has not yet read `GameState`. `GameState.StartAt` sets the start without any signal, so the preset's cycle flags are not reset; it refuses once the main scene is in the tree (the main scene is already `CurrentScene` while the autoloads enter, so it checks `IsInsideTree`). Then it prints the world, the cycle and every flag, so a headless run leaves its state in the log.
+**`DebugTools` applies it in `_EnterTree`,** registered after `DecisionRegistry` under `[autoload]`, so the registry exists and `Main` has not yet read `GameState`. `GameState.StartAt` sets the start without any signal, so the preset's cycle flags are not reset; it refuses once the main scene is in the tree (the main scene is already `CurrentScene` while the autoloads enter, so it checks `IsInsideTree`). Then it prints the world, the cycle, every flag and the party's members, so a headless run leaves its state in the log.
 
-**A preset that cannot be applied stops the game with exit code 1,** and says why: a file that cannot be read or is malformed, an unknown argument, or a flag misused. A run that went on in the default state would look like one that worked, the same false result the terminal marker of a headless run exists to catch.
+**A preset that cannot be applied stops the game with exit code 1,** and says why: a file that cannot be read or is malformed, an unknown argument, a flag misused, a character that does not exist, or an effect the party refuses. A run that went on in the default state would look like one that worked, the same false result the terminal marker of a headless run exists to catch.
 
 ## Engine-Free Game Logic
 
@@ -616,7 +647,8 @@ Being in the roster is not being in the party. The party starts with the protago
 - **The protagonist is always in the party and never leaves.** They are the first member.
 - **The party holds four at most,** `PartyState.MaximumSize`, the protagonist included. Recruiting is optional, so a party of one is a valid party.
 - **Nobody is in it twice.**
-- **A change that breaks a rule throws and changes nothing.** `Recruit` and `Dismiss` throw `InvalidOperationException` for a broken rule and `ArgumentException` for an id the roster does not have. It is never ignored in silence: a conversation that recruits into a full party is a mistake in the game's content, and should be seen.
+- **A change that breaks a rule is refused and changes nothing.** `TryRecruit` and `TryDismiss` answer `false` with the reason, and `Recruit` and `Dismiss` throw that same reason as an `InvalidOperationException`, so each rule is written once. The dialogue uses the first pair, through `IPartyStore`, because a conversation goes on after a refusal (see [The party in a conversation](#the-party-in-a-conversation)); code that should never break a rule uses the second. It is never ignored in silence: a conversation that recruits into a full party is a mistake in the game's content, and should be seen.
+- **An id the roster does not have throws `ArgumentException`** in all four, and in `IsMember`.
 - **`Members` is a list of ids,** in the order they joined. Whoever comes after a member who leaves moves up.
 
 ### Progress

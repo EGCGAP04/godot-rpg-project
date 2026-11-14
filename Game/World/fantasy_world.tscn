@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://cnkkaoa8kax27" path="res://Enemy/enemy.tscn" id="4_enemy"]
 [ext_resource type="Resource" uid="uid://bdaltip3qhh3" path="res://Enemy/weak_enemy.tres" id="5_weak"]
 [ext_resource type="Resource" uid="uid://dp32vd5ebymxt" path="res://Enemy/strong_enemy.tres" id="6_strong"]
+[ext_resource type="PackedScene" uid="uid://bph022c6r1qv8" path="res://World/interactable.tscn" id="7_interactable"]
 
 [node name="FantasyWorld" type="Node2D" unique_id=627251250]
 script = ExtResource("2_script")
@@ -34,6 +35,11 @@ Data = ExtResource("6_strong")
 [node name="Exit" parent="." unique_id=1539596280 instance=ExtResource("3_exit")]
 position = Vector2(600, 136)
 
+[node name="Newcomer" parent="." unique_id=1103039715 instance=ExtResource("7_interactable")]
+position = Vector2(184, 56)
+Conversation = "demo_replace"
+
 [connection signal="CombatTriggered" from="Enemy" to="." method="OnCombatTriggered"]
 [connection signal="CombatTriggered" from="StrongEnemy" to="." method="OnCombatTriggered"]
 [connection signal="ExitTriggered" from="Exit" to="." method="OnExitTriggered"]
+[connection signal="InteractionTriggered" from="Newcomer" to="." method="OnInteractionTriggered"]

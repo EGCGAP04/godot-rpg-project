@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 
 /// <summary>
-/// Checks every conversation of the project against the flag catalogue and against each
-/// other, and returns every problem it finds instead of stopping at the first.
+/// Checks every conversation of the project against the flag catalogue, the roster of
+/// characters and each other, and returns every problem it finds instead of stopping at the first.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -13,6 +13,10 @@ using System.Linq;
 /// </para>
 /// <list type="bullet">
 /// <item>every flag a condition or an effect names is declared in the catalogue, and used with its type;</item>
+/// <item>
+/// every character a condition or an effect names is in the roster, and no effect
+/// recruits or dismisses the protagonist, which the party would always refuse;
+/// </item>
 /// <item>conversation ids are unique;</item>
 /// <item>every node can be reached from the start;</item>
 /// <item>
@@ -32,15 +36,17 @@ using System.Linq;
 /// </remarks>
 public static class DialogueValidator
 {
-	/// <summary>Checks the catalogue and the conversations together.</summary>
+	/// <summary>Checks the catalogue, the roster and the conversations together.</summary>
 	/// <param name="catalogueJson">The text of the flag catalogue.</param>
+	/// <param name="roster">Every character there is, for the conversations that speak of the party.</param>
 	/// <param name="files">Every conversation file of the project.</param>
 	/// <returns>
 	/// Every problem found, each a sentence that starts with the file it is in. Empty when
 	/// everything is valid.
 	/// </returns>
-	public static IReadOnlyList<string> Validate(string catalogueJson, IEnumerable<ConversationFile> files)
+	public static IReadOnlyList<string> Validate(string catalogueJson, CharacterRosterValues roster, IEnumerable<ConversationFile> files)
 	{
+		ArgumentNullException.ThrowIfNull(roster);
 		ArgumentNullException.ThrowIfNull(files);
 
 		var problems = new List<string>();
@@ -82,6 +88,8 @@ public static class DialogueValidator
 		{
 			if (catalogue != null)
 				CheckFlags(conversation, catalogue, problems);
+
+			CheckCharacters(conversation, roster, problems);
 
 			CheckPaths(conversation, problems);
 		}
@@ -258,7 +266,7 @@ public static class DialogueValidator
 				Check($"{where}, if", FlagUses.InCondition(line.Condition), false);
 
 				for (int k = 0; k < line.Effects.Count; k++)
-					Check($"{where}, do {k + 1}", new[] { FlagUses.InEffect(line.Effects[k]) }, true);
+					Check($"{where}, do {k + 1}", FlagUses.InEffect(line.Effects[k]), true);
 			}
 
 			for (int i = 0; i < node.Choices.Count; i++)
@@ -268,8 +276,35 @@ public static class DialogueValidator
 				Check($"{where}, if", FlagUses.InCondition(option.Condition), false);
 
 				for (int k = 0; k < option.Effects.Count; k++)
-					Check($"{where}, do {k + 1}", new[] { FlagUses.InEffect(option.Effects[k]) }, true);
+					Check($"{where}, do {k + 1}", FlagUses.InEffect(option.Effects[k]), true);
 			}
+		}
+	}
+
+	private static void CheckCharacters(Conversation conversation, CharacterRosterValues roster, List<string> problems)
+	{
+		void Report(string where, string problem)
+		{
+			if (problem != null)
+				problems.Add($"{conversation.Id}: {where}: {problem}.");
+		}
+
+		void Check(string where, FlagCondition condition, IReadOnlyList<FlagEffect> effects)
+		{
+			foreach (string character in PartyUses.InCondition(condition))
+				Report($"{where}, if", PartyUses.ProblemInCondition(roster, character));
+
+			for (int k = 0; k < effects.Count; k++)
+				Report($"{where}, do {k + 1}", PartyUses.ProblemInEffect(roster, effects[k]));
+		}
+
+		foreach (DialogueNode node in conversation.Nodes.Values)
+		{
+			for (int i = 0; i < node.Lines.Count; i++)
+				Check($"node '{node.Id}', line {i + 1} ('{node.Lines[i].Name}')", node.Lines[i].Condition, node.Lines[i].Effects);
+
+			for (int i = 0; i < node.Choices.Count; i++)
+				Check($"node '{node.Id}', option {i + 1} ('{node.Choices[i].Name}')", node.Choices[i].Condition, node.Choices[i].Effects);
 		}
 	}
 

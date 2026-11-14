@@ -154,37 +154,56 @@ public sealed class DebugPreset
 
 	/// <summary>
 	/// Checks every flag the effects write against <paramref name="catalogue"/>: it has to
-	/// be declared, and written with its type.
+	/// be declared, and written with its type. And every character they recruit or dismiss
+	/// against <paramref name="roster"/>: it has to be in it, and not be the protagonist.
 	/// </summary>
 	/// <returns>
 	/// Every problem found, each a sentence that starts with where the effect was written, in
 	/// the same words <see cref="DialogueValidator"/> uses. Empty when everything is valid.
 	/// </returns>
-	public IReadOnlyList<string> Validate(FlagCatalogue catalogue)
+	public IReadOnlyList<string> Validate(FlagCatalogue catalogue, CharacterRosterValues roster)
 	{
 		ArgumentNullException.ThrowIfNull(catalogue);
+		ArgumentNullException.ThrowIfNull(roster);
 
 		var problems = new List<string>();
 
 		foreach (PresetEffect effect in Effects)
 		{
-			(string name, FlagType type) = FlagUses.InEffect(effect.Effect);
-			string problem = FlagUses.Problem(catalogue, name, type, inEffect: true);
+			foreach ((string name, FlagType type) in FlagUses.InEffect(effect.Effect))
+			{
+				string problem = FlagUses.Problem(catalogue, name, type, inEffect: true);
 
-			if (problem != null)
-				problems.Add($"{effect.Source}: {problem}.");
+				if (problem != null)
+					problems.Add($"{effect.Source}: {problem}.");
+			}
+
+			if (PartyUses.ProblemInEffect(roster, effect.Effect) is string partyProblem)
+				problems.Add($"{effect.Source}: {partyProblem}.");
 		}
 
 		return problems;
 	}
 
-	/// <summary>Applies every effect to <paramref name="flags"/>, in order.</summary>
-	/// <remarks>Validate first: an undeclared flag throws halfway, with the earlier effects already applied.</remarks>
-	public void Apply(IFlagStore flags)
+	/// <summary>Applies every effect to <paramref name="context"/>, in order.</summary>
+	/// <returns>
+	/// Every effect the party refused, each a sentence that starts with where the effect was
+	/// written. A refused effect changes nothing and the ones after it still apply. Empty
+	/// when everything was applied.
+	/// </returns>
+	/// <remarks>Validate first: an undeclared flag or an unknown character throws halfway, with the earlier effects already applied.</remarks>
+	public IReadOnlyList<string> Apply(DialogueContext context)
 	{
-		ArgumentNullException.ThrowIfNull(flags);
+		ArgumentNullException.ThrowIfNull(context);
+
+		var refusals = new List<string>();
 
 		foreach (PresetEffect effect in Effects)
-			effect.Effect.Apply(flags);
+		{
+			if (!effect.Effect.TryApply(context, out string refusal))
+				refusals.Add($"{effect.Source}: '{effect.Effect.Describe()}' was refused: {refusal}");
+		}
+
+		return refusals;
 	}
 }

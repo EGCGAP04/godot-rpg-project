@@ -1,0 +1,29 @@
+{
+	"format": 1,
+	"nodes": {
+		"start": {
+			"lines": [
+				{ "speaker": "demo_friend", "line": "greet", "if": "not in_party demo_friend and not party_full" },
+				{ "speaker": "demo_friend", "line": "no_room", "if": "not in_party demo_friend and party_full" },
+				{ "speaker": "demo_friend", "line": "greet_member", "if": "in_party demo_friend" }
+			],
+			"choices": [
+				{ "option": "join", "if": "not in_party demo_friend and not party_full", "do": ["recruit demo_friend"], "next": "joined" },
+				{ "option": "stay", "if": "in_party demo_friend", "do": ["dismiss demo_friend"], "next": "stayed" },
+				{ "option": "bye", "next": "END" }
+			]
+		},
+		"joined": {
+			"lines": [
+				{ "speaker": "demo_friend", "line": "lead_on" }
+			],
+			"next": "END"
+		},
+		"stayed": {
+			"lines": [
+				{ "speaker": "demo_friend", "line": "wait_here" }
+			],
+			"next": "END"
+		}
+	}
+}

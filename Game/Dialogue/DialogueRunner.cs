@@ -29,22 +29,31 @@ public enum DialogueStep
 /// the effects of earlier lines already count. A line's effects apply when it is shown and
 /// an option's when it is chosen; a hidden line or option applies nothing.
 /// </para>
+/// <para>
+/// An effect on the party can be refused, as when it recruits into a full party. The
+/// runner cannot log, so it hands a sentence saying what was refused, where and why to
+/// the function <see cref="Start"/> was given, and goes on: the refused effect changed
+/// nothing, and the rest of the list still applies. A conversation's conditions are
+/// what should keep it from getting there.
+/// </para>
 /// </remarks>
 public sealed class DialogueRunner
 {
 	private static readonly IReadOnlyList<DialogueOption> NoOptions = Array.Empty<DialogueOption>();
 
 	private readonly Conversation _conversation;
-	private readonly IFlagStore _flags;
+	private readonly DialogueContext _context;
+	private readonly Action<string> _onRefused;
 
 	// Where the conversation is: a node, and the index of the line shown in it.
 	private DialogueNode _node;
 	private int _lineIndex;
 
-	private DialogueRunner(Conversation conversation, IFlagStore flags)
+	private DialogueRunner(Conversation conversation, DialogueContext context, Action<string> onRefused)
 	{
 		_conversation = conversation;
-		_flags = flags;
+		_context = context;
+		_onRefused = onRefused;
 	}
 
 	/// <summary>What the conversation is showing.</summary>
@@ -61,18 +70,25 @@ public sealed class DialogueRunner
 
 	/// <summary>
 	/// Starts <paramref name="conversation"/> at its start node and runs to the first thing
-	/// it shows, applying that line's effects if it is a line.
+	/// it shows, applying that line's effects if it is a line. Conditions read
+	/// <paramref name="context"/> and effects change it.
 	/// </summary>
+	/// <param name="onRefused">
+	/// Called with a sentence for each effect the party refuses. It is given here, not as
+	/// an event, because the first line's effects apply before this returns. Without one, a
+	/// refused effect throws <see cref="InvalidOperationException"/> instead of passing in
+	/// silence.
+	/// </param>
 	/// <exception cref="InvalidOperationException">
 	/// The conversation cannot show anything, which a conversation the validator accepted
 	/// never does. See <see cref="Advance"/>.
 	/// </exception>
-	public static DialogueRunner Start(Conversation conversation, IFlagStore flags)
+	public static DialogueRunner Start(Conversation conversation, DialogueContext context, Action<string> onRefused = null)
 	{
 		ArgumentNullException.ThrowIfNull(conversation);
-		ArgumentNullException.ThrowIfNull(flags);
+		ArgumentNullException.ThrowIfNull(context);
 
-		var runner = new DialogueRunner(conversation, flags);
+		var runner = new DialogueRunner(conversation, context, onRefused);
 		runner.GoTo(DialogueNames.Start);
 		return runner;
 	}
@@ -189,12 +205,22 @@ public sealed class DialogueRunner
 		Options = NoOptions;
 	}
 
-	private bool Holds(FlagCondition condition) => condition == null || condition.Evaluate(_flags);
+	private bool Holds(FlagCondition condition) => condition == null || condition.Evaluate(_context);
 
 	private void Apply(IReadOnlyList<FlagEffect> effects)
 	{
 		foreach (FlagEffect effect in effects)
-			effect.Apply(_flags);
+		{
+			if (effect.TryApply(_context, out string refusal))
+				continue;
+
+			string report = $"Conversation '{_conversation.Id}', node '{_node.Id}': '{effect.Describe()}' was refused: {refusal}";
+
+			if (_onRefused == null)
+				throw new InvalidOperationException(report);
+
+			_onRefused(report);
+		}
 	}
 
 	private static string Describe(DialogueStep step) => step switch

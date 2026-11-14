@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 using static FlagCondition;
 
@@ -16,7 +17,7 @@ public class FlagConditionTests
 	{
 		var flags = new InMemoryFlagStore().WithFlag("example.has_key", value);
 
-		Assert.Equal(value, new IsSet("example.has_key").Evaluate(flags));
+		Assert.Equal(value, new IsSet("example.has_key").Evaluate(DialogueContext.FlagsOnly(flags)));
 	}
 
 	// Always compared with 3, so each pair of rows sits on either side of the boundary.
@@ -37,7 +38,7 @@ public class FlagConditionTests
 	{
 		var flags = new InMemoryFlagStore().WithCounter("example.times_met", counter);
 
-		Assert.Equal(expected, new Comparison("example.times_met", comparator, 3).Evaluate(flags));
+		Assert.Equal(expected, new Comparison("example.times_met", comparator, 3).Evaluate(DialogueContext.FlagsOnly(flags)));
 	}
 
 	[Fact]
@@ -46,7 +47,7 @@ public class FlagConditionTests
 		// Read as "(a or b) and c" this would be false, so true proves "and" was grouped first.
 		var flags = new InMemoryFlagStore().WithFlag("a.x", true).WithFlag("b.y").WithFlag("c.z");
 
-		Assert.True(FlagConditionParser.Parse("a.x or b.y and c.z").Evaluate(flags));
+		Assert.True(FlagConditionParser.Parse("a.x or b.y and c.z").Evaluate(DialogueContext.FlagsOnly(flags)));
 	}
 
 	// The reference example's line that remembers a refusal: shown once the stranger has
@@ -64,7 +65,7 @@ public class FlagConditionTests
 			.WithFlag("example.promised_help", promisedHelp)
 			.WithFlag("example.key_returned", keyReturned);
 
-		Assert.Equal(expected, condition.Evaluate(flags));
+		Assert.Equal(expected, condition.Evaluate(DialogueContext.FlagsOnly(flags)));
 	}
 
 	[Fact]
@@ -72,8 +73,72 @@ public class FlagConditionTests
 	{
 		var flags = new InMemoryFlagStore().WithFlag("a.x", true).WithFlag("b.y").WithCounter("c.z", 2);
 
-		_ = FlagConditionParser.Parse("not (a.x and b.y) or c.z >= 1").Evaluate(flags);
+		_ = FlagConditionParser.Parse("not (a.x and b.y) or c.z >= 1").Evaluate(DialogueContext.FlagsOnly(flags));
 
 		Assert.Equal(0, flags.Writes);
+	}
+
+	[Fact]
+	public void InParty_IsWhetherTheCharacterIsAMember()
+	{
+		var context = new DialogueContext(new InMemoryFlagStore(), new InMemoryPartyStore(TestRoster.Hero, "abe", "bea").With("abe"));
+
+		Assert.True(new InParty("abe").Evaluate(context));
+		Assert.False(new InParty("bea").Evaluate(context));
+		Assert.True(new InParty(TestRoster.Hero).Evaluate(context));
+	}
+
+	[Fact]
+	public void InParty_OfACharacterThatDoesNotExist_Throws()
+	{
+		var context = new DialogueContext(new InMemoryFlagStore(), new InMemoryPartyStore(TestRoster.Hero));
+
+		Assert.Throws<ArgumentException>(() => new InParty("zed").Evaluate(context));
+	}
+
+	[Theory]
+	[InlineData(2, true)]
+	[InlineData(3, false)]
+	public void PartyFull_IsWhetherThePartyHoldsAsManyAsItCan(int maximumSize, bool expected)
+	{
+		var context = new DialogueContext(new InMemoryFlagStore(), new InMemoryPartyStore(maximumSize, TestRoster.Hero, "abe").With("abe"));
+
+		Assert.Equal(expected, new PartyFull().Evaluate(context));
+	}
+
+	[Theory]
+	[InlineData(false, false, true)]    // outside, with room: the offer shows
+	[InlineData(true, false, false)]    // already in
+	[InlineData(false, true, false)]    // no room
+	public void ThePartyWordsCombineWithTheRest(bool member, bool full, bool expected)
+	{
+		var party = new InMemoryPartyStore(full ? (member ? 2 : 1) : 4, TestRoster.Hero, "abe");
+
+		if (member)
+			party.With("abe");
+
+		var context = new DialogueContext(new InMemoryFlagStore(), party);
+
+		Assert.Equal(expected, FlagConditionParser.Parse("not in_party abe and not party_full").Evaluate(context));
+	}
+
+	[Fact]
+	public void Evaluate_NeverChangesTheParty()
+	{
+		var party = new InMemoryPartyStore(TestRoster.Hero, "abe");
+
+		_ = FlagConditionParser.Parse("in_party abe or party_full").Evaluate(new DialogueContext(new InMemoryFlagStore(), party));
+
+		Assert.Equal(0, party.Changes);
+		Assert.Equal(new[] { TestRoster.Hero }, party.Members);
+	}
+
+	[Fact]
+	public void AConditionOnTheParty_OverFlagsOnly_Throws()
+	{
+		DialogueContext context = DialogueContext.FlagsOnly(new InMemoryFlagStore());
+
+		Assert.Throws<InvalidOperationException>(() => new InParty("abe").Evaluate(context));
+		Assert.Throws<InvalidOperationException>(() => new PartyFull().Evaluate(context));
 	}
 }

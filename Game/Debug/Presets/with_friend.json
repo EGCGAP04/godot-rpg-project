@@ -1,0 +1,9 @@
+{
+	"format": 1,
+	"description": "Starts in the Fantasy world with the friend already recruited, in front of whoever offers to replace them.",
+	"world": "fantasy",
+	"cycle": 1,
+	"do": [
+		"recruit demo_friend"
+	]
+}

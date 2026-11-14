@@ -315,7 +315,10 @@ public partial class Main : Node2D
 		if (!ConversationRules.CanStartConversation(Activity))
 			return;
 
-		DialogueRunner runner = DialogueRunner.Start(ConversationLoader.Load(id), DecisionRegistry.Instance.State);
+		DialogueRunner runner = DialogueRunner.Start(
+			ConversationLoader.Load(id),
+			new DialogueContext(DecisionRegistry.Instance.State, Party.Instance.State),
+			refusal => GD.PushError(refusal));
 
 		if (runner.Step == DialogueStep.End)
 			return;

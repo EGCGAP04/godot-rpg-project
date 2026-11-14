@@ -45,4 +45,51 @@ public class FlagEffectParserTests
 
 		Assert.Equal(column, error.Column);
 	}
+
+	[Fact]
+	public void Parse_RecruitNamesACharacter()
+	{
+		Assert.Equal(new FlagEffect.Recruit("demo_friend"), FlagEffectParser.Parse("recruit demo_friend"));
+	}
+
+	[Fact]
+	public void Parse_DismissNamesACharacter()
+	{
+		Assert.Equal(new FlagEffect.Dismiss("demo_friend"), FlagEffectParser.Parse("dismiss demo_friend"));
+	}
+
+	[Theory]
+	[InlineData("recruit", 8)]             // nobody named
+	[InlineData("dismiss 3", 9)]           // a number where the character goes
+	[InlineData("recruit abe bea", 13)]    // one character per effect
+	[InlineData("dismiss abe 1", 13)]      // no amount
+	[InlineData("recruit set", 9)]         // a keyword where the character goes
+	[InlineData("in_party abe", 1)]        // a condition is not an effect
+	[InlineData("party_full", 1)]
+	public void Parse_RejectsAMalformedPartyEffectAndSaysWhere(string text, int column)
+	{
+		var error = Assert.Throws<FlagSyntaxException>(() => FlagEffectParser.Parse(text));
+
+		Assert.Equal(column, error.Column);
+	}
+
+	[Fact]
+	public void Parse_SaysACharacterIsExpected_NotAFlag()
+	{
+		var error = Assert.Throws<FlagSyntaxException>(() => FlagEffectParser.Parse("recruit 3"));
+
+		Assert.Contains("expected a character after 'recruit'", error.Message);
+	}
+
+	[Theory]
+	[InlineData("set a.x")]
+	[InlineData("clear a.x")]
+	[InlineData("add a.n 3")]
+	[InlineData("add a.n -2")]
+	[InlineData("recruit abe")]
+	[InlineData("dismiss abe")]
+	public void Describe_WritesTheEffectBackAsItIsWritten(string text)
+	{
+		Assert.Equal(text, FlagEffectParser.Parse(text).Describe());
+	}
 }

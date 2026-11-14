@@ -30,11 +30,15 @@ public class DialogueRunnerTests
 	/// was shown: each line's name, narration in parentheses, and each choice as the options
 	/// offered and the one picked.
 	/// </summary>
-	internal static string[] Play(Conversation conversation, IFlagStore flags, params string[] picks)
+	internal static string[] Play(Conversation conversation, IFlagStore flags, params string[] picks) =>
+		Play(conversation, DialogueContext.FlagsOnly(flags), picks);
+
+	/// <summary>The same, for a conversation that speaks of the party too. A refused effect fails the test.</summary>
+	internal static string[] Play(Conversation conversation, DialogueContext context, params string[] picks)
 	{
 		var shown = new List<string>();
 		var remaining = new Queue<string>(picks);
-		DialogueRunner runner = DialogueRunner.Start(conversation, flags);
+		DialogueRunner runner = DialogueRunner.Start(conversation, context);
 
 		for (int steps = 0; runner.Step != DialogueStep.End; steps++)
 		{
@@ -161,7 +165,7 @@ public class DialogueRunnerTests
 		var flags = new InMemoryFlagStore().WithCounter("a.n");
 		var conversation = Read("{ 'format': 1, 'nodes': { 'start': { 'lines': [ { 'speaker': 'guide', 'line': 'hi', 'do': [ 'add a.n 1' ] } ], 'next': 'END' } } }");
 
-		var runner = DialogueRunner.Start(conversation, flags);
+		var runner = DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags));
 
 		Assert.Equal(DialogueStep.Line, runner.Step);
 		Assert.Equal("test.start.hi", runner.CurrentLine.Key);
@@ -206,7 +210,7 @@ public class DialogueRunnerTests
 				'middle': { 'choices': [ { 'option': 'ok', 'next': 'END' } ] } } }
 			""");
 
-		var runner = DialogueRunner.Start(conversation, flags);
+		var runner = DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags));
 
 		Assert.Equal(DialogueStep.Choice, runner.Step);
 		Assert.Null(runner.CurrentLine);
@@ -229,7 +233,7 @@ public class DialogueRunnerTests
 	[Fact]
 	public void TheEnd_ShowsNothing()
 	{
-		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), new InMemoryFlagStore());
+		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), DialogueContext.FlagsOnly(new InMemoryFlagStore()));
 
 		runner.Choose("bye");
 
@@ -243,7 +247,7 @@ public class DialogueRunnerTests
 	[Fact]
 	public void Advance_ThrowsAtAChoice()
 	{
-		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), new InMemoryFlagStore());
+		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), DialogueContext.FlagsOnly(new InMemoryFlagStore()));
 
 		Assert.Throws<InvalidOperationException>(runner.Advance);
 	}
@@ -251,7 +255,7 @@ public class DialogueRunnerTests
 	[Fact]
 	public void Choose_ThrowsOnALine()
 	{
-		var runner = DialogueRunner.Start(FirstMeeting, NewPlaythrough());
+		var runner = DialogueRunner.Start(FirstMeeting, DialogueContext.FlagsOnly(NewPlaythrough()));
 
 		Assert.Throws<InvalidOperationException>(() => runner.Choose("help"));
 	}
@@ -261,7 +265,7 @@ public class DialogueRunnerTests
 	[InlineData("maybe")]    // it does not exist
 	public void Choose_ThrowsOnAnOptionNotOffered(string option)
 	{
-		var runner = DialogueRunner.Start(FirstMeeting, NewPlaythrough());
+		var runner = DialogueRunner.Start(FirstMeeting, DialogueContext.FlagsOnly(NewPlaythrough()));
 
 		while (runner.Step == DialogueStep.Line)
 			runner.Advance();
@@ -273,7 +277,7 @@ public class DialogueRunnerTests
 	[Fact]
 	public void AdvanceAndChoose_ThrowAtTheEnd()
 	{
-		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), new InMemoryFlagStore());
+		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), DialogueContext.FlagsOnly(new InMemoryFlagStore()));
 		runner.Choose("bye");
 
 		Assert.Throws<InvalidOperationException>(runner.Advance);
@@ -293,7 +297,7 @@ public class DialogueRunnerTests
 				'other': { 'lines': [ { 'speaker': 'guide', 'line': 'bye', 'if': 'a.x' } ], 'next': 'start' } } }
 			""");
 
-		var error = Assert.Throws<InvalidOperationException>(() => DialogueRunner.Start(conversation, flags));
+		var error = Assert.Throws<InvalidOperationException>(() => DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags)));
 		Assert.Contains("loop", error.Message);
 	}
 
@@ -303,7 +307,153 @@ public class DialogueRunnerTests
 		var flags = new InMemoryFlagStore().WithFlag("a.x");
 		var conversation = Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'yes', 'if': 'a.x', 'next': 'END' } ] } } }");
 
-		var error = Assert.Throws<InvalidOperationException>(() => DialogueRunner.Start(conversation, flags));
+		var error = Assert.Throws<InvalidOperationException>(() => DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags)));
 		Assert.Contains("no option available", error.Message);
+	}
+
+	/// <summary>A friend who joins when asked, leaves when asked, and a swap for someone else.</summary>
+	private static readonly Conversation Recruiting = Read(@"{ 'format': 1, 'nodes': {
+		'start': {
+			'lines': [
+				{ 'speaker': 'narrator', 'line': 'outside', 'if': 'not in_party abe' },
+				{ 'speaker': 'narrator', 'line': 'inside', 'if': 'in_party abe' }
+			],
+			'choices': [
+				{ 'option': 'join', 'if': 'not in_party abe and not party_full', 'do': ['recruit abe'], 'next': 'after' },
+				{ 'option': 'swap', 'if': 'in_party abe', 'do': ['dismiss abe', 'recruit bea'], 'next': 'after' },
+				{ 'option': 'bye', 'next': 'END' }
+			]
+		},
+		'after': {
+			'lines': [
+				{ 'speaker': 'narrator', 'line': 'with_abe', 'if': 'in_party abe' },
+				{ 'speaker': 'narrator', 'line': 'with_bea', 'if': 'in_party bea' }
+			],
+			'next': 'END'
+		}
+	} }");
+
+	private static DialogueContext Context(InMemoryPartyStore party, InMemoryFlagStore flags = null) => new(flags ?? new InMemoryFlagStore(), party);
+
+	[Fact]
+	public void AnOptionsRecruit_PutsTheCharacterInTheParty_AndLaterConditionsSeeIt()
+	{
+		var party = new InMemoryPartyStore(TestRoster.Hero, "abe", "bea");
+		var runner = DialogueRunner.Start(Recruiting, Context(party));
+
+		Assert.Equal("outside", runner.CurrentLine.Name);
+		runner.Advance();
+		Assert.Equal(new[] { "join", "bye" }, runner.Options.Select(option => option.Name));
+		runner.Choose("join");
+
+		Assert.Equal(new[] { TestRoster.Hero, "abe" }, party.Members);
+		Assert.Equal("with_abe", runner.CurrentLine.Name);
+	}
+
+	[Fact]
+	public void DecliningTheOffer_LeavesThePartyAsItWas()
+	{
+		var party = new InMemoryPartyStore(TestRoster.Hero, "abe", "bea");
+		var runner = DialogueRunner.Start(Recruiting, Context(party));
+
+		runner.Advance();
+		runner.Choose("bye");
+
+		Assert.Equal(DialogueStep.End, runner.Step);
+		Assert.Equal(0, party.Changes);
+	}
+
+	[Fact]
+	public void WithAFullParty_TheOfferIsNotShown()
+	{
+		var party = new InMemoryPartyStore(1, TestRoster.Hero, "abe", "bea");
+		var runner = DialogueRunner.Start(Recruiting, Context(party));
+
+		runner.Advance();
+
+		Assert.Equal(new[] { "bye" }, runner.Options.Select(option => option.Name));
+	}
+
+	[Fact]
+	public void AReplacement_IsADismissAndARecruitInOneList_AppliedInOrder()
+	{
+		// A party of two that is full: the recruit only fits because the dismiss came first.
+		var party = new InMemoryPartyStore(2, TestRoster.Hero, "abe", "bea").With("abe");
+		var runner = DialogueRunner.Start(Recruiting, Context(party));
+
+		Assert.Equal("inside", runner.CurrentLine.Name);
+		runner.Advance();
+		Assert.Equal(new[] { "swap", "bye" }, runner.Options.Select(option => option.Name));
+		runner.Choose("swap");
+
+		Assert.Equal(new[] { TestRoster.Hero, "bea" }, party.Members);
+		Assert.Equal("with_bea", runner.CurrentLine.Name);
+	}
+
+	[Fact]
+	public void ARefusedEffect_IsReported_ChangesNothing_AndTheConversationGoesOn()
+	{
+		var conversation = Read("{ 'format': 1, 'nodes': { 'start': { 'lines': [ { 'speaker': 'narrator', 'line': 'one' } ], 'choices': [ { 'option': 'go', 'do': ['recruit abe', 'set a.x'], 'next': 'then' } ] }, 'then': { 'lines': [ { 'speaker': 'narrator', 'line': 'two' } ], 'next': 'END' } } }");
+		var flags = new InMemoryFlagStore().WithFlag("a.x");
+		var party = new InMemoryPartyStore(1, TestRoster.Hero, "abe");
+		var refusals = new List<string>();
+
+		var runner = DialogueRunner.Start(conversation, Context(party, flags), refusals.Add);
+		Assert.Empty(refusals);
+		runner.Advance();
+		runner.Choose("go");
+
+		Assert.Equal(new[] { "Conversation 'test', node 'start': 'recruit abe' was refused: 'abe' cannot join: the party already holds 1." }, refusals);
+		Assert.Equal(0, party.Changes);
+		Assert.True(flags.GetFlag("a.x"));
+		Assert.Equal("two", runner.CurrentLine.Name);
+	}
+
+	[Fact]
+	public void ARefusedEffectOnTheFirstLine_IsReportedBeforeStartReturns()
+	{
+		var conversation = Read("{ 'format': 1, 'nodes': { 'start': { 'lines': [ { 'speaker': 'narrator', 'line': 'one', 'do': ['dismiss abe'] } ], 'next': 'END' } } }");
+		var refusals = new List<string>();
+
+		var runner = DialogueRunner.Start(conversation, Context(new InMemoryPartyStore(TestRoster.Hero, "abe")), refusals.Add);
+
+		Assert.Equal(new[] { "Conversation 'test', node 'start': 'dismiss abe' was refused: 'abe' is not in the party." }, refusals);
+		Assert.Equal("one", runner.CurrentLine.Name);
+	}
+
+	[Fact]
+	public void AReplacementWhoseDismissIsRefused_StillTriesTheRecruit_AndReportsOnlyTheDismiss()
+	{
+		var conversation = Read("{ 'format': 1, 'nodes': { 'start': { 'lines': [ { 'speaker': 'narrator', 'line': 'one', 'do': ['dismiss abe', 'recruit bea'] } ], 'next': 'END' } } }");
+		var party = new InMemoryPartyStore(TestRoster.Hero, "abe", "bea");
+		var refusals = new List<string>();
+
+		DialogueRunner.Start(conversation, Context(party), refusals.Add);
+
+		Assert.Single(refusals);
+		Assert.Contains("'dismiss abe' was refused", refusals[0]);
+		Assert.Equal(new[] { TestRoster.Hero, "bea" }, party.Members);
+	}
+
+	[Fact]
+	public void ARefusedEffect_WithNobodyToReportTo_Throws_InsteadOfPassingInSilence()
+	{
+		var conversation = Read("{ 'format': 1, 'nodes': { 'start': { 'lines': [ { 'speaker': 'narrator', 'line': 'one', 'do': ['dismiss abe'] } ], 'next': 'END' } } }");
+
+		var error = Assert.Throws<InvalidOperationException>(() => DialogueRunner.Start(conversation, Context(new InMemoryPartyStore(TestRoster.Hero, "abe"))));
+
+		Assert.Contains("'dismiss abe' was refused: 'abe' is not in the party.", error.Message);
+	}
+
+	[Fact]
+	public void AHiddenLinesRecruit_IsNeverApplied()
+	{
+		var conversation = Read("{ 'format': 1, 'nodes': { 'start': { 'lines': [ { 'speaker': 'narrator', 'line': 'hidden', 'if': 'party_full', 'do': ['recruit abe'] }, { 'speaker': 'narrator', 'line': 'shown' } ], 'next': 'END' } } }");
+		var party = new InMemoryPartyStore(TestRoster.Hero, "abe");
+
+		var runner = DialogueRunner.Start(conversation, Context(party));
+
+		Assert.Equal("shown", runner.CurrentLine.Name);
+		Assert.Equal(0, party.Changes);
 	}
 }
