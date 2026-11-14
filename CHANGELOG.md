@@ -27,11 +27,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Experience from fights: a fight won gives its experience, whole, to every member of the party, and the combat screen says how much and who reaches a level with it. The Real world gives none
 - Snapshots of the party, strict and atomic like the decision registry's. The debug overlay's snapshots now hold both, and restoring one checks both before changing either
 - A section on the party in `docs/CONVENTIONS.md`
+- Recruiting through dialogue. The dialogue's language gains four reserved words: the effects `recruit <character>` and `dismiss <character>`, and the conditions `in_party <character>` and `party_full`. A replacement is a `dismiss` and a `recruit` on the same line
+- `IPartyStore`, the seam through which the language reaches the party, and `DialogueContext`, which carries it next to `IFlagStore`. `PartyState` implements it with `TryRecruit` and `TryDismiss`, which answer with the reason instead of throwing
+- Refused effects: recruiting into a full party, or someone already in it, changes nothing and is logged as an error, and the conversation goes on
+- The validator checks every character a conversation names against the roster, and refuses a `recruit` or a `dismiss` of the protagonist. A test requires every character's id to be writable in the language
+- Debug presets and `--do` accept `recruit` and `dismiss`. A character that does not exist, or an effect the party refuses, stops the game with exit code 1, and a preset's startup print lists the party's members
+- The milestone's demo, with placeholder characters, in English and Spanish: a friend in the Real world who joins the party if asked, and a newcomer in the Fantasy world who takes the friend's place. The preset `with_friend.json` starts with the friend recruited
 
 ### Changed
 
 - Combat fights with the placeholder protagonist's stats in the current world, read from the party, and shows the protagonist's name beside their HP instead of "Player". The numbers are the same as before: 20 HP and 4 attack in the Fantasy world
 - After a fight, the heal comes once the game is unpaused, together with the experience, so a failure there cannot leave the game paused
+- Conditions are evaluated against a `DialogueContext` and effects are applied to it, where both took an `IFlagStore`. `DialogueRunner.Start` and `DebugPreset.Apply` take it too
+- `world_access.json` may only ask about flags: a condition there that asks about the party is refused when the file is read
 - The pull request template opens with a comment giving the title convention, `[Type]: <summary> (Issue #N)`, which every PR with an Issue has followed since #7 without it being written anywhere
 - The README's status line reads "core systems phase" instead of "foundation phase", and its Screenshots section says what it waits for: real art
 
