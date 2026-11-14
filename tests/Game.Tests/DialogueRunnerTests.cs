@@ -34,7 +34,7 @@ public class DialogueRunnerTests
 	{
 		var shown = new List<string>();
 		var remaining = new Queue<string>(picks);
-		DialogueRunner runner = DialogueRunner.Start(conversation, flags);
+		DialogueRunner runner = DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags));
 
 		for (int steps = 0; runner.Step != DialogueStep.End; steps++)
 		{
@@ -161,7 +161,7 @@ public class DialogueRunnerTests
 		var flags = new InMemoryFlagStore().WithCounter("a.n");
 		var conversation = Read("{ 'format': 1, 'nodes': { 'start': { 'lines': [ { 'speaker': 'guide', 'line': 'hi', 'do': [ 'add a.n 1' ] } ], 'next': 'END' } } }");
 
-		var runner = DialogueRunner.Start(conversation, flags);
+		var runner = DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags));
 
 		Assert.Equal(DialogueStep.Line, runner.Step);
 		Assert.Equal("test.start.hi", runner.CurrentLine.Key);
@@ -206,7 +206,7 @@ public class DialogueRunnerTests
 				'middle': { 'choices': [ { 'option': 'ok', 'next': 'END' } ] } } }
 			""");
 
-		var runner = DialogueRunner.Start(conversation, flags);
+		var runner = DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags));
 
 		Assert.Equal(DialogueStep.Choice, runner.Step);
 		Assert.Null(runner.CurrentLine);
@@ -229,7 +229,7 @@ public class DialogueRunnerTests
 	[Fact]
 	public void TheEnd_ShowsNothing()
 	{
-		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), new InMemoryFlagStore());
+		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), DialogueContext.FlagsOnly(new InMemoryFlagStore()));
 
 		runner.Choose("bye");
 
@@ -243,7 +243,7 @@ public class DialogueRunnerTests
 	[Fact]
 	public void Advance_ThrowsAtAChoice()
 	{
-		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), new InMemoryFlagStore());
+		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), DialogueContext.FlagsOnly(new InMemoryFlagStore()));
 
 		Assert.Throws<InvalidOperationException>(runner.Advance);
 	}
@@ -251,7 +251,7 @@ public class DialogueRunnerTests
 	[Fact]
 	public void Choose_ThrowsOnALine()
 	{
-		var runner = DialogueRunner.Start(FirstMeeting, NewPlaythrough());
+		var runner = DialogueRunner.Start(FirstMeeting, DialogueContext.FlagsOnly(NewPlaythrough()));
 
 		Assert.Throws<InvalidOperationException>(() => runner.Choose("help"));
 	}
@@ -261,7 +261,7 @@ public class DialogueRunnerTests
 	[InlineData("maybe")]    // it does not exist
 	public void Choose_ThrowsOnAnOptionNotOffered(string option)
 	{
-		var runner = DialogueRunner.Start(FirstMeeting, NewPlaythrough());
+		var runner = DialogueRunner.Start(FirstMeeting, DialogueContext.FlagsOnly(NewPlaythrough()));
 
 		while (runner.Step == DialogueStep.Line)
 			runner.Advance();
@@ -273,7 +273,7 @@ public class DialogueRunnerTests
 	[Fact]
 	public void AdvanceAndChoose_ThrowAtTheEnd()
 	{
-		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), new InMemoryFlagStore());
+		var runner = DialogueRunner.Start(Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'bye', 'next': 'END' } ] } } }"), DialogueContext.FlagsOnly(new InMemoryFlagStore()));
 		runner.Choose("bye");
 
 		Assert.Throws<InvalidOperationException>(runner.Advance);
@@ -293,7 +293,7 @@ public class DialogueRunnerTests
 				'other': { 'lines': [ { 'speaker': 'guide', 'line': 'bye', 'if': 'a.x' } ], 'next': 'start' } } }
 			""");
 
-		var error = Assert.Throws<InvalidOperationException>(() => DialogueRunner.Start(conversation, flags));
+		var error = Assert.Throws<InvalidOperationException>(() => DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags)));
 		Assert.Contains("loop", error.Message);
 	}
 
@@ -303,7 +303,7 @@ public class DialogueRunnerTests
 		var flags = new InMemoryFlagStore().WithFlag("a.x");
 		var conversation = Read("{ 'format': 1, 'nodes': { 'start': { 'choices': [ { 'option': 'yes', 'if': 'a.x', 'next': 'END' } ] } } }");
 
-		var error = Assert.Throws<InvalidOperationException>(() => DialogueRunner.Start(conversation, flags));
+		var error = Assert.Throws<InvalidOperationException>(() => DialogueRunner.Start(conversation, DialogueContext.FlagsOnly(flags)));
 		Assert.Contains("no option available", error.Message);
 	}
 }

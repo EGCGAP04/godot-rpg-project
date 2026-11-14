@@ -235,4 +235,68 @@ public class PartyStateTests
 
 		Assert.Throws<NotSupportedException>(() => ((System.Collections.Generic.IList<string>)party.Members).Add("abe"));
 	}
+
+	[Fact]
+	public void TryRecruit_ThatIsRefused_ChangesNothing_AndFiresNoSignal()
+	{
+		PartyState party = Party();
+		party.Recruit("abe");
+		Func<int> changes = CountChanges(party);
+
+		Assert.False(party.TryRecruit("abe", out string refusal));
+
+		Assert.Equal("'abe' is already in the party.", refusal);
+		Assert.Equal(new[] { TestRoster.Hero, "abe" }, party.Members);
+		Assert.Equal(0, changes());
+	}
+
+	[Fact]
+	public void TryRecruit_ThatGoesThrough_FiresTheSignalOnce()
+	{
+		PartyState party = Party();
+		Func<int> changes = CountChanges(party);
+
+		Assert.True(party.TryRecruit("abe", out _));
+
+		Assert.Equal(new[] { TestRoster.Hero, "abe" }, party.Members);
+		Assert.Equal(1, changes());
+	}
+
+	[Fact]
+	public void TryDismiss_ThatIsRefused_ChangesNothing_AndFiresNoSignal()
+	{
+		PartyState party = Party();
+		party.Recruit("abe");
+		Func<int> changes = CountChanges(party);
+
+		Assert.False(party.TryDismiss("bea", out string refusal));
+
+		Assert.Equal("'bea' is not in the party.", refusal);
+		Assert.Equal(new[] { TestRoster.Hero, "abe" }, party.Members);
+		Assert.Equal(0, changes());
+	}
+
+	[Fact]
+	public void TryDismiss_ThatGoesThrough_FiresTheSignalOnce()
+	{
+		PartyState party = Party();
+		party.Recruit("abe");
+		Func<int> changes = CountChanges(party);
+
+		Assert.True(party.TryDismiss("abe", out _));
+
+		Assert.Equal(new[] { TestRoster.Hero }, party.Members);
+		Assert.Equal(1, changes());
+	}
+
+	[Fact]
+	public void RecruitAndDismiss_ThrowTheSameWordsTheTryMethodsAnswer()
+	{
+		PartyState party = Party();
+
+		party.TryDismiss("abe", out string refusal);
+		var exception = Assert.Throws<InvalidOperationException>(() => party.Dismiss("abe"));
+
+		Assert.Equal(refusal, exception.Message);
+	}
 }

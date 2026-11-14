@@ -4,8 +4,8 @@
 /// </summary>
 public abstract record FlagEffect
 {
-	/// <summary>Applies the effect to the values in <paramref name="flags"/>.</summary>
-	public abstract void Apply(IFlagStore flags);
+	/// <summary>Applies the effect to what <paramref name="context"/> holds.</summary>
+	public abstract void Apply(DialogueContext context);
 
 	/// <summary>
 	/// <c>set</c> a boolean flag, when <see cref="Value"/> is <c>true</c>, or <c>clear</c>
@@ -13,12 +13,12 @@ public abstract record FlagEffect
 	/// </summary>
 	public sealed record Set(string Flag, bool Value) : FlagEffect
 	{
-		public override void Apply(IFlagStore flags) => flags.SetFlag(Flag, Value);
+		public override void Apply(DialogueContext context) => context.Flags.SetFlag(Flag, Value);
 	}
 
 	/// <summary><c>add</c> to a counter. A negative <see cref="Amount"/> subtracts.</summary>
 	public sealed record Add(string Counter, int Amount) : FlagEffect
 	{
-		public override void Apply(IFlagStore flags) => flags.AddToCounter(Counter, Amount);
+		public override void Apply(DialogueContext context) => context.Flags.AddToCounter(Counter, Amount);
 	}
 }

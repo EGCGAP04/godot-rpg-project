@@ -98,9 +98,10 @@ public sealed class WorldAccess
 	{
 		ArgumentNullException.ThrowIfNull(flags);
 
-		bool fantasy = Fantasy.Evaluate(flags);
+		DialogueContext context = DialogueContext.FlagsOnly(flags);
+		bool fantasy = Fantasy.Evaluate(context);
 
-		return new WorldUnlocks(Fantasy: fantasy, Nightmare: fantasy && Nightmare.Evaluate(flags));
+		return new WorldUnlocks(Fantasy: fantasy, Nightmare: fantasy && Nightmare.Evaluate(context));
 	}
 
 	private static FlagCondition ReadCondition(Dictionary<string, JsonElement> worlds, string world)

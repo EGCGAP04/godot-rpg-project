@@ -133,7 +133,7 @@ public partial class DebugTools : Node
 		}
 
 		GameState.Instance.StartAt(preset.Start);
-		preset.Apply(state);
+		preset.Apply(new DialogueContext(state, Party.Instance.State));
 
 		GD.Print($"Debug: preset applied; starting in {preset.Start.World}, cycle {preset.Start.Cycle}.");
 

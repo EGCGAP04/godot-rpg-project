@@ -53,6 +53,8 @@
     <Compile Include="..\..\Game\Player\DirectionResolver.cs" Link="GameLogic\DirectionResolver.cs" />
     <Compile Include="..\..\Game\Player\Facing.cs" Link="GameLogic\Facing.cs" />
     <Compile Include="..\..\Game\Dialogue\IFlagStore.cs" Link="GameLogic\IFlagStore.cs" />
+    <Compile Include="..\..\Game\Dialogue\IPartyStore.cs" Link="GameLogic\IPartyStore.cs" />
+    <Compile Include="..\..\Game\Dialogue\DialogueContext.cs" Link="GameLogic\DialogueContext.cs" />
     <Compile Include="..\..\Game\Dialogue\FlagSyntaxException.cs" Link="GameLogic\FlagSyntaxException.cs" />
     <Compile Include="..\..\Game\Dialogue\FlagTokenizer.cs" Link="GameLogic\FlagTokenizer.cs" />
     <Compile Include="..\..\Game\Dialogue\FlagCondition.cs" Link="GameLogic\FlagCondition.cs" />

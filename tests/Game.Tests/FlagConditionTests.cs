@@ -16,7 +16,7 @@ public class FlagConditionTests
 	{
 		var flags = new InMemoryFlagStore().WithFlag("example.has_key", value);
 
-		Assert.Equal(value, new IsSet("example.has_key").Evaluate(flags));
+		Assert.Equal(value, new IsSet("example.has_key").Evaluate(DialogueContext.FlagsOnly(flags)));
 	}
 
 	// Always compared with 3, so each pair of rows sits on either side of the boundary.
@@ -37,7 +37,7 @@ public class FlagConditionTests
 	{
 		var flags = new InMemoryFlagStore().WithCounter("example.times_met", counter);
 
-		Assert.Equal(expected, new Comparison("example.times_met", comparator, 3).Evaluate(flags));
+		Assert.Equal(expected, new Comparison("example.times_met", comparator, 3).Evaluate(DialogueContext.FlagsOnly(flags)));
 	}
 
 	[Fact]
@@ -46,7 +46,7 @@ public class FlagConditionTests
 		// Read as "(a or b) and c" this would be false, so true proves "and" was grouped first.
 		var flags = new InMemoryFlagStore().WithFlag("a.x", true).WithFlag("b.y").WithFlag("c.z");
 
-		Assert.True(FlagConditionParser.Parse("a.x or b.y and c.z").Evaluate(flags));
+		Assert.True(FlagConditionParser.Parse("a.x or b.y and c.z").Evaluate(DialogueContext.FlagsOnly(flags)));
 	}
 
 	// The reference example's line that remembers a refusal: shown once the stranger has
@@ -64,7 +64,7 @@ public class FlagConditionTests
 			.WithFlag("example.promised_help", promisedHelp)
 			.WithFlag("example.key_returned", keyReturned);
 
-		Assert.Equal(expected, condition.Evaluate(flags));
+		Assert.Equal(expected, condition.Evaluate(DialogueContext.FlagsOnly(flags)));
 	}
 
 	[Fact]
@@ -72,7 +72,7 @@ public class FlagConditionTests
 	{
 		var flags = new InMemoryFlagStore().WithFlag("a.x", true).WithFlag("b.y").WithCounter("c.z", 2);
 
-		_ = FlagConditionParser.Parse("not (a.x and b.y) or c.z >= 1").Evaluate(flags);
+		_ = FlagConditionParser.Parse("not (a.x and b.y) or c.z >= 1").Evaluate(DialogueContext.FlagsOnly(flags));
 
 		Assert.Equal(0, flags.Writes);
 	}

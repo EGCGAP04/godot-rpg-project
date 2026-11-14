@@ -12,10 +12,10 @@ public class FlagEffectTests
 	{
 		var flags = new InMemoryFlagStore().WithFlag("example.has_key");
 
-		new FlagEffect.Set("example.has_key", true).Apply(flags);
+		new FlagEffect.Set("example.has_key", true).Apply(DialogueContext.FlagsOnly(flags));
 		Assert.True(flags.GetFlag("example.has_key"));
 
-		new FlagEffect.Set("example.has_key", false).Apply(flags);
+		new FlagEffect.Set("example.has_key", false).Apply(DialogueContext.FlagsOnly(flags));
 		Assert.False(flags.GetFlag("example.has_key"));
 	}
 
@@ -27,7 +27,7 @@ public class FlagEffectTests
 	{
 		var flags = new InMemoryFlagStore().WithCounter("example.times_met", 2);
 
-		new FlagEffect.Add("example.times_met", amount).Apply(flags);
+		new FlagEffect.Add("example.times_met", amount).Apply(DialogueContext.FlagsOnly(flags));
 
 		Assert.Equal(expected, flags.GetCounter("example.times_met"));
 	}
@@ -43,7 +43,7 @@ public class FlagEffectTests
 			.WithFlag("example.promised_help", true);
 
 		foreach (string effect in new[] { "clear example.has_key", "set example.key_returned", "clear example.promised_help" })
-			FlagEffectParser.Parse(effect).Apply(flags);
+			FlagEffectParser.Parse(effect).Apply(DialogueContext.FlagsOnly(flags));
 
 		Assert.False(flags.GetFlag("example.has_key"));
 		Assert.True(flags.GetFlag("example.key_returned"));

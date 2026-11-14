@@ -35,16 +35,16 @@ public sealed class DialogueRunner
 	private static readonly IReadOnlyList<DialogueOption> NoOptions = Array.Empty<DialogueOption>();
 
 	private readonly Conversation _conversation;
-	private readonly IFlagStore _flags;
+	private readonly DialogueContext _context;
 
 	// Where the conversation is: a node, and the index of the line shown in it.
 	private DialogueNode _node;
 	private int _lineIndex;
 
-	private DialogueRunner(Conversation conversation, IFlagStore flags)
+	private DialogueRunner(Conversation conversation, DialogueContext context)
 	{
 		_conversation = conversation;
-		_flags = flags;
+		_context = context;
 	}
 
 	/// <summary>What the conversation is showing.</summary>
@@ -61,18 +61,19 @@ public sealed class DialogueRunner
 
 	/// <summary>
 	/// Starts <paramref name="conversation"/> at its start node and runs to the first thing
-	/// it shows, applying that line's effects if it is a line.
+	/// it shows, applying that line's effects if it is a line. Conditions read
+	/// <paramref name="context"/> and effects change it.
 	/// </summary>
 	/// <exception cref="InvalidOperationException">
 	/// The conversation cannot show anything, which a conversation the validator accepted
 	/// never does. See <see cref="Advance"/>.
 	/// </exception>
-	public static DialogueRunner Start(Conversation conversation, IFlagStore flags)
+	public static DialogueRunner Start(Conversation conversation, DialogueContext context)
 	{
 		ArgumentNullException.ThrowIfNull(conversation);
-		ArgumentNullException.ThrowIfNull(flags);
+		ArgumentNullException.ThrowIfNull(context);
 
-		var runner = new DialogueRunner(conversation, flags);
+		var runner = new DialogueRunner(conversation, context);
 		runner.GoTo(DialogueNames.Start);
 		return runner;
 	}
@@ -189,12 +190,12 @@ public sealed class DialogueRunner
 		Options = NoOptions;
 	}
 
-	private bool Holds(FlagCondition condition) => condition == null || condition.Evaluate(_flags);
+	private bool Holds(FlagCondition condition) => condition == null || condition.Evaluate(_context);
 
 	private void Apply(IReadOnlyList<FlagEffect> effects)
 	{
 		foreach (FlagEffect effect in effects)
-			effect.Apply(_flags);
+			effect.Apply(_context);
 	}
 
 	private static string Describe(DialogueStep step) => step switch

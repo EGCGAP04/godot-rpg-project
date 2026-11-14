@@ -122,7 +122,7 @@ public class DebugPresetTests
 		var state = new DecisionState(Catalogue);
 		DebugPreset preset = Read("{ 'format': 1, 'description': 'd', 'do': ['set test.tonight', 'add test.visits 3', 'clear test.tonight', 'set test.ever'] }");
 
-		preset.Apply(state);
+		preset.Apply(DialogueContext.FlagsOnly(state));
 
 		Assert.False(state.GetFlag("test.tonight"));
 		Assert.Equal(3, state.GetCounter("test.visits"));

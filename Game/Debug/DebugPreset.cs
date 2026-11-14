@@ -178,13 +178,13 @@ public sealed class DebugPreset
 		return problems;
 	}
 
-	/// <summary>Applies every effect to <paramref name="flags"/>, in order.</summary>
+	/// <summary>Applies every effect to <paramref name="context"/>, in order.</summary>
 	/// <remarks>Validate first: an undeclared flag throws halfway, with the earlier effects already applied.</remarks>
-	public void Apply(IFlagStore flags)
+	public void Apply(DialogueContext context)
 	{
-		ArgumentNullException.ThrowIfNull(flags);
+		ArgumentNullException.ThrowIfNull(context);
 
 		foreach (PresetEffect effect in Effects)
-			effect.Effect.Apply(flags);
+			effect.Effect.Apply(context);
 	}
 }
