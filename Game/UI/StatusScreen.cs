@@ -23,9 +23,10 @@ using Godot;
 /// "next control", only closes.
 /// </para>
 /// <para>
-/// The text is built in code, so the labels do not translate themselves
-/// (<c>auto_translate_mode</c> is Disabled in the scene) and the screen rebuilds them
-/// when the language changes. It also listens to the party, so a change made behind it,
+/// A name is a key, and its button or label translates itself: the members' buttons,
+/// the name and the world. The other lines are built in code, so their labels do not
+/// translate themselves (<c>auto_translate_mode</c> is Disabled on them in the scene)
+/// and the screen rebuilds them when the language changes. It also listens to the party, so a change made behind it,
 /// which today only the debug overlay can make, shows at once. It runs with
 /// <c>process_mode = Always</c>, because <c>Main</c> pauses the tree around it.
 /// </para>
@@ -165,14 +166,24 @@ public partial class StatusScreen : CanvasLayer
 		}
 
 		_shown = _ids.Contains(focused) ? focused : _ids[0];
-		ButtonOf(_shown).GrabFocus();
 		ShowSheet();
+
+		// Not from under the debug overlay: the party changes while it is open, from its
+		// own panel, and taking the focus then would take it from the control in use.
+		// The screen takes it when the overlay closes.
+		if (DebugTools.Instance?.IsOpen != true)
+			ButtonOf(_shown).GrabFocus();
 	}
 
 	private Button ButtonOf(string id) => _members.GetChild<Button>(_ids.IndexOf(id));
 
 	private void OnMemberFocused(string id)
 	{
+		// The member already shown: the focus came back to its button, as it does when
+		// the row is built or the overlay closes, and there is nothing new to show.
+		if (id == _shown)
+			return;
+
 		_shown = id;
 		ShowSheet();
 	}

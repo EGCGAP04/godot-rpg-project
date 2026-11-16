@@ -27,9 +27,6 @@ public static class StatusText
 	public const string LuckKey = "ui.stat.luck";
 	public const string HitRateKey = "ui.stat.hit_rate";
 
-	/// <summary>The character's name.</summary>
-	public static string Name(StatusSheet sheet, Func<string, string> translate) => translate(sheet.NameKey);
-
 	/// <summary>The level, or the age in the world where the level is one.</summary>
 	public static string Level(StatusSheet sheet, Func<string, string> translate) => sheet.LevelIsAge
 		? TextTemplate.Fill(translate(AgeKey), ("age", sheet.Level))

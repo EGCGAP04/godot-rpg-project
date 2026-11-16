@@ -33,12 +33,6 @@ public class StatusTextTests
 	private static string Translate(string key) => Texts[key];
 
 	[Fact]
-	public void Name_IsTheCharactersName()
-	{
-		Assert.Equal("Hero", StatusText.Name(StatusSheet.For(TestRoster.Party(), Hero, World.Fantasy), Translate));
-	}
-
-	[Fact]
 	public void Level_SaysTheLevel_AndTheExperienceTowardsTheNext()
 	{
 		PartyState party = TestRoster.Party();
