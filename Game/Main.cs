@@ -47,7 +47,8 @@ public partial class Main : Node2D
 		Transitioning: _transitioning,
 		OnCombatCooldown: _combatOnCooldown,
 		Conversation: _conversationKind,
-		FightQueued: _queuedEnemy != null);
+		FightQueued: _queuedEnemy != null,
+		MenuOpen: false);
 
 	// Runs in _EnterTree, not _Ready, on purpose: a CharacterBody2D registers its
 	// transform with the physics server when it enters the tree, and a parent's

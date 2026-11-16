@@ -9,7 +9,7 @@ namespace GodotRPGProject.Tests;
 /// </summary>
 public class ConversationRulesTests
 {
-	private static readonly GameActivity Exploring = new(InCombat: false, Transitioning: false, OnCombatCooldown: false, Conversation: null, FightQueued: false);
+	private static readonly GameActivity Exploring = new(InCombat: false, Transitioning: false, OnCombatCooldown: false, Conversation: null, FightQueued: false, MenuOpen: false);
 
 	private static GameActivity Talking(ConversationKind kind, bool fightQueued = false) =>
 		Exploring with { Conversation = kind, FightQueued = fightQueued };
@@ -99,5 +99,15 @@ public class ConversationRulesTests
 	public void EveryExitIsClosed_DuringAFightOrATransition(bool inCombat, bool transitioning)
 	{
 		Assert.False(ConversationRules.CanTransition(Exploring with { InCombat = inCombat, Transitioning = transitioning }));
+	}
+
+	[Fact]
+	public void AnOpenMenu_RefusesAFightAConversationAndEveryExit()
+	{
+		GameActivity inTheMenu = Exploring with { MenuOpen = true };
+
+		Assert.Equal(CombatRequestOutcome.Ignore, ConversationRules.OnCombatRequest(inTheMenu));
+		Assert.False(ConversationRules.CanStartConversation(inTheMenu));
+		Assert.False(ConversationRules.CanTransition(inTheMenu));
 	}
 }
