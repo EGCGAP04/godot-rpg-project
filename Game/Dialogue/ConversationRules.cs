@@ -38,12 +38,14 @@ public enum CombatRequestOutcome
 /// <param name="OnCombatCooldown">A fight or a world change has just ended, and new fights are refused for a moment.</param>
 /// <param name="Conversation">The kind of the conversation running, or null when there is none.</param>
 /// <param name="FightQueued">A fight is waiting for the conversation to end.</param>
+/// <param name="MenuOpen">The player's menu is open, and the world is paused behind it.</param>
 public readonly record struct GameActivity(
 	bool InCombat,
 	bool Transitioning,
 	bool OnCombatCooldown,
 	ConversationKind? Conversation,
-	bool FightQueued);
+	bool FightQueued,
+	bool MenuOpen);
 
 /// <summary>
 /// The rules for what a conversation allows while it runs, and when one can start.
@@ -65,9 +67,13 @@ public static class ConversationRules
 	/// come first and still refuse it: a fight already running, a world transition, and
 	/// the cooldown after either. Otherwise a running conversation queues it, once.
 	/// </summary>
+	/// <remarks>
+	/// An open menu refuses it too. The menu pauses the tree, and physics with it, so no
+	/// enemy can reach the player meanwhile: there is nothing to queue.
+	/// </remarks>
 	public static CombatRequestOutcome OnCombatRequest(GameActivity activity)
 	{
-		if (activity.InCombat || activity.Transitioning || activity.OnCombatCooldown)
+		if (activity.InCombat || activity.Transitioning || activity.OnCombatCooldown || activity.MenuOpen)
 			return CombatRequestOutcome.Ignore;
 
 		if (activity.Conversation == null)
@@ -78,13 +84,17 @@ public static class ConversationRules
 
 	/// <summary>
 	/// Whether a conversation can start now: not during a fight, a world transition or
-	/// another conversation, and not while a fight waits to start. The cooldown after a
-	/// fight does not stop one.
+	/// another conversation, not while a fight waits to start, and not behind an open
+	/// menu. The cooldown after a fight does not stop one.
 	/// </summary>
 	public static bool CanStartConversation(GameActivity activity) =>
-		!activity.InCombat && !activity.Transitioning && activity.Conversation == null && !activity.FightQueued;
+		!activity.InCombat && !activity.Transitioning && activity.Conversation == null && !activity.FightQueued && !activity.MenuOpen;
 
-	/// <summary>Whether the player can leave the world now. A conversation of either kind keeps every exit closed.</summary>
+	/// <summary>
+	/// Whether the player can leave the world now. A conversation of either kind keeps
+	/// every exit closed, and so does an open menu: the debug overlay can open over it
+	/// and ask for a jump, which would change the world behind the menu.
+	/// </summary>
 	public static bool CanTransition(GameActivity activity) =>
-		!activity.InCombat && !activity.Transitioning && activity.Conversation == null;
+		!activity.InCombat && !activity.Transitioning && activity.Conversation == null && !activity.MenuOpen;
 }

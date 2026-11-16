@@ -2,11 +2,12 @@ using Godot;
 
 /// <summary>
 /// Coordinates the run: which world scene is loaded, the player that outlives every
-/// one of them, the combat overlay and the dialogue box. It is the only node that sees
+/// one of them, the combat overlay, the dialogue box and the status screen. It is the only node that sees
 /// all of them, and it talks to <see cref="WorldScene"/> rather than to any concrete
 /// world, so adding or changing a world is scene work rather than code here. Whether a
 /// fight, a conversation or a transition can start is decided by
-/// <see cref="ConversationRules"/>, from what is going on at that moment.
+/// <see cref="ConversationRules"/>, and whether the menu can open by
+/// <see cref="MenuRules"/>, from what is going on at that moment.
 /// </summary>
 public partial class Main : Node2D
 {
@@ -40,14 +41,17 @@ public partial class Main : Node2D
 	private DialogueBox _dialogue;
 	private ConversationKind? _conversationKind;
 	private Enemy _queuedEnemy;
+	private StatusScreen _menu;
+	private bool _menuPausedTheTree;
 
-	/// <summary>What is going on right now, for <see cref="ConversationRules"/> to decide on.</summary>
+	/// <summary>What is going on right now, for <see cref="ConversationRules"/> and <see cref="MenuRules"/> to decide on.</summary>
 	private GameActivity Activity => new(
 		InCombat: _combat != null || _pendingEnemy != null,
 		Transitioning: _transitioning,
 		OnCombatCooldown: _combatOnCooldown,
 		Conversation: _conversationKind,
-		FightQueued: _queuedEnemy != null);
+		FightQueued: _queuedEnemy != null,
+		MenuOpen: _menu != null);
 
 	// Runs in _EnterTree, not _Ready, on purpose: a CharacterBody2D registers its
 	// transform with the physics server when it enters the tree, and a parent's
@@ -97,7 +101,7 @@ public partial class Main : Node2D
 	{
 		if (!ConversationRules.CanTransition(Activity))
 		{
-			GD.Print($"Debug: jump to {world}, cycle {cycle} refused: a fight, a transition or a conversation is in progress.");
+			GD.Print($"Debug: jump to {world}, cycle {cycle} refused: a fight, a transition or a conversation is in progress, or the menu is open.");
 			return;
 		}
 
@@ -357,5 +361,50 @@ public partial class Main : Node2D
 			_pendingEnemy = queued;
 			CallDeferred(MethodName.StartCombat, queued.Data);
 		}
+	}
+
+	// --- The menu ---
+
+	// _UnhandledInput, so a press something else used never opens the menu: the status
+	// screen marks the press that closes it, and without that this would open it again
+	// on the same press (verified headless both ways, #92).
+	public override void _UnhandledInput(InputEvent @event)
+	{
+		if (!@event.IsActionPressed("open_menu"))
+			return;
+
+		// The overlay pauses the tree, so this node hears nothing while it is open; the
+		// guard is here so that does not depend on it.
+		if (DebugTools.Instance?.IsOpen == true)
+			return;
+
+		if (!MenuRules.CanOpen(Activity))
+			return;
+
+		GetViewport().SetInputAsHandled();
+		OpenMenu();
+	}
+
+	/// <summary>
+	/// Opens the status screen over the world and pauses the tree, remembering whether
+	/// it was this that paused it, as the debug overlay does.
+	/// </summary>
+	private void OpenMenu()
+	{
+		_menu = GD.Load<PackedScene>("res://UI/status_screen.tscn").Instantiate<StatusScreen>();
+		_menu.Closed += CloseMenu;
+		AddChild(_menu);
+
+		_menuPausedTheTree = !GetTree().Paused;
+		GetTree().Paused = true;
+	}
+
+	private void CloseMenu()
+	{
+		_menu.QueueFree();
+		_menu = null;
+
+		if (_menuPausedTheTree)
+			GetTree().Paused = false;
 	}
 }

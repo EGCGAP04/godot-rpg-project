@@ -28,3 +28,49 @@ msgstr "{name} llegó al nivel {level}."
 #. {world} is a world's name (world.*); {cycle}, a number.
 msgid "ui.hud.world_and_cycle"
 msgstr "{world}  -  Ciclo {cycle}"
+
+#. The status screen. {level} is a number.
+msgid "ui.status.level"
+msgstr "Nivel {level}"
+
+#. In place of the level, in the Real world. {age} is a number.
+msgid "ui.status.age"
+msgstr "Edad {age}"
+
+#. {experience} is what was gained since the last level; {to_next}, what the next one costs.
+msgid "ui.status.experience"
+msgstr "Experiencia {experience}/{to_next}"
+
+#. In place of the experience, at the highest level.
+msgid "ui.status.highest_level"
+msgstr "Nivel máximo"
+
+#. {stat} is a stat's name (ui.stat.*); {current} and {max}, numbers.
+msgid "ui.status.points"
+msgstr "{stat}  {current}/{max}"
+
+#. {stat} is a stat's name (ui.stat.*); {value}, a number.
+msgid "ui.status.value"
+msgstr "{stat}  {value}"
+
+#. The stats' names. Short: they sit in a column beside their numbers.
+msgid "ui.stat.health_points"
+msgstr "PV"
+
+msgid "ui.stat.mana_points"
+msgstr "PM"
+
+msgid "ui.stat.attack_damage"
+msgstr "Ataque"
+
+msgid "ui.stat.armor"
+msgstr "Armadura"
+
+msgid "ui.stat.agility"
+msgstr "Agilidad"
+
+msgid "ui.stat.luck"
+msgstr "Suerte"
+
+msgid "ui.stat.hit_rate"
+msgstr "Precisión"

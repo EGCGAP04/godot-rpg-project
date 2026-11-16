@@ -145,7 +145,7 @@ An interactable's area is wider than the thing it holds, which has a `StaticBody
 
 Both keep the player still, through `Player.CanMove`, and every exit closed. Held directions are not even read while it is off, so moving through a choice's options does not turn the player; since they are polled, they are right again on the first frame back.
 
-**Whether a fight, a conversation or a transition can start is decided by `ConversationRules`,** an engine-free class, from a `GameActivity` that `Main` builds from its own state at that moment. The guards that existed before conversations (a fight running or pending, a transition, the cooldown) come first and still refuse a fight. Otherwise, **a fight requested during a conversation is queued, never dropped,** and starts as soon as the conversation ends. An area does not report a body already inside it a second time, so a dropped request would leave the enemy standing on the player with no fight.
+**Whether a fight, a conversation or a transition can start is decided by `ConversationRules`,** an engine-free class, from a `GameActivity` that `Main` builds from its own state at that moment. An open menu refuses all three (see [Status Screen](#status-screen)). The guards that existed before conversations (a fight running or pending, a transition, the cooldown) come first and still refuse a fight. Otherwise, **a fight requested during a conversation is queued, never dropped,** and starts as soon as the conversation ends. An area does not report a body already inside it a second time, so a dropped request would leave the enemy standing on the player with no fight.
 
 ### The box and its input
 
@@ -153,9 +153,40 @@ Both keep the player still, through `Player.CanMove`, and every exit closed. Hel
 - `confirm` moves past a line or picks the highlighted option, and `move_up` / `move_down` move the highlight, going round at either end. A choice keeps the last line on screen, since that line is usually the question.
 - **Every text is a key, and the labels translate themselves,** so a change of language shows at once. A narration line shows no name.
 - The box is a `CanvasLayer` with `process_mode = Always`, because a forced conversation pauses the tree around it.
-- **The box ignores input while the debug overlay is open,** and so does `Combat`. Godot runs every node's `_Input` before any control sees the event, so without that a key pressed in the overlay also moved the conversation behind it; `Combat`, which listens in `_UnhandledInput`, still received `confirm` with an overlay control holding the focus (both measured headless).
+- **The box ignores input while the debug overlay is open,** and so do `Combat` and the status screen. Godot runs every node's `_Input` before any control sees the event, so without that a key pressed in the overlay also moved the conversation behind it; `Combat`, which listens in `_UnhandledInput`, still received `confirm` with an overlay control holding the focus (both measured headless).
 
 **A conversation that shows nothing ends at once, without a box.** When no line's condition holds and the start node goes straight to `END`, `DialogueRunner.Start` is already at the end. That is what lets a world have an opening conversation that only sometimes has something to say, as the demo's morning does. A conversation that fails to load is read before anything changes, so the game carries on as it was, with the error in the log.
+
+## Status Screen
+
+The status screen is the player's menu, for now its only page: one member of the party at a time, with their level and base stats in the world the run is in (#92). It is the fourth thing `Main` coordinates, and it follows the dialogue box's shape:
+
+1. `Main` reads `open_menu` in `_UnhandledInput`. If `MenuRules.CanOpen` allows, it adds `UI/status_screen.tscn` and pauses the tree, remembering whether it was the one that paused it, as the debug overlay does.
+2. The screen emits `Closed` on `open_menu` or `cancel`, and `Main` frees it and unpauses only if the pause was its own.
+
+**The menu opens only while exploring.** `MenuRules`, an engine-free class beside `ConversationRules`, reads the same `GameActivity`: not during a fight, a transition or a conversation of either kind, not while a fight waits to start, and not over a menu already open. While it is open, `GameActivity.MenuOpen` makes `ConversationRules` refuse a fight, a conversation and every exit. The exit matters because the debug overlay can open over the screen and ask for a jump, which would change the world behind it. A fight is refused rather than queued: the tree is paused, physics with it, so no enemy can reach the player meanwhile.
+
+**Whether a menu pauses the Nightmare world is open in the design.** It pauses today, and is to be looked at again when the timer exists.
+
+### What it shows
+
+- **`Party/StatusSheet`**, engine-free, is what the screen shows of one character in one world: the level, the experience since the last level and what the next one costs, the points left, and the base stats.
+- **In the Real world the level is an age and there is no experience.** At a world's highest level there is no next level either, which the sheet settles before asking the curve, since `ToNextLevel` throws there.
+- **`UI/StatusText`**, engine-free, turns a sheet into the screen's lines. The stats' names are keys of their own, `ui.stat.*`, because the combat screen will name the same stats.
+- **The derived stats are not on it.** The design hides them from the player; they show in the debug overlay.
+- Its text is built in code, so its labels have auto-translation off and the screen rebuilds them on `NotificationTranslationChanged` (see [In the game](#in-the-game)). The members' buttons and the world's name hold keys and translate themselves.
+- **It listens to the party's signals,** so a change made behind it shows at once. If the member shown leaves, the focus goes to the protagonist.
+
+### Focus and input
+
+- **Each member is a `Button` in a row, and the sheet follows the keyboard focus:** a button reports `FocusEntered`, and the screen shows that member.
+- **The game's own actions move the focus, not Godot's `ui_*`.** `move_left` and `move_right` call `FindValidFocusNeighbor` on the focused button and `GrabFocus` on the answer, so a keyboard, WASD and a gamepad behave alike. Each button names its neighbours (`FocusNeighborLeft`, `FocusNeighborRight`), the first and the last naming each other so the row goes round, and names itself for every other direction.
+- **The screen reads input in `_Input` and marks every press it uses as handled,** which does three things:
+  - The press that closes it does not reach `Main`. Without the mark, `Main`, just unpaused, opened the screen again on the same press (verified headless by removing it).
+  - Godot's own focus keys never see the event, so an arrow does not move the focus twice, and Tab, which is both `open_menu` and Godot's "next control", only closes.
+  - `move_up`, `move_down` and `confirm` do nothing yet, and are marked too.
+- **It ignores input while the debug overlay is open,** like the box and `Combat`. Without that, `cancel` pressed in the overlay closed the screen and unpaused the tree behind the overlay (verified headless by removing it).
+- **It takes the focus back when the overlay closes,** on `DebugTools.OverlayClosed`. The overlay takes the focus while it is open, and frees the control that had it.
 
 ## Dialogue Format
 
@@ -324,7 +355,7 @@ _enemyHpLabel.Text = TextTemplate.Fill(Tr("ui.combat.hp"), ("name", Tr(EnemyData
 
 - **The starting language needs no code.** Godot starts in the system's language when a table exists for it (`es_AR` finds `es`) and falls back to English otherwise, and English is already Godot's default fallback, so `project.godot` does not repeat it. Remembering the player's choice waits for a place to store settings, in M9 at the latest.
 - **A fixed text is a key, and Godot translates it by itself.** A `Control` whose `text` is a key shows its translation, and updates when the language changes: the Attack button holds `ui.combat.attack` in `combat.tscn`, and `Combat` assigns the result's key to its label.
-- **A text built in code goes through `Tr()` and `TextTemplate`,** as the HP labels and the world and cycle label do. Those labels have `auto_translate_mode` set to *Disabled*; otherwise Godot would look the finished text up as a key again, and pseudolocalization would rewrite it twice. They are rebuilt on `NotificationTranslationChanged`, which Godot sends every node when the language changes.
+- **A text built in code goes through `Tr()` and `TextTemplate`,** as the HP labels, the world and cycle label and the status screen's lines do. Those labels have `auto_translate_mode` set to *Disabled*; otherwise Godot would look the finished text up as a key again, and pseudolocalization would rewrite it twice. They are rebuilt on `NotificationTranslationChanged`, which Godot sends every node when the language changes.
 - **The debug overlay switches the language** (see [Debug Tooling](#debug-tooling)), on every screen and while a fight pauses the tree. It replaced F2, a temporary key from #72.
 - **The debug overlay's own text is the one exception to "every text is a key".** It is a tool, not part of the game, so it is in English, its panel has auto-translation off, and `GameKeysTests` skips `Debug/`.
 - **Pseudolocalization checks that no text bypasses the tables.** It rewrites every translated text with accents and brackets (`[Åŧáćáŕ]`), so any text on screen without brackets did not come from a table. Turn it on for one run with an `override.cfg` beside `project.godot`, which `.gitignore` already lists:
@@ -404,7 +435,7 @@ It holds exactly `fantasy` and `nightmare`; the Real world has no condition, sin
 
 With around a hundred endings planned, checking them by playing each through by hand is not viable, so the decision registry has tooling of its own (#75). It is small on purpose and grows with the game. It exists in debug builds only: the `DebugTools` autoload frees itself when `OS.IsDebugBuild()` is false, and `DebugTools.Instance` stays null. Confirming nothing of it reaches a release export waits for the export configuration.
 
-The logic is engine-free, as in the rest of the game. `DebugPreset` reads and checks a preset, `DebugArguments` reads the command line and `SnapshotShelf` keeps the snapshots of the registry and the party, all three covered by tests. `DebugTools` and `DebugOverlay` are the nodes around them.
+The logic is engine-free, as in the rest of the game. `DebugPreset` reads and checks a preset, `DebugArguments` reads the command line, `SnapshotShelf` keeps the snapshots of the registry and the party, `PartyEdits` forces a level and `DerivedStatsTable` lists the derived stats, all five covered by tests. `DebugTools`, `DebugOverlay` and `PartyPanel` are the nodes around them.
 
 ### The overlay
 
@@ -412,6 +443,7 @@ The logic is engine-free, as in the rest of the game. `DebugPreset` reads and ch
 
 - where the run is, and a jump to any world and cycle, with a warning when the flags keep that world closed tonight;
 - the language;
+- the party (see [The party panel](#the-party-panel));
 - every flag of the catalogue with its lifetime and a check box or a number, and its description as a tooltip;
 - the snapshots, with a name of their own or a number, each with Restore and Delete;
 - a button that resets the persistent flags;
@@ -419,7 +451,20 @@ The logic is engine-free, as in the rest of the game. `DebugPreset` reads and ch
 
 **Every change goes through the registry's API,** so its signals fire as if the game had made it: a number is set by adding the difference with `AddToCounter`. The overlay follows `FlagChanged`, so a change the game makes while it is open shows too. Its rows are built from the catalogue each time it opens.
 
-**Opening pauses the tree unless something already had, and closing unpauses it only if opening paused it,** so a fight or a forced conversation stays paused behind it. The one gap: a forced conversation that starts while the overlay is open, which only a world's fade in can do, is unpaused when it closes. While the box and `Combat` ignore input, nothing behind the overlay reacts to a key pressed in it (see [The box and its input](#the-box-and-its-input)).
+**Opening pauses the tree unless something already had, and closing unpauses it only if opening paused it,** so a fight or a forced conversation stays paused behind it. The one gap: a forced conversation that starts while the overlay is open, which only a world's fade in can do, is unpaused when it closes. While the box, `Combat` and the status screen ignore input, nothing behind the overlay reacts to a key pressed in it (see [The box and its input](#the-box-and-its-input)). `DebugTools` emits `OverlayClosed` once it has closed, for whatever lost the keyboard focus to it.
+
+**The overlay's text fields have a whole border,** set on its theme. The default theme draws a field as a line under it with rounded ends, which at the overlay's size read as a box with its bottom border cut.
+
+### The party panel
+
+`Debug/PartyPanel` is the overlay's party section (#92), built in code from the roster, so a new character shows without touching it. For a character and a world chosen there:
+
+- **In party** puts the character in or out through `TryRecruit` and `TryDismiss`, and shows a refusal in the party's own words. It is disabled for the protagonist.
+- **Set** puts the character at a level. The game never sets a level, so `PartyState` has no method for it: `PartyEdits.WithLevel` edits a copy of `TakeSnapshot`'s snapshot and `Restore` applies it, with the checks a loaded save gets. The experience towards the next level goes to 0, and health points and mana points are cut down to what the level gives, never raised. In the Real world the only level is the age.
+- **Give to party** calls `Award`, so every member receives the whole amount, as after a fight won, and the Real world gives none.
+- **The derived stats** of the character at that level, against an attack and against a skill, from `DerivedStatsTable` over the tuning in `stat_tuning.tres`: armor reduction, critical chance, hit chance, critical damage and evasion rate. The design hides them from the player, so this is the only place they show. The escape rate is not there: it compares two sides of a fight.
+
+The panel follows the party's events, so a change made elsewhere shows in it, and what it changes shows on the status screen behind the overlay.
 
 ### Snapshots and the persistent flags
 
@@ -429,7 +474,7 @@ Persistent flags are shared by every save slot, so nothing in a slot can bring t
 
 ### The jump
 
-**A jump takes the same road as an exit:** `GameState.RequestJump` emits `JumpRequested`, and `Main` answers it as it answers a `WorldExit`, with the same guards from `ConversationRules`, the same fade, and then `GameState.JumpTo`, which moves the run with the signals `Advance` emits. A jump to another cycle therefore resets its cycle flags, and the swap keeps the guards against the phantom contact (see [World and Cycle Coordination](#world-and-cycle-coordination)); a jump that skipped them would produce fights the game never could. It can reach a world the flags keep closed, which is the one place the tool steps outside the game's rules, and the overlay says so. A jump `Main` refuses, during a fight, a transition or a conversation, is only printed, since a signal has no answer.
+**A jump takes the same road as an exit:** `GameState.RequestJump` emits `JumpRequested`, and `Main` answers it as it answers a `WorldExit`, with the same guards from `ConversationRules`, the same fade, and then `GameState.JumpTo`, which moves the run with the signals `Advance` emits. A jump to another cycle therefore resets its cycle flags, and the swap keeps the guards against the phantom contact (see [World and Cycle Coordination](#world-and-cycle-coordination)); a jump that skipped them would produce fights the game never could. It can reach a world the flags keep closed, which is the one place the tool steps outside the game's rules, and the overlay says so. A jump `Main` refuses, during a fight, a transition or a conversation, or with the menu open, is only printed, since a signal has no answer.
 
 ### Presets
 
@@ -467,7 +512,7 @@ godot --headless --path . --quit-after 800 -- --world fantasy --cycle 2 --do "se
 
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas, the growth of stats and the experience curves in `Stats/`, a character's values and the roster's in `Characters/`, the party's state in `Party/`, the text of a fight's result (`Combat/CombatResultText.cs`), and the rules for conversations (`Dialogue/ConversationRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas, the growth of stats and the experience curves in `Stats/`, a character's values and the roster's in `Characters/`, the party's state in `Party/`, what the status screen shows (`Party/StatusSheet.cs`, `UI/StatusText.cs`), the text of a fight's result (`Combat/CombatResultText.cs`), and the rules for conversations (`Dialogue/ConversationRules.cs`), for the menu (`UI/MenuRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
@@ -632,6 +677,7 @@ It follows the split of the decision registry. The logic is engine-free in `Part
 | `Party/CharacterProgress` | What one character keeps in one world: a `LevelProgress`, and the health points and mana points left. |
 | `Party/ExperienceAward`, `MemberGain` | What an award of experience does to each member, before and after. |
 | `Party/PartySnapshot`, `ProgressRecord` | What a save slot keeps of the party. |
+| `Party/StatusSheet` | What the status screen shows of one character in one world (see [Status Screen](#status-screen)). |
 | `Autoloads/Party` | The node: it loads the roster and the experience curves in `_EnterTree`, and re-emits the state's events as the signals `MembersChanged` and `ProgressChanged(id, world)`. |
 
 Outside code uses `Party.Instance.State`, rather than methods repeated on the node. `Party` is registered before `DebugTools`, which reaches it for its snapshots.

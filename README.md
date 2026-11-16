@@ -12,7 +12,7 @@
 
 🚧 In development — core systems phase.
 
-The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost, and a fight won gives the party experience. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. A friend there joins the party if asked, and a newcomer in the Fantasy world offers to take the friend's place. Every text is in Spanish and English, and the game starts in the system's language. In a debug build, F3 opens an overlay to inspect and change the decision registry's flags, take and restore snapshots of them and of the party, jump to any world and cycle, and switch the language. All art is placeholder (solid-colour rectangles and tinted tiles).
+The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost, and a fight won gives the party experience. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. A friend there joins the party if asked, and a newcomer in the Fantasy world offers to take the friend's place. While exploring, `open_menu` (Tab) opens a status screen with each party member's level and base stats in the current world. Every text is in Spanish and English, and the game starts in the system's language. In a debug build, F3 opens an overlay to inspect and change the decision registry's flags, take and restore snapshots of them and of the party, change the party and see its derived stats, jump to any world and cycle, and switch the language. All art is placeholder (solid-colour rectangles and tinted tiles).
 
 This is a personal learning project, with no deadline, developed following professional version control and code organization standards.
 
@@ -43,7 +43,7 @@ dotnet build --configuration Debug
 
 Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
-The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables, the decision registry, the stat formulas, how characters grow and level up, and the party — are covered by unit tests that run without it. Some of them check every conversation, every translation table, every data file and every character in the project, so a broken conversation, a missing translation, a misspelt flag or a character with a misspelt stat fails the build. The solution includes the test project, so from the same `Game/` folder:
+The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables, the decision registry, the stat formulas, how characters grow and level up, the party, and what the status screen shows — are covered by unit tests that run without it. Some of them check every conversation, every translation table, every data file and every character in the project, so a broken conversation, a missing translation, a misspelt flag or a character with a misspelt stat fails the build. The solution includes the test project, so from the same `Game/` folder:
 
 ```bash
 dotnet test "Godot RPG Project.sln" --configuration Debug
@@ -51,7 +51,7 @@ dotnet test "Godot RPG Project.sln" --configuration Debug
 
 CI runs this on every pull request into `main` and every push to it, along with `dotnet format --verify-no-changes`, so a formatting mismatch fails the build too. CodeQL also scans the C# code and the workflows on those same events and once a week, and reports what it finds as code scanning alerts rather than failing the build.
 
-In a debug build, F3 opens a debug overlay that shows every flag of the decision registry and lets them be changed, takes and restores snapshots, jumps to any world and cycle, and switches the language. A run can also start in a chosen state from the command line, with a preset from `Game/Debug/Presets/`; the *Debug Tooling* section of [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) has the syntax:
+In a debug build, F3 opens a debug overlay that shows every flag of the decision registry and lets them be changed, takes and restores snapshots, changes the party and shows its derived stats, jumps to any world and cycle, and switches the language. A run can also start in a chosen state from the command line, with a preset from `Game/Debug/Presets/`; the *Debug Tooling* section of [`docs/CONVENTIONS.md`](docs/CONVENTIONS.md) has the syntax:
 
 ```bash
 godot --path . -- --preset res://Debug/Presets/no_fantasy.json
@@ -111,6 +111,9 @@ godot-rpg-project/
 │   │   ├── DebugOverlay.cs (+.uid)        # the overlay: flags, snapshots, jump and language
 │   │   ├── DebugPreset.cs (+.uid)         # engine-free: reads a preset, checks it, applies it
 │   │   ├── DebugTools.cs (+.uid)          # global singleton: the startup preset, and F3 opens the overlay
+│   │   ├── DerivedStatsTable.cs (+.uid)   # engine-free: the derived stats the overlay shows
+│   │   ├── PartyEdits.cs (+.uid)          # engine-free: a party snapshot with a level forced
+│   │   ├── PartyPanel.cs (+.uid)          # the overlay's party section
 │   │   ├── SnapshotShelf.cs (+.uid)       # engine-free: named snapshots of the registry and the party
 │   │   └── debug_overlay.tscn             # opened and closed with F3
 │   │
@@ -189,7 +192,8 @@ godot-rpg-project/
 │   │   ├── CharacterProgress.cs (+.uid)   # what one character keeps in one world
 │   │   ├── ExperienceAward.cs (+.uid)     # what an award of experience does to each member
 │   │   ├── PartySnapshot.cs (+.uid)       # what one save slot keeps of the party
-│   │   └── PartyState.cs (+.uid)          # members, progress per world, experience, snapshots
+│   │   ├── PartyState.cs (+.uid)          # members, progress per world, experience, snapshots
+│   │   └── StatusSheet.cs (+.uid)         # what the status screen shows of one character in one world
 │   │
 │   ├── Player/
 │   │   ├── Direction.cs (+.uid)
@@ -224,9 +228,13 @@ godot-rpg-project/
 │   │
 │   ├── UI/
 │   │   ├── DialogueBox.cs (+.uid)      # shows a conversation and reads its input
+│   │   ├── MenuRules.cs (+.uid)        # engine-free: when the player's menu can open
 │   │   ├── ScreenFade.cs (+.uid)       # shared fade, used by combat and transitions
+│   │   ├── StatusScreen.cs (+.uid)     # the status screen: one party member at a time
+│   │   ├── StatusText.cs (+.uid)       # engine-free: the status screen's lines
 │   │   ├── dialogue_box.tscn
-│   │   └── screen_fade.tscn
+│   │   ├── screen_fade.tscn
+│   │   └── status_screen.tscn          # opened with open_menu, closed with it or cancel
 │   │
 │   ├── World/
 │   │   ├── CyclePosition.cs (+.uid)    # engine-free: a world plus its cycle number
@@ -272,6 +280,7 @@ godot-rpg-project/
 │       ├── DecisionStateTests.cs
 │       ├── DemoConversationsTests.cs # plays M6's demo against the real registry
 │       ├── DemoRecruitmentTests.cs # plays M7's demo against the game's roster and a real party
+│       ├── DerivedStatsTableTests.cs
 │       ├── DialogueContextTests.cs
 │       ├── DialogueNamesTests.cs
 │       ├── DialogueRunnerTests.cs
@@ -295,6 +304,8 @@ godot-rpg-project/
 │       ├── InMemoryFlagStore.cs    # stand-in for the decision registry
 │       ├── InMemoryPartyStore.cs   # stand-in for the party, in dialogue tests
 │       ├── LocalizationValidatorTests.cs # includes the test that checks every table
+│       ├── MenuRulesTests.cs
+│       ├── PartyEditsTests.cs
 │       ├── PartyProgressTests.cs
 │       ├── PartySnapshotTests.cs
 │       ├── PartyStateTests.cs
@@ -308,6 +319,8 @@ godot-rpg-project/
 │       ├── StatLineTests.cs
 │       ├── StatTuningTests.cs      # the tuning file writes every value
 │       ├── StatTuningValuesTests.cs
+│       ├── StatusSheetTests.cs
+│       ├── StatusTextTests.cs
 │       ├── TestRoster.cs           # the characters, curves and party the party's tests use
 │       ├── TestTuning.cs           # the tuning and the stats the formula tests use
 │       ├── TextTemplateTests.cs

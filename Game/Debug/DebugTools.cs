@@ -34,6 +34,13 @@ public partial class DebugTools : Node
 {
 	public static DebugTools Instance { get; private set; }
 
+	/// <summary>
+	/// Emitted once the overlay has closed. Whatever it was open over had lost the
+	/// keyboard focus to it, and takes it back here.
+	/// </summary>
+	[Signal]
+	public delegate void OverlayClosedEventHandler();
+
 	private DebugOverlay _overlay;
 	private bool _pausedTheTree;
 
@@ -99,6 +106,8 @@ public partial class DebugTools : Node
 
 		if (_pausedTheTree)
 			GetTree().Paused = false;
+
+		EmitSignal(SignalName.OverlayClosed);
 	}
 
 	private void ApplyStartupPreset()

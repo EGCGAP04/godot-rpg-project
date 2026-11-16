@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The validator checks every character a conversation names against the roster, and refuses a `recruit` or a `dismiss` of the protagonist. A test requires every character's id to be writable in the language
 - Debug presets and `--do` accept `recruit` and `dismiss`. A character that does not exist, or an effect the party refuses, stops the game with exit code 1, and a preset's startup print lists the party's members
 - The milestone's demo, with placeholder characters, in English and Spanish: a friend in the Real world who joins the party if asked, and a newcomer in the Fantasy world who takes the friend's place. The preset `with_friend.json` starts with the friend recruited
+- A status screen, opened with `open_menu` (Tab, or a gamepad's Back button) while exploring and closed with it or with `cancel`. It shows one member of the party at a time, in the current world: the level, the experience towards the next one and the seven base stats. In the Real world the level shows as an age, with no experience. `move_left` and `move_right` change the member, by moving the keyboard focus along a row of buttons
+- `MenuRules`, the engine-free rule for when the menu can open: only while exploring. `GameActivity` gains `MenuOpen`
+- `StatusSheet` and `StatusText`, engine-free: what the screen shows of a character in a world, and its lines. The stats' names are keys of their own, `ui.stat.*`, in English and Spanish
+- A party section in the debug overlay, built from the roster: it puts a character in or out of the party, sets a level in a world, gives the party experience, and shows the derived stats the design hides from the player, against an attack and against a skill. It is the first use of the stat formulas in the game
+- `PartyEdits` and `DerivedStatsTable`, the engine-free halves of that section. A level is forced by editing a snapshot of the party and restoring it, so the party gains no method only the debug tooling would call
+- A Status Screen section in `docs/CONVENTIONS.md`
 
 ### Changed
 
@@ -40,6 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - After a fight, the heal comes once the game is unpaused, together with the experience, so a failure there cannot leave the game paused
 - Conditions are evaluated against a `DialogueContext` and effects are applied to it, where both took an `IFlagStore`. `DialogueRunner.Start` and `DebugPreset.Apply` take it too
 - `world_access.json` may only ask about flags: a condition there that asks about the party is refused when the file is read
+- While the menu is open, a fight, a conversation and a world transition are all refused, a debug jump included
+- `DebugTools` emits `OverlayClosed` when the overlay closes, and the status screen takes the keyboard focus back on it
 - The pull request template opens with a comment giving the title convention, `[Type]: <summary> (Issue #N)`, which every PR with an Issue has followed since #7 without it being written anywhere
 - The README's status line reads "core systems phase" instead of "foundation phase", and its Screenshots section says what it waits for: real art
 
@@ -51,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `ScreenFade.FadeTo`'s remark said `Main` could park state in a fade callback only because it had two callers, and that a third would strand it. The debug tooling's jump is a third and strands nothing, so the remark now states the rule that keeps it safe: every request that fades `Main`'s instance passes `ConversationRules.CanTransition` first
 - The README's Project Structure tree had no separator line between `UI/` and `World/`
+- The debug overlay's text fields have a whole border. The default theme draws a field as a line under it with rounded ends, which made the snapshot's name look like a box with its bottom border cut
 
 ## [0.3.0] - 2026-11-05
 
