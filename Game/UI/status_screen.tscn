@@ -1,0 +1,74 @@
+[gd_scene format=3 uid="uid://dv72un6cmscuk"]
+
+[ext_resource type="Script" uid="uid://2gdvqp6pfg10" path="res://UI/StatusScreen.cs" id="1_screen"]
+
+[node name="StatusScreen" type="CanvasLayer" unique_id=1645277365]
+process_mode = 3
+script = ExtResource("1_screen")
+
+[node name="Panel" type="Panel" parent="." unique_id=1290339904]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 624.0
+offset_bottom = 344.0
+
+[node name="Members" type="HBoxContainer" parent="Panel" unique_id=1946822745]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 440.0
+offset_bottom = 39.0
+
+[node name="WorldLabel" type="Label" parent="Panel" unique_id=1706996231]
+layout_mode = 0
+offset_left = 448.0
+offset_top = 12.0
+offset_right = 596.0
+offset_bottom = 35.0
+horizontal_alignment = 2
+
+[node name="Separator" type="HSeparator" parent="Panel" unique_id=790755623]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 44.0
+offset_right = 596.0
+offset_bottom = 48.0
+
+[node name="NameLabel" type="Label" parent="Panel" unique_id=2020404861]
+layout_mode = 0
+offset_left = 12.0
+offset_top = 56.0
+offset_right = 596.0
+offset_bottom = 79.0
+
+[node name="LevelLabel" type="Label" parent="Panel" unique_id=1260353431]
+auto_translate_mode = 2
+layout_mode = 0
+offset_left = 12.0
+offset_top = 84.0
+offset_right = 290.0
+offset_bottom = 107.0
+
+[node name="ExperienceLabel" type="Label" parent="Panel" unique_id=1136162244]
+auto_translate_mode = 2
+layout_mode = 0
+offset_left = 304.0
+offset_top = 84.0
+offset_right = 596.0
+offset_bottom = 107.0
+
+[node name="Points" type="VBoxContainer" parent="Panel" unique_id=699885460]
+auto_translate_mode = 2
+layout_mode = 0
+offset_left = 12.0
+offset_top = 124.0
+offset_right = 290.0
+offset_bottom = 312.0
+
+[node name="Stats" type="VBoxContainer" parent="Panel" unique_id=1179814844]
+auto_translate_mode = 2
+layout_mode = 0
+offset_left = 304.0
+offset_top = 124.0
+offset_right = 596.0
+offset_bottom = 312.0
