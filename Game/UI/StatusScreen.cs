@@ -60,6 +60,10 @@ public partial class StatusScreen : CanvasLayer
 		Party.Instance.MembersChanged += OnMembersChanged;
 		Party.Instance.ProgressChanged += OnProgressChanged;
 
+		// In a release build there is no debug tooling, and nothing to listen to.
+		if (DebugTools.Instance != null)
+			DebugTools.Instance.OverlayClosed += OnOverlayClosed;
+
 		BuildMembers(Party.Instance.State.Members[0]);
 	}
 
@@ -68,6 +72,9 @@ public partial class StatusScreen : CanvasLayer
 	{
 		Party.Instance.MembersChanged -= OnMembersChanged;
 		Party.Instance.ProgressChanged -= OnProgressChanged;
+
+		if (DebugTools.Instance != null)
+			DebugTools.Instance.OverlayClosed -= OnOverlayClosed;
 	}
 
 	public override void _Notification(int what)
@@ -110,8 +117,7 @@ public partial class StatusScreen : CanvasLayer
 	{
 		Button current = ButtonOf(_shown);
 
-		// The focus can be elsewhere, or nowhere: the debug overlay takes it while it is
-		// open and frees the control that had it when it closes. The row takes it back.
+		// Should the focus be anywhere else, or nowhere, the row takes it back first.
 		if (GetViewport().GuiGetFocusOwner() != current)
 			current.GrabFocus();
 
@@ -172,6 +178,9 @@ public partial class StatusScreen : CanvasLayer
 	}
 
 	private void OnMembersChanged() => BuildMembers(_shown);
+
+	// The overlay took the focus while it was open, and the control that had it is gone.
+	private void OnOverlayClosed() => ButtonOf(_shown).GrabFocus();
 
 	private void OnProgressChanged(string id, World world)
 	{

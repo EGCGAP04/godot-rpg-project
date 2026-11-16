@@ -6,8 +6,8 @@ using Godot;
 
 /// <summary>
 /// The debug tooling's overlay (#75): where the run is, a jump to any world and cycle, the
-/// language, every flag of the catalogue with its value, the snapshots, a reset of the
-/// persistent flags, and the history of fights. <see cref="DebugTools"/> opens and closes
+/// language, the party (#92, in <see cref="PartyPanel"/>), every flag of the catalogue with
+/// its value, the snapshots, a reset of the persistent flags, and the history of fights. <see cref="DebugTools"/> opens and closes
 /// it; the rows are built here, from the catalogue, when it opens.
 /// </summary>
 /// <remarks>
@@ -26,6 +26,8 @@ public partial class DebugOverlay : CanvasLayer
 	private const int FontSize = 10;
 	private const int MaxCycle = 99;
 	private static readonly Color PanelColour = new(0.1f, 0.1f, 0.1f);
+	private static readonly Color FieldColour = new(0.16f, 0.16f, 0.16f);
+	private static readonly Color FieldBorderColour = new(0.45f, 0.45f, 0.45f);
 
 	private readonly Dictionary<string, Control> _flagControls = new();
 
@@ -46,12 +48,21 @@ public partial class DebugOverlay : CanvasLayer
 		var panel = GetNode<Panel>("Panel");
 		panel.Theme = new Theme { DefaultFontSize = FontSize };
 
+		// The default theme draws a text field as a line under it with rounded ends, which
+		// at this size read as a box with its bottom border cut. A whole border instead,
+		// for every field of the overlay, the number boxes' included.
+		var field = new StyleBoxFlat { BgColor = FieldColour, BorderColor = FieldBorderColour };
+		field.SetBorderWidthAll(1);
+		field.SetContentMarginAll(4);
+		panel.Theme.SetStylebox("normal", "LineEdit", field);
+
 		// Opaque: the default panel lets the world show through, and the check boxes were
 		// lost against the tiles behind them.
 		panel.AddThemeStyleboxOverride("panel", new StyleBoxFlat { BgColor = PanelColour });
 
 		BuildPosition();
 		BuildLanguage();
+		BuildParty();
 		BuildFlags();
 		BuildSnapshots();
 		BuildFights();
@@ -143,6 +154,14 @@ public partial class DebugOverlay : CanvasLayer
 		locales.ItemSelected += index => TranslationServer.SetLocale(LocalizationNames.Locales[(int)index]);
 		row.AddChild(locales);
 		_content.AddChild(row);
+	}
+
+	// --- The party ---
+
+	private void BuildParty()
+	{
+		AddHeading("Party");
+		_content.AddChild(new PartyPanel());
 	}
 
 	// --- Flags ---
