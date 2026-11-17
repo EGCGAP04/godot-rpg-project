@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The tree of every file in the repository moved from the README to a document of its own, `docs/PROJECT_STRUCTURE.md`. The README keeps a short tree of the folders, with a line on each, and a link to the full one
 - The pull request template and the Docs Issue form now name `docs/PROJECT_STRUCTURE.md` as the tree to keep up to date
+- **The license changed from MIT to the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).** From this change on, the project may be used, modified and shared for noncommercial purposes only, every copy must carry the license's terms and the `Required Notice` line at the top of `LICENSE`, and commercial use needs the maintainer's permission. Everything published before this change, the versions up to `v0.4.0` included, was released under MIT and stays available under it
+- The README's *License* section says what the new license allows and how to ask for commercial permission, and a new *Contributing* note says under which terms a contribution is accepted
 
 ## [0.4.0] - 2026-11-16
 
