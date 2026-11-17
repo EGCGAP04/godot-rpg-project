@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-16
+
 ### Added
 
-- The stat formulas, in a new `Stats/` folder, as engine-free classes covered by unit tests. `StatFormulas` turns a combatant's `BaseStats` into armor's damage reduction, critical chance, hit chance, critical damage, evasion rate and escape rate, each as an unrounded percentage. Nothing in the game calls them yet
+- The stat formulas, in a new `Stats/` folder, as engine-free classes covered by unit tests. `StatFormulas` turns a combatant's `BaseStats` into armor's damage reduction, critical chance, hit chance, critical damage, evasion rate and escape rate, each as an unrounded percentage. The debug overlay's party section is their first caller
 - `DiminishingReturns`, the curve `cap * stat / (stat + K)` that armor and luck go through, which approaches its cap without reaching it
 - `StatTuning`, a resource with every provisional number of the formulas (the caps, the floors, the bases and each curve's `K`), editable in the Inspector in `Stats/stat_tuning.tres`. It hands the formulas a plain `StatTuningValues`, which refuses a value that is missing or makes no sense
 - A test that reads `stat_tuning.tres` and requires it to write every value the resource has
@@ -18,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stats computed from the level and never stored: `base + growth * (level - 1)` for each of the seven stats, rounded down once. Growth may be a fraction, and the numbers are `decimal` so that rounding down lands where the design says
 - Experience curves, one for the Fantasy world and one for the Nightmare world: a level costs `base * level ^ exponent`, experience is a 64-bit number, and the highest level is data. One award may raise several levels, and the Real world, where a level is an age, earns none. Their six provisional numbers are in `Stats/stat_tuning.tres`
 - `EnemyData` says how much experience a win is worth, and both enemies write it: 5 and 20
-- Three placeholder characters (`demo_hero`, `demo_friend` and `demo_newcomer`), with names in English and Spanish. Nothing in the game uses them yet
+- Three placeholder characters (`demo_hero`, `demo_friend` and `demo_newcomer`), with names in English and Spanish
 - A test that reads every character's file and rebuilds it through the same checks the game applies, refusing a stat name the resource does not have
 - A Characters and Levels section in `docs/CONVENTIONS.md`
 - The party, as the `Party` autoload around an engine-free `PartyState` in a new `Party/` folder: who is in it, in order, and where every character stands in each of the three worlds. The protagonist never leaves, the party holds four at most, and a change that breaks a rule is refused
@@ -49,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - While the menu is open, a fight, a conversation and a world transition are all refused, a debug jump included
 - `DebugTools` emits `OverlayClosed` when the overlay closes, and the status screen takes the keyboard focus back on it
 - The pull request template opens with a comment giving the title convention, `[Type]: <summary> (Issue #N)`, which every PR with an Issue has followed since #7 without it being written anywhere
+- The Issue forms' milestone dropdown no longer offers M7, which closes with this release
 - The README's status line reads "core systems phase" instead of "foundation phase", and its Screenshots section says what it waits for: real art
 
 ### Removed
@@ -225,7 +228,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Combat could be triggered more than once (two overlapping enemies, or a re-trigger before the deferred start ran), leaking an orphaned overlay on a permanently paused tree and crashing when the first fight resolved
 - `.editorconfig` declared spaces for C# files while every file in the project is tab-indented, which would have introduced mixed indentation
 
-[Unreleased]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/EGCGAP04/godot-rpg-project/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/EGCGAP04/godot-rpg-project/releases/tag/v0.1.0
