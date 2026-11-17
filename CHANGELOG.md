@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The tree of every file in the repository moved from the README to a document of its own, `docs/PROJECT_STRUCTURE.md`. The README keeps a short tree of the folders, with a line on each, and a link to the full one
+- The pull request template and the Docs Issue form now name `docs/PROJECT_STRUCTURE.md` as the tree to keep up to date
+
 ## [0.4.0] - 2026-11-16
 
 ### Added
