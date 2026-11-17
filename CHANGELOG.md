@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `ScreenFade.FadeTo`'s remark said `Main` could park state in a fade callback only because it had two callers, and that a third would strand it. The debug tooling's jump is a third and strands nothing, so the remark now states the rule that keeps it safe: every request that fades `Main`'s instance passes `ConversationRules.CanTransition` first
 - The README's Project Structure tree had no separator line between `UI/` and `World/`
+- Opening the menu while the game's first fade in was still running lost the world's opening conversation: it was refused with the menu open and never asked for again. The first fade in now counts as a transition, like the fade of every world change, so the menu waits for it
 - The debug overlay's text fields have a whole border. The default theme draws a field as a line under it with rounded ends, which made the snapshot's name look like a box with its bottom border cut
 
 ## [0.3.0] - 2026-11-05
