@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The engine-free core of combat v2, in `Combat/`, covered by unit tests. No scene uses it yet: the fights in the game are still combat v1
+- `ICombatRandom`, the one way combat rolls: a percent roll and a pick among a count. `SeededCombatRandom` is the game's implementation, which repeats its rolls from a seed it reports
+- `DamagePipeline`, which works out one attack in a fixed order of rolls: accuracy, evasion, the critical hit and a variation of the base damage, with armor taken out at the end. A stage that is reached always rolls, the damage is rounded down once, and a hit that lands does at least 1
+- `CombatTuningValues`, combat's own provisional numbers: the least damage of a landed hit and the variation of the base damage, 10% either way
+- `TurnOrder`: everyone standing acts by agility, highest first, and a tie is settled by a roll
+- `CombatRunner`, which plays a fight a round at a time. It takes an order for every standing member, works the round out, and stops on each enemy attack until it is answered with the damage taken, so a fight where the player dodges in real time can answer with another number. An attack whose target went down moves to another standing enemy by a roll, and the fight ends when a whole side is down
+- `ScriptedCombatRandom`, in the test project: rolls written by hand, so no combat test is statistical
+- A Combat Core section in `docs/CONVENTIONS.md`
+
 ### Changed
 
 - The tree of every file in the repository moved from the README to a document of its own, `docs/PROJECT_STRUCTURE.md`. The README keeps a short tree of the folders, with a line on each, and a link to the full one

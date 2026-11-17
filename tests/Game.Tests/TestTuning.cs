@@ -38,6 +38,13 @@ public static class TestTuning
 
 	public static StatFormulas Formulas() => new(Values());
 
+	/// <summary>
+	/// The combat tuning the combat tests run with: a hit does at least 1, and the base
+	/// damage varies by 10% either way, so its ends are 90% and 110%.
+	/// </summary>
+	public static CombatTuningValues Combat(int minimumDamage = 1, double damageVariationPercent = 10) =>
+		new(minimumDamage, damageVariationPercent);
+
 	/// <summary>Stats with only the named ones set, so a test reads as what it is about.</summary>
 	public static BaseStats Stats(int healthPoints = 0, int attackDamage = 0, int armor = 0, int manaPoints = 0, int agility = 0, int luck = 0, int hitRate = 0) =>
 		new(healthPoints, attackDamage, armor, manaPoints, agility, luck, hitRate);
