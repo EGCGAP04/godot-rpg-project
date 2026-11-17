@@ -550,7 +550,7 @@ A resource is a Godot type, so an engine-free class cannot take one. When plain 
 
 ## Stat Formulas
 
-`Game/Stats/` holds the formulas that turn a combatant's base stats into what a fight uses. Nothing in the game calls them yet: M7's debug panel shows their results, and M8's damage pipeline (accuracy, then evasion, then critical, then armor) is built on them. Expect M8 to change them.
+`Game/Stats/` holds the formulas that turn a combatant's base stats into what a fight uses. The debug overlay's party panel is their only caller so far, and M8's damage pipeline (accuracy, then evasion, then critical, then armor) is built on them. Expect M8 to change them.
 
 | File | What it is |
 |---|---|
