@@ -33,6 +33,10 @@
     <Compile Include="..\..\Game\Combat\CombatTuningValues.cs" Link="GameLogic\CombatTuningValues.cs" />
     <Compile Include="..\..\Game\Combat\AttackResult.cs" Link="GameLogic\AttackResult.cs" />
     <Compile Include="..\..\Game\Combat\DamagePipeline.cs" Link="GameLogic\DamagePipeline.cs" />
+    <Compile Include="..\..\Game\Combat\CombatantId.cs" Link="GameLogic\CombatantId.cs" />
+    <Compile Include="..\..\Game\Combat\CombatantSetup.cs" Link="GameLogic\CombatantSetup.cs" />
+    <Compile Include="..\..\Game\Combat\Combatant.cs" Link="GameLogic\Combatant.cs" />
+    <Compile Include="..\..\Game\Combat\TurnOrder.cs" Link="GameLogic\TurnOrder.cs" />
     <Compile Include="..\..\Game\Stats\ActionKind.cs" Link="GameLogic\ActionKind.cs" />
     <Compile Include="..\..\Game\Stats\BaseStats.cs" Link="GameLogic\BaseStats.cs" />
     <Compile Include="..\..\Game\Stats\DiminishingReturns.cs" Link="GameLogic\DiminishingReturns.cs" />
