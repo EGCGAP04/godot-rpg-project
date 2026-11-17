@@ -38,11 +38,23 @@ godot-rpg-project/
 │   │   ├── demo_newcomer.tres             # placeholder: the one who takes a place in the party
 │   │   └── roster.tres                    # every character the game has, the protagonist named
 │   │
-│   ├── Combat/
-│   │   ├── Combat.cs (+.uid)           # turn state, timers, input, UI
-│   │   ├── CombatResolver.cs (+.uid)   # engine-free, covered by tests
+│   ├── Combat/                         # combat v1, and the engine-free core of v2 beside it
+│   │   ├── AttackResult.cs (+.uid)     # engine-free: one attack worked out
+│   │   ├── Combat.cs (+.uid)           # v1: turn state, timers, input, UI
+│   │   ├── CombatEvent.cs (+.uid)      # engine-free: what happened in a fight
+│   │   ├── CombatOrder.cs (+.uid)      # engine-free: what a member is told to do
+│   │   ├── CombatResolver.cs (+.uid)   # v1: engine-free, covered by tests
 │   │   ├── CombatResultText.cs (+.uid) # engine-free: what the screen says when a fight ends
-│   │   └── combat.tscn                 # overlay scene, not a scene swap
+│   │   ├── CombatRunner.cs (+.uid)     # engine-free: a fight, a round at a time
+│   │   ├── CombatTuningValues.cs (+.uid) # engine-free: combat's tunable numbers
+│   │   ├── Combatant.cs (+.uid)        # engine-free: one side's member while a fight lasts
+│   │   ├── CombatantId.cs (+.uid)      # engine-free: a side and a position
+│   │   ├── CombatantSetup.cs (+.uid)   # engine-free: what a combatant brings into a fight
+│   │   ├── DamagePipeline.cs (+.uid)   # engine-free: accuracy, evasion, critical, armor
+│   │   ├── ICombatRandom.cs (+.uid)    # engine-free: every roll a fight makes
+│   │   ├── SeededCombatRandom.cs (+.uid) # engine-free: the game's dice, from a seed
+│   │   ├── TurnOrder.cs (+.uid)        # engine-free: who acts when in a round
+│   │   └── combat.tscn                 # v1: overlay scene, not a scene swap
 │   │
 │   ├── Debug/                         # debug builds only (#75)
 │   │   ├── Presets/
@@ -215,9 +227,13 @@ godot-rpg-project/
 │       ├── CharacterValuesTests.cs
 │       ├── CombatResolverTests.cs
 │       ├── CombatResultTextTests.cs
+│       ├── CombatRunnerTests.cs    # includes a whole fight of four against three
+│       ├── CombatTuningValuesTests.cs
+│       ├── CombatantTests.cs
 │       ├── ConversationReaderTests.cs
 │       ├── ConversationRulesTests.cs
 │       ├── CycleProgressionTests.cs
+│       ├── DamagePipelineTests.cs
 │       ├── DebugArgumentsTests.cs
 │       ├── DebugPresetTests.cs     # includes the test that checks every preset
 │       ├── DecisionStateTests.cs
@@ -256,6 +272,9 @@ godot-rpg-project/
 │       ├── PartyUsesTests.cs
 │       ├── PoText.cs               # writes small .po tables for tests
 │       ├── ProjectFiles.cs         # finds Game/ and its data files from inside a test run
+│       ├── ScriptedCombatRandom.cs # the dice of the combat tests: rolls written by hand
+│       ├── ScriptedCombatRandomTests.cs
+│       ├── SeededCombatRandomTests.cs
 │       ├── SnapshotShelfTests.cs
 │       ├── StatFormulasTests.cs
 │       ├── StatGrowthValuesTests.cs
@@ -265,9 +284,10 @@ godot-rpg-project/
 │       ├── StatusSheetTests.cs
 │       ├── StatusTextTests.cs
 │       ├── TestRoster.cs           # the characters, curves and party the party's tests use
-│       ├── TestTuning.cs           # the tuning and the stats the formula tests use
+│       ├── TestTuning.cs           # the tuning and the stats the formula and combat tests use
 │       ├── TextTemplateTests.cs
 │       ├── TranslationTableReaderTests.cs
+│       ├── TurnOrderTests.cs
 │       ├── WorldAccessTests.cs
 │       └── WorldUnlocksTests.cs
 │

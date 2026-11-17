@@ -512,7 +512,7 @@ godot --headless --path . --quit-after 800 -- --world fantasy --cycle 2 --do "se
 
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas, the growth of stats and the experience curves in `Stats/`, a character's values and the roster's in `Characters/`, the party's state in `Party/`, what the status screen shows (`Party/StatusSheet.cs`, `UI/StatusText.cs`), the text of a fight's result (`Combat/CombatResultText.cs`), and the rules for conversations (`Dialogue/ConversationRules.cs`), for the menu (`UI/MenuRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas, the growth of stats and the experience curves in `Stats/`, a character's values and the roster's in `Characters/`, the party's state in `Party/`, what the status screen shows (`Party/StatusSheet.cs`, `UI/StatusText.cs`), the text of a fight's result (`Combat/CombatResultText.cs`), the combat core in `Combat/` (its dice, the damage pipeline, the turn order and the runner of a fight), and the rules for conversations (`Dialogue/ConversationRules.cs`), for the menu (`UI/MenuRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
@@ -550,7 +550,7 @@ A resource is a Godot type, so an engine-free class cannot take one. When plain 
 
 ## Stat Formulas
 
-`Game/Stats/` holds the formulas that turn a combatant's base stats into what a fight uses. The debug overlay's party panel is their only caller so far, and M8's damage pipeline (accuracy, then evasion, then critical, then armor) is built on them. Expect M8 to change them.
+`Game/Stats/` holds the formulas that turn a combatant's base stats into what a fight uses. The debug overlay's party panel calls them, and so does the combat core's damage pipeline (accuracy, then evasion, then critical, then armor). See *Combat Core*. Expect M8 to change them.
 
 | File | What it is |
 |---|---|
@@ -565,7 +565,7 @@ The same folder holds how stats grow with the level and what a level costs. See 
 
 ### What they compute
 
-Every result is a percentage written as the design writes it (**90 is 90%**, not 0.9), in `double`, and **never rounded**: rounding belongs to the end of whatever applies the result. Nothing here draws a random number. A formula returns a chance, and deciding whether it comes up needs a source of randomness the tests can control, which M8 adds.
+Every result is a percentage written as the design writes it (**90 is 90%**, not 0.9), in `double`, and **never rounded**: rounding belongs to the end of whatever applies the result. Nothing here draws a random number. A formula returns a chance, and deciding whether it comes up needs a source of randomness the tests can control: the combat core's `ICombatRandom`.
 
 | Method | Formula | Limits |
 |---|---|---|
@@ -579,7 +579,7 @@ Every result is a percentage written as the design writes it (**90 is 90%**, not
 - **The curve needs no clamp.** It is 0 for a stat of 0, half the cap when the stat equals `K`, and approaches the cap without reaching it. `K` is the one knob of each use: the stat value that gives half the cap.
 - **Hit rate above 100 is not lost.** It no longer improves the chance to hit, and feeds critical damage instead.
 - **Evasion applies its cap first and the half after,** so a skill is evaded 25% of the time at most.
-- **Evasion is the chance to evade an action that already landed,** which is why accuracy comes before it in M8's pipeline.
+- **Evasion is the chance to evade an action that already landed,** which is why accuracy comes before it in the damage pipeline.
 - **Escape uses each side's average,** so it does not depend on how many are on a side. Who counts on a side, such as whether a downed ally does, is the caller's to decide.
 
 ### A wrong input fails loudly
@@ -729,3 +729,95 @@ All three come after unpausing for the reason [Fights](#fights) gives: an except
 - **`Restore`** puts one back, and raises the events only for what changed. A character and world the snapshot does not mention go back to where they start, as a flag does in the registry.
 - **A restore is strict and atomic.** It refuses, and changes nothing, a snapshot the party could never hold: members that break a rule, a character outside the roster, the same character and world twice, a level outside the ones the character can have in that world, experience that already pays for the next level, or health points or mana points outside what the level gives. Loading a save made with other characters or other curves is M9's to decide.
 - **`CheckSnapshot` is that check without the restore,** on `PartyState` and on `DecisionState`. Whoever restores both as one step checks both first, as the debug tooling's shelf does: a restore cannot be undone.
+
+## Combat Core
+
+`Game/Combat/` holds the rules of combat v2 as engine-free classes: what a fight rolls, how an attack becomes damage, who acts when, and the runner that plays a fight a round at a time. No scene uses them yet. The fights in the game are still combat v1 (`CombatResolver`, `Combat.cs` and `combat.tscn`, see *Combat Overlay Architecture*), which stays as it is until the screen of v2 replaces it.
+
+| File | What it is |
+|---|---|
+| `ICombatRandom` | Every roll a fight makes: `Percent()`, from 0 up to but not including 100, and `Index(count)`, a pick among a count. |
+| `SeededCombatRandom` | The game's dice, over a `System.Random` built from a seed it reports in `Seed`. |
+| `CombatTuningValues` | Combat's own tunable numbers, as a plain checked record. |
+| `AttackResult`, `DamagePipeline` | One attack worked out: missed, evaded or hit, whether it was critical, and the damage. |
+| `CombatantId`, `CombatantSetup`, `Combatant` | Who is in a fight: a side and a position, what a combatant brings in, and what it has left while the fight lasts. |
+| `TurnOrder` | Who acts when in a round. |
+| `CombatOrder`, `CombatEvent` | What a member is told to do, and what happened, each as a record with one subtype per kind. |
+| `CombatRunner` | The fight. |
+
+### Rolls
+
+**Combat never reaches for a random number any other way than `ICombatRandom`.** A chance comes up when the roll is below it, `random.Percent() < chance`, so a chance of 100 always comes up and one of 0 never does, with no special case.
+
+- **Which rolls are made, and in which order, is part of each class's contract,** written in its remarks. A seed only repeats a fight while they stay the same, and the tests script them.
+- **A stage that is reached always rolls,** even when its chance is 0% or 100%, and a target is rolled for even when one is left. So how many rolls something takes never depends on the stats.
+- **No test is statistical.** A test writes its rolls with `ScriptedCombatRandom`, in the test project: `new ScriptedCombatRandom().Percent(10).Index(0)`. It is strict, so a test that scripts its rolls wrongly fails for that reason: asking for the other kind of roll than the next one, for one more than were written, or for an index that does not fit its count all throw. `Index(1, among: 2)` also requires the count it is asked with, and `RequireUsedUp()` that no roll was left over.
+- **On the class itself, `Percent` and `Index` script a roll.** Only through `ICombatRandom` do they take one, which is why a test that takes rolls by hand holds it in a variable of that type.
+
+### The damage pipeline
+
+`DamagePipeline.Resolve(attacker, defender, kind, random)` reads the two sides' `BaseStats` and changes nobody's health. Its rolls, in order:
+
+| # | Roll | If it comes up | Otherwise |
+|---|---|---|---|
+| 1 | `HitChance(attacker)` | goes on | `Missed`, and nothing else is rolled |
+| 2 | `EvasionRate(defender, kind)` | `Evaded`, and nothing else is rolled | goes on |
+| 3 | `CriticalChance(attacker, kind)` | the hit is critical | it is not |
+| 4 | the variation | | |
+
+A miss takes one roll, an evaded attack two, a hit four. The damage of a hit is:
+
+```
+factor = 1 + variation / 100 * (roll - 50) / 50
+damage = attack damage * factor
+         * critical damage / 100        (only when critical)
+         * (1 - armor reduction / 100)
+damage = max(minimum damage, round down(damage))
+```
+
+- **The variation moves the base damage** from `-variation%` at a roll of 0 up to, but not reaching, `+variation%`. A roll of 50 changes nothing, whatever the variation, which is what a test that is not about it scripts.
+- **It is rounded down once, at the end,** and a hit that got this far does at least the minimum. A miss or an evaded attack does 0, not the minimum.
+- **The arithmetic is in `double`, rounded to nine decimals before rounding down.** A result that should be whole can land a hair under: 90 damage against a 30% reduction is `62.99999999999999`. `decimal` does not solve it here as it does for `StatLine`: a reduction is a ratio, and one like 6.666…% has no exact decimal either, so 15 damage against it would come out as 13.99… and not 14. A test holds each of the two cases.
+
+### Tuning
+
+`CombatTuningValues` is apart from `StatTuningValues`: those tune how a stat becomes a percentage, these what a fight does with it.
+
+| Value | What it is | Accepted | Provisional |
+|---|---|---|---|
+| `MinimumDamage` | The least a hit that lands does | 1 or more | 1 |
+| `DamageVariationPercent` | How far the base damage moves either way | 0 to below 100 | 10 |
+
+A record nobody filled in is all zeros and is refused by the minimum. There is no resource or file for them yet: they arrive with the combat screen. The tests use `TestTuning.Combat()`.
+
+### Combatants and the turn order
+
+A `CombatantSetup` is what comes into a fight: the key of a name, the stats, and the health and mana left, each from 0 to the stats' own maximum. Inside the fight it is a `Combatant` with a `CombatantId`, its side (`Party` or `Enemy`) and its position on that side from 0. A combatant is down at 0 health. Anyone may read one; what changes it is `internal`, for the runner.
+
+`TurnOrder.For` orders everyone standing by agility, highest first. Those who tie are listed the party first and then the enemies, by position, and one is picked among those left until one remains: **a tie of `k` takes `k - 1` index rolls,** over `k`, `k - 1`… down to 2, with ties settled from the highest agility down.
+
+### The runner
+
+`CombatRunner` is passive, like `DialogueRunner`: whoever drives it asks which `Step` it is at and answers that.
+
+| `Step` | It waits for | Continue with |
+|---|---|---|
+| `AwaitingOrders` | An order for each of `MembersToOrder`, the members standing | `SubmitOrders(orders)` |
+| `EnemyAttackPending` | The damage taken from `PendingAttack` | `AnswerEnemyAttack(damageTaken)` |
+| `Finished` | Nothing: `Result` is `Won` or `Lost` | |
+
+A round takes its orders in advance, works out the turn order once, and plays each turn in it:
+
+- **A member** attacks the ordered target. If that target went down earlier in the round, the attack moves to another standing enemy by an index roll.
+- **An enemy** picks its target by an index roll among the standing members, the attack is worked out, and the runner stops.
+- **Whoever went down before its turn loses it.** The fight ends the moment a whole side is down, and nobody after that acts.
+
+**An enemy's attack is a step, not a result.** The runner stops on every one, the ones that miss included, so the stop is always the same. `PendingAttack` carries the attacker, the target and the `AttackResult`, with armor already taken out of its damage. The driver answers with the damage that was taken, and that number comes out of the target's health as it is, without going through armor again. Today the answer is `PendingAttack.Result.Damage`. A fight where the player dodges in real time answers with what got through, and nothing in the runner changes for it.
+
+**What happened is a list, not a step.** `TakeEvents()` hands over the events since the last call, in order, and forgets them: `RoundStarted` with the turn order, `AttackResolved`, `CombatantDowned` and `FightEnded`. The driver takes them whenever the runner stops and shows them at its own pace. On an enemy's attack, `AttackResolved` carries both the pipeline's result and the damage that was answered, which need not match.
+
+**Orders that do not fit are refused** with `ArgumentException`, before anything changes or is rolled: one missing, one for somebody who is down or is not a member, two for the same member, a kind the fight does not know, and an attack on someone who is not an enemy or is already down. Calling a method at the wrong step throws `InvalidOperationException`.
+
+- **A new action is a new record under `CombatOrder`,** and a new kind of event one under `CombatEvent`, so no signature changes for it.
+- **The party has from one to four members and there is at least one enemy,** with someone standing on each side. How many enemies fit on screen is not the runner's to decide.
+- **What a fight leaves behind is not here.** Leaving with 1 health and 1 mana, and experience only for those standing, happen when the fight's result goes back to the party.
