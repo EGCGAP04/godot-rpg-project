@@ -8,7 +8,7 @@ body:
     attributes:
       label: Description
       description: What is missing, wrong or out of date, and where?
-      placeholder: E.g. The README's Project Structure tree does not list the new World/ scripts...
+      placeholder: E.g. The tree in docs/PROJECT_STRUCTURE.md does not list the new World/ scripts...
     validations:
       required: true
 
@@ -18,7 +18,7 @@ body:
       label: Sub-tasks checklist
       description: Break the work down into concrete steps (optional, can be completed or adjusted later)
       placeholder: |
-        - [ ] Update the Project Structure tree
+        - [ ] Update the tree in docs/PROJECT_STRUCTURE.md
         - [ ] Check it against git ls-files in both directions
         - [ ] Update CHANGELOG.md
       value: |
