@@ -91,6 +91,29 @@ public class ScriptedCombatRandomTests
 		Assert.Equal(2, random.Index(3));
 	}
 
+	[Fact]
+	public void AScriptedIndex_ThatNamesItsCount_IsGivenOnlyForThatCount()
+	{
+		var scripted = new ScriptedCombatRandom().Index(1, among: 3);
+		ICombatRandom random = scripted;
+
+		var tooMany = Assert.Throws<InvalidOperationException>(() => random.Index(4));
+		Assert.Throws<InvalidOperationException>(() => random.Index(2));
+
+		Assert.Contains("Index(1, among: 3)", tooMany.Message);
+		Assert.Equal(1, scripted.Remaining);
+		Assert.Equal(1, random.Index(3));
+	}
+
+	[Theory]
+	[InlineData(2, 2)]
+	[InlineData(2, 1)]
+	[InlineData(0, 0)]
+	public void AScriptedIndex_CannotNameACountItDoesNotFit(int roll, int among)
+	{
+		Assert.Throws<ArgumentOutOfRangeException>(() => new ScriptedCombatRandom().Index(roll, among));
+	}
+
 	[Theory]
 	[InlineData(0)]
 	[InlineData(-1)]

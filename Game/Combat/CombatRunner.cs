@@ -1,0 +1,358 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+/// <summary>What a running fight is waiting for.</summary>
+public enum CombatStep
+{
+	/// <summary>
+	/// An order for each of <see cref="CombatRunner.MembersToOrder"/>. Continue with
+	/// <see cref="CombatRunner.SubmitOrders"/>.
+	/// </summary>
+	AwaitingOrders,
+
+	/// <summary>
+	/// The damage taken from the attack in <see cref="CombatRunner.PendingAttack"/>.
+	/// Continue with <see cref="CombatRunner.AnswerEnemyAttack"/>.
+	/// </summary>
+	EnemyAttackPending,
+
+	/// <summary>Nothing: the fight is over, and <see cref="CombatRunner.Result"/> says how.</summary>
+	Finished
+}
+
+/// <summary>How a fight stands.</summary>
+public enum CombatResult
+{
+	Ongoing,
+
+	/// <summary>Every enemy is down.</summary>
+	Won,
+
+	/// <summary>The whole party is down.</summary>
+	Lost
+}
+
+/// <summary>
+/// An enemy's attack, worked out and not applied yet: who attacks, whom, and what the
+/// damage pipeline answered, with armor already taken out of the damage.
+/// </summary>
+public sealed record PendingEnemyAttack(CombatantId Attacker, CombatantId Target, AttackResult Result);
+
+/// <summary>
+/// Runs one fight, a round at a time: it takes an order for every member, works the
+/// round out in turn order, and stops whenever it needs something from outside.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Engine-free and passive, like <c>DialogueRunner</c>. Whoever drives it, the combat
+/// screen or a test, asks which <see cref="Step"/> it is at and answers that. It never
+/// waits, draws or reads input itself. What happened in between is in
+/// <see cref="TakeEvents"/>, to be shown at the driver's own pace.
+/// </para>
+/// <para>
+/// <b>An enemy's attack is a step, not a result.</b> The runner picks the target, works
+/// the attack out and stops, on every enemy attack, the ones that miss included, so the
+/// stop is always the same. The driver answers with the damage that was taken. Today that
+/// is the damage in <see cref="PendingAttack"/>; a fight where the player dodges in real
+/// time answers with what got through instead. The answer is taken out of the target's
+/// health as it is: it does not go through armor again.
+/// </para>
+/// <para>
+/// <b>The rolls of a round, in order,</b> on top of the damage pipeline's own:
+/// </para>
+/// <list type="bullet">
+/// <item>When the round starts, <see cref="TurnOrder"/>'s rolls for the ties.</item>
+/// <item>
+/// On a member's attack, an index roll among the standing enemies, only if the ordered
+/// target went down earlier in the round.
+/// </item>
+/// <item>
+/// On an enemy's attack, an index roll among the standing members, always, even when one
+/// is left.
+/// </item>
+/// </list>
+/// <para>
+/// Whoever goes down before its turn loses it. The fight ends the moment a whole side is
+/// down, and nobody after that acts.
+/// </para>
+/// </remarks>
+public sealed class CombatRunner
+{
+	private static readonly IReadOnlyList<CombatantId> NoOne = Array.Empty<CombatantId>();
+
+	private readonly List<Combatant> _party;
+	private readonly List<Combatant> _enemies;
+	private readonly DamagePipeline _pipeline;
+	private readonly ICombatRandom _random;
+	private readonly List<CombatEvent> _events = new();
+
+	// The round being worked out: its orders, who acts when, and whose turn it is.
+	private Dictionary<CombatantId, CombatOrder> _orders = new();
+	private IReadOnlyList<Combatant> _turns = Array.Empty<Combatant>();
+	private int _turn;
+
+	private CombatRunner(List<Combatant> party, List<Combatant> enemies, DamagePipeline pipeline, ICombatRandom random)
+	{
+		_party = party;
+		_enemies = enemies;
+		_pipeline = pipeline;
+		_random = random;
+	}
+
+	/// <summary>What the fight is waiting for.</summary>
+	public CombatStep Step { get; private set; } = CombatStep.AwaitingOrders;
+
+	/// <summary>How the fight stands. <see cref="CombatResult.Ongoing"/> until <see cref="Step"/> is <see cref="CombatStep.Finished"/>.</summary>
+	public CombatResult Result { get; private set; } = CombatResult.Ongoing;
+
+	/// <summary>The round being ordered or worked out, from 1. It stays at the last one when the fight ends.</summary>
+	public int Round { get; private set; } = 1;
+
+	/// <summary>The party, in the order it was given, downed members included.</summary>
+	public IReadOnlyList<Combatant> Party => _party;
+
+	/// <summary>The enemies, in the order they were given, downed ones included.</summary>
+	public IReadOnlyList<Combatant> Enemies => _enemies;
+
+	/// <summary>
+	/// The members who need an order: those standing, in the party's order. Empty unless
+	/// <see cref="Step"/> is <see cref="CombatStep.AwaitingOrders"/>.
+	/// </summary>
+	public IReadOnlyList<CombatantId> MembersToOrder =>
+		Step == CombatStep.AwaitingOrders ? Standing(_party).Select(member => member.Id).ToArray() : NoOne;
+
+	/// <summary>The enemy attack waiting for its answer. Null unless <see cref="Step"/> is <see cref="CombatStep.EnemyAttackPending"/>.</summary>
+	public PendingEnemyAttack PendingAttack { get; private set; }
+
+	/// <summary>
+	/// Sets a fight up and waits for the first round's orders. Nothing is rolled yet.
+	/// </summary>
+	/// <remarks>
+	/// The party has from one member to <see cref="PartyState.MaximumSize"/>, there is at
+	/// least one enemy, and each side has someone standing. How many enemies fit is not
+	/// decided here.
+	/// </remarks>
+	public static CombatRunner Start(
+		IReadOnlyList<CombatantSetup> party,
+		IReadOnlyList<CombatantSetup> enemies,
+		StatFormulas formulas,
+		CombatTuningValues tuning,
+		ICombatRandom random)
+	{
+		ArgumentNullException.ThrowIfNull(party);
+		ArgumentNullException.ThrowIfNull(enemies);
+		ArgumentNullException.ThrowIfNull(random);
+
+		var pipeline = new DamagePipeline(formulas, tuning);
+
+		if (party.Count < 1 || party.Count > PartyState.MaximumSize)
+			throw new ArgumentException($"A fight needs from 1 to {PartyState.MaximumSize} party members, and {party.Count} were given.", nameof(party));
+
+		if (enemies.Count < 1)
+			throw new ArgumentException("A fight needs at least one enemy.", nameof(enemies));
+
+		List<Combatant> members = Enter(party, CombatSide.Party, nameof(party));
+		List<Combatant> foes = Enter(enemies, CombatSide.Enemy, nameof(enemies));
+
+		if (members.All(member => member.IsDown))
+			throw new ArgumentException("Nobody in the party is standing.", nameof(party));
+
+		if (foes.All(foe => foe.IsDown))
+			throw new ArgumentException("No enemy is standing.", nameof(enemies));
+
+		return new CombatRunner(members, foes, pipeline, random);
+	}
+
+	/// <summary>
+	/// Takes the round's orders, one for each of <see cref="MembersToOrder"/>, and works
+	/// the round out up to the next stop.
+	/// </summary>
+	/// <remarks>
+	/// Orders that do not fit are refused with <see cref="ArgumentException"/> before
+	/// anything changes or is rolled: one missing, one for somebody who is down or is not
+	/// a member, two for the same member, a kind of order the fight does not know, and an
+	/// attack whose target is not an enemy or is already down.
+	/// </remarks>
+	public void SubmitOrders(IEnumerable<CombatOrder> orders)
+	{
+		ArgumentNullException.ThrowIfNull(orders);
+		Require(CombatStep.AwaitingOrders, "take orders");
+
+		Dictionary<CombatantId, CombatOrder> checkedOrders = Check(orders);
+
+		_orders = checkedOrders;
+		_turns = TurnOrder.For(_party.Concat(_enemies), _random);
+		_turn = 0;
+		_events.Add(new RoundStarted(Round, _turns.Select(combatant => combatant.Id).ToArray()));
+
+		Continue();
+	}
+
+	/// <summary>
+	/// Takes <paramref name="damageTaken"/> out of the health of
+	/// <see cref="PendingAttack"/>'s target, as it is, and goes on to the next stop.
+	/// </summary>
+	public void AnswerEnemyAttack(int damageTaken)
+	{
+		Require(CombatStep.EnemyAttackPending, "take the answer to an enemy attack");
+
+		if (damageTaken < 0)
+			throw new ArgumentOutOfRangeException(nameof(damageTaken), damageTaken, "The damage taken cannot be negative.");
+
+		PendingEnemyAttack attack = PendingAttack;
+		PendingAttack = null;
+
+		Apply(attack.Attacker, Find(attack.Target), attack.Result, damageTaken);
+
+		if (Step == CombatStep.Finished)
+			return;
+
+		_turn++;
+		Continue();
+	}
+
+	/// <summary>Hands over what happened since the last call, in order, and forgets it.</summary>
+	public IReadOnlyList<CombatEvent> TakeEvents()
+	{
+		CombatEvent[] taken = _events.ToArray();
+		_events.Clear();
+		return taken;
+	}
+
+	private static List<Combatant> Enter(IReadOnlyList<CombatantSetup> setups, CombatSide side, string name)
+	{
+		var combatants = new List<Combatant>();
+
+		for (int position = 0; position < setups.Count; position++)
+		{
+			if (setups[position] == null)
+				throw new ArgumentException($"The combatant at position {position} is missing.", name);
+
+			combatants.Add(new Combatant(new CombatantId(side, position), setups[position]));
+		}
+
+		return combatants;
+	}
+
+	private static List<Combatant> Standing(List<Combatant> side) =>
+		side.Where(combatant => !combatant.IsDown).ToList();
+
+	private void Require(CombatStep step, string action)
+	{
+		if (Step != step)
+			throw new InvalidOperationException($"The fight cannot {action} now: it is at {Step}.");
+	}
+
+	private Dictionary<CombatantId, CombatOrder> Check(IEnumerable<CombatOrder> orders)
+	{
+		var checkedOrders = new Dictionary<CombatantId, CombatOrder>();
+
+		foreach (CombatOrder order in orders)
+		{
+			if (order == null)
+				throw new ArgumentException("An order is missing.", nameof(orders));
+
+			if (order.Actor.Side != CombatSide.Party || !Exists(order.Actor))
+				throw new ArgumentException($"An order is for {order.Actor}, who is not a party member in this fight.", nameof(orders));
+
+			if (Find(order.Actor).IsDown)
+				throw new ArgumentException($"An order is for {order.Actor}, who is down.", nameof(orders));
+
+			if (order is not AttackOrder attack)
+				throw new ArgumentException($"The fight does not know the kind of order given to {order.Actor}, {order.GetType().Name}.", nameof(orders));
+
+			if (attack.Target.Side != CombatSide.Enemy || !Exists(attack.Target))
+				throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is not an enemy in this fight.", nameof(orders));
+
+			if (Find(attack.Target).IsDown)
+				throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is already down.", nameof(orders));
+
+			if (!checkedOrders.TryAdd(order.Actor, order))
+				throw new ArgumentException($"{order.Actor} was given two orders.", nameof(orders));
+		}
+
+		foreach (Combatant member in Standing(_party))
+		{
+			if (!checkedOrders.ContainsKey(member.Id))
+				throw new ArgumentException($"{member.Id} was given no order.", nameof(orders));
+		}
+
+		return checkedOrders;
+	}
+
+	/// <summary>Plays turns from the current one until the fight needs something from outside.</summary>
+	private void Continue()
+	{
+		while (_turn < _turns.Count)
+		{
+			Combatant actor = _turns[_turn];
+
+			if (actor.IsDown)
+			{
+				_turn++;
+				continue;
+			}
+
+			if (actor.Id.Side == CombatSide.Enemy)
+			{
+				Combatant victim = PickStanding(_party);
+				AttackResult worked = _pipeline.Resolve(actor.Stats, victim.Stats, ActionKind.Attack, _random);
+
+				PendingAttack = new PendingEnemyAttack(actor.Id, victim.Id, worked);
+				Step = CombatStep.EnemyAttackPending;
+				return;
+			}
+
+			var order = (AttackOrder)_orders[actor.Id];
+			Combatant target = Find(order.Target);
+
+			if (target.IsDown)
+				target = PickStanding(_enemies);
+
+			AttackResult result = _pipeline.Resolve(actor.Stats, target.Stats, ActionKind.Attack, _random);
+			Apply(actor.Id, target, result, result.Damage);
+
+			if (Step == CombatStep.Finished)
+				return;
+
+			_turn++;
+		}
+
+		Round++;
+		Step = CombatStep.AwaitingOrders;
+	}
+
+	/// <summary>One of the side's standing combatants, by a roll that is made even when one is left.</summary>
+	private Combatant PickStanding(List<Combatant> side)
+	{
+		List<Combatant> standing = Standing(side);
+		return standing[_random.Index(standing.Count)];
+	}
+
+	private void Apply(CombatantId attacker, Combatant target, AttackResult result, int damageTaken)
+	{
+		target.TakeDamage(damageTaken);
+		_events.Add(new AttackResolved(attacker, target.Id, result, damageTaken));
+
+		if (!target.IsDown)
+			return;
+
+		_events.Add(new CombatantDowned(target.Id));
+
+		List<Combatant> side = target.Id.Side == CombatSide.Party ? _party : _enemies;
+
+		if (side.Any(combatant => !combatant.IsDown))
+			return;
+
+		Result = target.Id.Side == CombatSide.Party ? CombatResult.Lost : CombatResult.Won;
+		Step = CombatStep.Finished;
+		_events.Add(new FightEnded(Result));
+	}
+
+	private bool Exists(CombatantId id) =>
+		id.Position < (id.Side == CombatSide.Party ? _party : _enemies).Count;
+
+	private Combatant Find(CombatantId id) =>
+		(id.Side == CombatSide.Party ? _party : _enemies)[id.Position];
+}

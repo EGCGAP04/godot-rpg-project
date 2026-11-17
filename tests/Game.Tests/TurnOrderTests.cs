@@ -67,7 +67,7 @@ public class TurnOrderTests
 		// Listed as Party 0, Party 1, Enemy 0, Enemy 1. Index 3 of four is Enemy 1; index 0
 		// of the three left is Party 0; index 1 of the two left is Enemy 0; Party 1 is last.
 		CombatantId[] order = Order(
-			new ScriptedCombatRandom().Index(3).Index(0).Index(1),
+			new ScriptedCombatRandom().Index(3, among: 4).Index(0, among: 3).Index(1, among: 2),
 			Enemy(1, agility: 7), Member(1, agility: 7), Enemy(0, agility: 7), Member(0, agility: 7));
 
 		Assert.Equal(new[] { CombatantId.Enemy(1), CombatantId.Party(0), CombatantId.Enemy(0), CombatantId.Party(1) }, order);
