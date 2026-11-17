@@ -223,7 +223,7 @@ public partial class Main : Node2D
 		{
 			case CombatRequestOutcome.Start:
 				_pendingEnemy = enemy;
-				CallDeferred(MethodName.StartCombat, enemy.Data);
+				CallDeferred(MethodName.StartCombat, FirstOf(enemy));
 				break;
 
 			// The enemy is still touching the player, and its area will not report that
@@ -233,6 +233,10 @@ public partial class Main : Node2D
 				break;
 		}
 	}
+
+	// Combat v1 is one against one, so until the screen of v2 replaces it the party
+	// fights the first enemy of the group and the others are not there.
+	private static EnemyData FirstOf(Enemy enemy) => enemy.Encounter.Enemies[0];
 
 	private void StartCombat(EnemyData enemyData)
 	{
@@ -247,8 +251,8 @@ public partial class Main : Node2D
 	private void OnCombatFinished(bool playerWon)
 	{
 		// Read now: the enemy is forgotten below, and may be freed.
-		string enemyId = _pendingEnemy.Data.Id;
-		long experience = _pendingEnemy.Data.Experience;
+		string enemyId = FirstOf(_pendingEnemy).Id;
+		long experience = FirstOf(_pendingEnemy).Experience;
 
 		if (playerWon)
 		{
@@ -367,7 +371,7 @@ public partial class Main : Node2D
 		if (queued != null && IsInstanceValid(queued))
 		{
 			_pendingEnemy = queued;
-			CallDeferred(MethodName.StartCombat, queued.Data);
+			CallDeferred(MethodName.StartCombat, FirstOf(queued));
 		}
 	}
 

@@ -8,3 +8,15 @@ msgstr "Enemy"
 
 msgid "enemy.strong"
 msgstr "Strong Enemy"
+
+msgid "enemy.demo_clumsy"
+msgstr "Clumsy Enemy"
+
+msgid "enemy.demo_armored"
+msgstr "Armored Enemy"
+
+msgid "enemy.demo_nimble"
+msgstr "Nimble Enemy"
+
+msgid "enemy.demo_lucky"
+msgstr "Lucky Enemy"

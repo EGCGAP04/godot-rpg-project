@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" format=3]
+
+[ext_resource type="Script" path="res://Enemy/EncounterData.cs" id="1_encounter"]
+[ext_resource type="Script" uid="uid://vwkaouolbgoh" path="res://Enemy/EnemyData.cs" id="2_enemy"]
+[ext_resource type="Resource" uid="uid://dp32vd5ebymxt" path="res://Enemy/strong_enemy.tres" id="3_strong"]
+
+[resource]
+script = ExtResource("1_encounter")
+Id = "demo_wall"
+Enemies = Array[ExtResource("2_enemy")]([ExtResource("3_strong"), ExtResource("3_strong")])

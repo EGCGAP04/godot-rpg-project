@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" uid="uid://vwkaouolbgoh" path="res://Enemy/EnemyData.cs" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+Id = "demo_clumsy"
+NameKey = "enemy.demo_clumsy"
+HealthPoints = 8
+AttackDamage = 3
+Agility = 2
+HitRate = 35
+Experience = 4
+metadata/_custom_type_script = "uid://vwkaouolbgoh"

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EncounterData" format=3]
+
+[ext_resource type="Script" path="res://Enemy/EncounterData.cs" id="1_encounter"]
+[ext_resource type="Script" uid="uid://vwkaouolbgoh" path="res://Enemy/EnemyData.cs" id="2_enemy"]
+[ext_resource type="Resource" path="res://Enemy/demo_armored_enemy.tres" id="3_demo_armored"]
+[ext_resource type="Resource" path="res://Enemy/demo_nimble_enemy.tres" id="4_demo_nimble"]
+[ext_resource type="Resource" path="res://Enemy/demo_lucky_enemy.tres" id="5_demo_lucky"]
+
+[resource]
+script = ExtResource("1_encounter")
+Id = "demo_showcase"
+Enemies = Array[ExtResource("2_enemy")]([ExtResource("3_demo_armored"), ExtResource("4_demo_nimble"), ExtResource("5_demo_lucky")])

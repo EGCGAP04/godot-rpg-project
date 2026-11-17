@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" uid="uid://vwkaouolbgoh" path="res://Enemy/EnemyData.cs" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+Id = "demo_armored"
+NameKey = "enemy.demo_armored"
+HealthPoints = 12
+AttackDamage = 2
+Armor = 100
+Agility = 1
+HitRate = 90
+Experience = 8
+metadata/_custom_type_script = "uid://vwkaouolbgoh"
