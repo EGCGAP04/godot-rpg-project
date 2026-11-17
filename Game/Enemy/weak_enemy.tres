@@ -6,7 +6,8 @@
 script = ExtResource("1_jwrdx")
 Id = "weak"
 NameKey = "enemy.weak"
-MaxHp = 10
-AttackPower = 3
+HealthPoints = 10
+AttackDamage = 3
+HitRate = 100
 Experience = 5
 metadata/_custom_type_script = "uid://vwkaouolbgoh"

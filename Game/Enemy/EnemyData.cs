@@ -1,14 +1,22 @@
 using Godot;
 
 /// <summary>
-/// Stats for a single enemy type, authored as a .tres Resource so new enemies
-/// are created by duplicating a file instead of editing code or scene properties.
+/// One kind of enemy, authored as a .tres Resource so a new enemy is a new file instead
+/// of new code or properties typed into a scene: its id, the key of its name, its seven
+/// base stats and the experience it gives.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Every default is empty or zero, never a real enemy's value. The editor leaves out of a
 /// <c>.tres</c> each property that equals its default, so when these were the weak
-/// enemy's stats, saving <c>weak_enemy.tres</c> dropped them from the file. Empty
-/// defaults also make a new enemy that is missing a value fail a test.
+/// enemy's stats, saving <c>weak_enemy.tres</c> dropped them from the file. So a stat
+/// missing from a file is a 0, as in a character's.
+/// </para>
+/// <para>
+/// The stats are fixed: an enemy has no level. The rules of a fight never read this
+/// resource: <see cref="ToValues"/> hands them an <see cref="EnemyValues"/>, which is
+/// also where an enemy with no health or no experience is refused.
+/// </para>
 /// </remarks>
 [GlobalClass]
 public partial class EnemyData : Resource
@@ -30,10 +38,26 @@ public partial class EnemyData : Resource
 	public string NameKey { get; set; } = "";
 
 	[Export]
-	public int MaxHp { get; set; }
+	public int HealthPoints { get; set; }
 
 	[Export]
-	public int AttackPower { get; set; }
+	public int AttackDamage { get; set; }
+
+	[Export]
+	public int Armor { get; set; }
+
+	[Export]
+	public int ManaPoints { get; set; }
+
+	[Export]
+	public int Agility { get; set; }
+
+	[Export]
+	public int Luck { get; set; }
+
+	/// <summary>Accuracy, where 1 point is 1%. An enemy that leaves it at 0 hits at the floor.</summary>
+	[Export]
+	public int HitRate { get; set; }
 
 	/// <summary>
 	/// The experience a win over this enemy gives. Every enemy gives at least 1: the
@@ -43,4 +67,18 @@ public partial class EnemyData : Resource
 	/// </summary>
 	[Export]
 	public long Experience { get; set; }
+
+	/// <summary>This enemy as the plain values the rules of a fight read.</summary>
+	public EnemyValues ToValues() => new(
+		id: Id,
+		nameKey: NameKey,
+		stats: new BaseStats(
+			healthPoints: HealthPoints,
+			attackDamage: AttackDamage,
+			armor: Armor,
+			manaPoints: ManaPoints,
+			agility: Agility,
+			luck: Luck,
+			hitRate: HitRate),
+		experience: Experience);
 }

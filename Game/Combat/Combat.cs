@@ -71,8 +71,8 @@ public partial class Combat : CanvasLayer
 		_resolver = new CombatResolver(
 			_party.ProgressOf(_fighter.Id, _world).HealthPoints,
 			stats.AttackDamage,
-			EnemyData.MaxHp,
-			EnemyData.AttackPower);
+			EnemyData.HealthPoints,
+			EnemyData.AttackDamage);
 
 		_enemyHpLabel = GetNode<Label>("EnemyHpLabel");
 		_playerHpLabel = GetNode<Label>("PlayerHpLabel");
@@ -80,7 +80,7 @@ public partial class Combat : CanvasLayer
 		_attackButton = GetNode<Button>("AttackButton");
 		_fade = GetNode<ScreenFade>("ScreenFade");
 
-		GD.Print($"Combat started. {_fighter.Id} {_resolver.PlayerHp}/{_maxHp} HP in the {_world} world vs {EnemyData.NameKey} {_resolver.EnemyHp}/{EnemyData.MaxHp} HP");
+		GD.Print($"Combat started. {_fighter.Id} {_resolver.PlayerHp}/{_maxHp} HP in the {_world} world vs {EnemyData.NameKey} {_resolver.EnemyHp}/{EnemyData.HealthPoints} HP");
 		UpdateHpLabels();
 
 		// The overlay starts fully black so the world map is never cut away
@@ -125,7 +125,7 @@ public partial class Combat : CanvasLayer
 	private void PlayerAttack()
 	{
 		CombatResolver.Outcome outcome = _resolver.PlayerAttack();
-		GD.Print($"Player attacks for {_resolver.PlayerAttackPower}. {EnemyData.NameKey} HP: {_resolver.EnemyHp}/{EnemyData.MaxHp}");
+		GD.Print($"Player attacks for {_resolver.PlayerAttackPower}. {EnemyData.NameKey} HP: {_resolver.EnemyHp}/{EnemyData.HealthPoints}");
 		UpdateHpLabels();
 
 		if (outcome == CombatResolver.Outcome.PlayerWon)
@@ -216,7 +216,7 @@ public partial class Combat : CanvasLayer
 	// combat.tscn: Godot would otherwise look the finished text up as a key again.
 	private void UpdateHpLabels()
 	{
-		_enemyHpLabel.Text = HpText(Tr(EnemyData.NameKey), _resolver.EnemyHp, EnemyData.MaxHp);
+		_enemyHpLabel.Text = HpText(Tr(EnemyData.NameKey), _resolver.EnemyHp, EnemyData.HealthPoints);
 		_playerHpLabel.Text = HpText(Tr(_fighter.NameKey), _resolver.PlayerHp, _maxHp);
 	}
 
