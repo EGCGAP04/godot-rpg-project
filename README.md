@@ -1,6 +1,6 @@
 # godot-rpg-project
 
-![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 ![Godot](https://img.shields.io/badge/Godot-4.6.2-478cbf?logo=godotengine&logoColor=white)
 [![Release](https://img.shields.io/github/v/release/EGCGAP04/godot-rpg-project?logo=github&color=success)](https://github.com/EGCGAP04/godot-rpg-project/releases/latest)
 
@@ -97,4 +97,14 @@ Please don't report a vulnerability in a public Issue: [SECURITY.md](SECURITY.md
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is **source-available, not open source**. It is licensed under the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) — see the [LICENSE](LICENSE) file for the full terms.
+
+- **Noncommercial use is allowed:** you may read, run, modify and share it for any noncommercial purpose, such as personal use, study or research.
+- **Attribution is required:** every copy you pass on, changed or not, must include the license's terms and the `Required Notice` line at the top of the [LICENSE](LICENSE) file.
+- **Commercial use needs the maintainer's permission.** To ask for it, write to <ea.aguirrepolenta@gmail.com>.
+
+Everything published before this change, the versions up to `v0.4.0` included, was released under the MIT License and stays available under it.
+
+### Contributing
+
+By opening a pull request, you agree that your contribution is licensed under the same terms, and you grant the maintainer the right to license it under other terms as well. That keeps the maintainer able to give permission for the whole project.
