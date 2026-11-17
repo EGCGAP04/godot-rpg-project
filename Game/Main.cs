@@ -76,7 +76,15 @@ public partial class Main : Node2D
 	{
 		GameState.Instance.WorldChanged += OnWorldChanged;
 		GameState.Instance.JumpRequested += OnJumpRequested;
-		_fade.FadeTo(ScreenFade.Clear, StartOpeningConversation);
+
+		// The first fade in is a transition like any other. Left unmarked, the menu could
+		// open over it, and the opening conversation, refused with the menu open, was lost.
+		_transitioning = true;
+		_fade.FadeTo(ScreenFade.Clear, () =>
+		{
+			_transitioning = false;
+			StartOpeningConversation();
+		});
 	}
 
 	// --- World transitions ---
@@ -296,9 +304,9 @@ public partial class Main : Node2D
 	}
 
 	// Runs from a fade's callback, like clearing _transitioning, so the conversation never
-	// starts before the world is visible. A killed tween skips its callback; nothing else
-	// fades this instance while a transition is under way, but a third caller of the fade
-	// would have to account for it.
+	// starts before the world is visible. A killed tween skips its callback, so every fade
+	// with one runs with _transitioning set, which ConversationRules.CanTransition refuses
+	// to fade over.
 	private void StartOpeningConversation()
 	{
 		if (_world.OpeningConversation.Length > 0)
