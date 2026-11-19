@@ -122,6 +122,14 @@ public class EncounterDataTests
 		return found;
 	}
 
+	/// <summary>
+	/// Whether a scene connects a node's <c>CombatTriggered</c> to the scene's root, the
+	/// world, which is what turns a touch into a fight. An enemy added in the editor has no
+	/// connection until one is made by hand, and without it touching the enemy does nothing.
+	/// </summary>
+	public static bool StartsAFight(string scene, string node) =>
+		Regex.IsMatch(scene, $@"^\[connection signal=""CombatTriggered"" from=""{Regex.Escape(node)}"" to=""\."" method=""OnCombatTriggered""\]$", RegexOptions.Multiline);
+
 	[Fact]
 	public void TheResource_ExportsTheValuesThisTestKnows()
 	{
@@ -166,7 +174,7 @@ public class EncounterDataTests
 	}
 
 	[Fact]
-	public void EveryEnemyOnAMap_CarriesAnEncounter()
+	public void EveryEnemyOnAMap_CarriesAnEncounter_AndStartsAFight()
 	{
 		Dictionary<string, string> encounters = EncounterFiles();
 		var onMaps = new List<string>();
@@ -180,12 +188,16 @@ public class EncounterDataTests
 
 				if (!hasEncounter)
 					problems.Add($"{file}: the enemy '{node}' carries no encounter of the game.");
+
+				if (!StartsAFight(scene, node))
+					problems.Add($"{file}: the enemy '{node}' has its CombatTriggered connected to nothing, so touching it starts no fight. Connect it to the world's OnCombatTriggered.");
 			}
 		}
 
-		// The Fantasy placeholder's two, so a broken search cannot pass as maps with no enemies.
+		// The Fantasy placeholder's three, so a broken search cannot pass as maps with no enemies.
 		Assert.Contains("World/fantasy_world.tscn:Enemy", onMaps);
 		Assert.Contains("World/fantasy_world.tscn:StrongEnemy", onMaps);
+		Assert.Contains("World/fantasy_world.tscn:ShowcaseEnemy", onMaps);
 		Assert.Empty(problems);
 	}
 
@@ -255,5 +267,20 @@ public class EncounterDataTests
 		List<(string Node, bool HasEncounter)> found = EnemiesOnAMap(scene, new[] { "Enemy/Encounters/demo_pair.tres" });
 
 		Assert.Equal(new[] { ("With", true), ("Without", false), ("WithAnEnemy", false) }, found);
+	}
+
+	[Fact]
+	public void StartsAFight_FindsTheConnectionOfThatNodeOnly()
+	{
+		string scene = "[node name=\"World\" type=\"Node2D\"]\n\n"
+			+ "[connection signal=\"CombatTriggered\" from=\"Enemy\" to=\".\" method=\"OnCombatTriggered\"]\n"
+			+ "[connection signal=\"ExitTriggered\" from=\"Exit\" to=\".\" method=\"OnExitTriggered\"]\n"
+			+ "[connection signal=\"CombatTriggered\" from=\"Elsewhere\" to=\"Other\" method=\"OnCombatTriggered\"]\n";
+
+		Assert.True(StartsAFight(scene, "Enemy"));
+		Assert.False(StartsAFight(scene, "Exit"));
+		Assert.False(StartsAFight(scene, "Elsewhere"));
+		Assert.False(StartsAFight(scene, "Enem"));
+		Assert.False(StartsAFight(scene, "Missing"));
 	}
 }
