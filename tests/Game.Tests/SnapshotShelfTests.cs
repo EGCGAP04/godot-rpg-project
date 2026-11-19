@@ -90,7 +90,7 @@ public class SnapshotShelfTests
 
 		state.SetFlag("test.tonight", false);
 		state.AddToCounter("test.visits", 4);
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
 		state.SetFlag("test.ever", true);
 
 		shelf.Restore(state, Party(), "saved");
@@ -152,7 +152,7 @@ public class SnapshotShelfTests
 		shelf.Take(state, withAbe, Start, "saved");
 
 		state.SetFlag("test.tonight", true);
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
 		PartyState withoutAbe = TestRoster.Party("bea");
 		withoutAbe.Recruit("bea");
 

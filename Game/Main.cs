@@ -250,9 +250,10 @@ public partial class Main : Node2D
 
 	private void OnCombatFinished(bool playerWon)
 	{
-		// Read now: the enemy is forgotten below, and may be freed.
-		string enemyId = FirstOf(_pendingEnemy).Id;
-		long experience = FirstOf(_pendingEnemy).Experience;
+		// Read now: the enemy is forgotten below, and may be freed. v1 fought only the
+		// first enemy of the group, so the history says so.
+		var fought = new EncounterValues(_pendingEnemy.Encounter.Id, new[] { FirstOf(_pendingEnemy).ToValues() });
+		long experience = fought.Experience;
 
 		if (playerWon)
 		{
@@ -287,7 +288,7 @@ public partial class Main : Node2D
 		// Combat v1 heals whoever fought after every fight, won or lost.
 		party.FullHeal(party.Roster.Protagonist.Id, world);
 
-		DecisionRegistry.Instance.State.RecordCombat(world, GameState.Instance.CurrentCycle, enemyId, playerWon);
+		DecisionRegistry.Instance.State.RecordCombat(world, GameState.Instance.CurrentCycle, fought, playerWon ? FightOutcome.Won : FightOutcome.Lost);
 	}
 
 	private void StartCombatCooldown()

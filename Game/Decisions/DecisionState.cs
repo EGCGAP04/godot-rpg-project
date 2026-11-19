@@ -112,14 +112,14 @@ public sealed class DecisionState : IFlagStore
 	/// <see cref="Wins"/> or <see cref="Losses"/>. The two always go together, so the
 	/// history and the totals never disagree.
 	/// </summary>
-	/// <param name="enemyId">The enemy's <c>Id</c>. It cannot be empty.</param>
-	public void RecordCombat(World world, int cycle, string enemyId, bool playerWon)
+	/// <param name="encounter">The group the fight was against. Its id and its enemies' ids go into the history.</param>
+	/// <exception cref="ArgumentOutOfRangeException">The outcome is neither won nor lost. Nothing is recorded then.</exception>
+	public void RecordCombat(World world, int cycle, EncounterValues encounter, FightOutcome outcome)
 	{
-		if (string.IsNullOrEmpty(enemyId))
-			throw new ArgumentException("a fight needs the id of the enemy it was against", nameof(enemyId));
+		ArgumentNullException.ThrowIfNull(encounter);
 
-		_combats.Add(new CombatRecord(world, cycle, enemyId, playerWon));
-		AddToCounter(playerWon ? Wins : Losses, 1);
+		_combats.Add(new CombatRecord(world, cycle, encounter.Id, encounter.Enemies.Select(enemy => enemy.Id), outcome));
+		AddToCounter(outcome == FightOutcome.Won ? Wins : Losses, 1);
 	}
 
 	/// <summary>

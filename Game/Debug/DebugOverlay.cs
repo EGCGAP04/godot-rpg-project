@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Godot;
 
@@ -294,10 +293,7 @@ public partial class DebugOverlay : CanvasLayer
 			_fightList.AddChild(new Label { Text = "none yet" });
 
 		foreach (CombatRecord fight in _state.Combats)
-		{
-			string outcome = fight.PlayerWon ? "won" : "lost";
-			_fightList.AddChild(new Label { Text = string.Create(CultureInfo.InvariantCulture, $"{fight.World}, cycle {fight.Cycle}: {fight.EnemyId}, {outcome}") });
-		}
+			_fightList.AddChild(new Label { Text = fight.ToString() });
 	}
 
 	private void AddHeading(string text)

@@ -53,6 +53,9 @@ public sealed class CombatAftermath
 
 	public bool Won => Result == CombatResult.Won;
 
+	/// <summary>How the fight ended, as the decision registry's history records it.</summary>
+	public FightOutcome Outcome => Won ? FightOutcome.Won : FightOutcome.Lost;
+
 	/// <summary>One entry per member, in the party's order.</summary>
 	public IReadOnlyList<MemberAftermath> Members { get; }
 

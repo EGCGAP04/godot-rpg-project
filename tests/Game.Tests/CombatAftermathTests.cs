@@ -150,6 +150,7 @@ public class CombatAftermathTests
 
 		Assert.Equal(CombatResult.Won, aftermath.Result);
 		Assert.True(aftermath.Won);
+		Assert.Equal(FightOutcome.Won, aftermath.Outcome);
 		Assert.Equal(World.Fantasy, aftermath.World);
 		Assert.Same(lineup, aftermath.Lineup);
 		Assert.Equal(new[] { Hero }, aftermath.Standing);
@@ -165,6 +166,7 @@ public class CombatAftermathTests
 
 		Assert.Equal(CombatResult.Lost, aftermath.Result);
 		Assert.False(aftermath.Won);
+		Assert.Equal(FightOutcome.Lost, aftermath.Outcome);
 		Assert.Empty(aftermath.Standing);
 		Assert.Equal(0, aftermath.Experience);
 		Assert.Equal(new[] { new MemberAftermath(Hero, 1, 1, WentDown: true) }, aftermath.Members);
