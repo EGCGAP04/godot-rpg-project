@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CombatTuning" format=3]
+[gd_resource type="Resource" script_class="CombatTuning" format=3 uid="uid://dti4kh87tpvvd"]
 
 [ext_resource type="Script" uid="uid://ducxckqlm408b" path="res://Combat/CombatTuning.cs" id="1_tuning"]
 

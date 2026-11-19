@@ -323,6 +323,113 @@ public class PartyProgressTests
 		Assert.Equal(new LevelProgress(3, 4), party.ProgressOf("abe", World.Fantasy).Level);
 	}
 
+	// --- An award to some of the members ---
+
+	private static PartyState PartyOfThree()
+	{
+		PartyState party = TestRoster.Party("abe", "bea", "cy");
+		party.Recruit("abe");
+		party.Recruit("bea");
+		return party;
+	}
+
+	[Fact]
+	public void Award_ToSomeMembers_GivesItToThemOnly_InThePartysOrder()
+	{
+		PartyState party = PartyOfThree();
+
+		ExperienceAward award = party.Award(World.Fantasy, 12, new[] { "bea", Hero });
+
+		Assert.Equal(
+			new[]
+			{
+				new MemberGain(Hero, new LevelProgress(1, 0), new LevelProgress(2, 2)),
+				new MemberGain("bea", new LevelProgress(1, 0), new LevelProgress(2, 2))
+			},
+			award.Gains);
+		Assert.Equal(12, award.Experience);
+		Assert.Equal(new LevelProgress(2, 2), party.ProgressOf(Hero, World.Fantasy).Level);
+		Assert.Equal(new LevelProgress(1, 0), party.ProgressOf("abe", World.Fantasy).Level);
+		Assert.Equal(new LevelProgress(2, 2), party.ProgressOf("bea", World.Fantasy).Level);
+	}
+
+	[Fact]
+	public void Award_ToNobody_ChangesNothing_AndStillSaysTheAmount()
+	{
+		PartyState party = PartyOfThree();
+		List<(string, World)> changes = Changes(party);
+
+		ExperienceAward award = party.Award(World.Fantasy, 12, Array.Empty<string>());
+
+		Assert.Empty(award.Gains);
+		Assert.Equal(12, award.Experience);
+		Assert.Empty(changes);
+	}
+
+	[Fact]
+	public void PreviewAward_ToSomeMembers_SaysWhatAwardWouldDo_AndChangesNothing()
+	{
+		PartyState party = PartyOfThree();
+		List<(string, World)> changes = Changes(party);
+
+		ExperienceAward preview = party.PreviewAward(World.Fantasy, 12, new[] { "abe" });
+
+		Assert.Empty(changes);
+		Assert.Equal(new LevelProgress(1, 0), party.ProgressOf("abe", World.Fantasy).Level);
+		Assert.Equal(preview.Gains, party.Award(World.Fantasy, 12, new[] { "abe" }).Gains);
+		Assert.Equal(new[] { "abe" }, preview.Gains.Select(gain => gain.Id));
+	}
+
+	[Fact]
+	public void Award_WithoutRecipients_IsTheSameAsToEveryMember()
+	{
+		PartyState everyone = PartyOfThree();
+		PartyState named = PartyOfThree();
+
+		ExperienceAward toEveryone = everyone.Award(World.Fantasy, 12);
+		ExperienceAward toNamed = named.Award(World.Fantasy, 12, new[] { Hero, "abe", "bea" });
+
+		Assert.Equal(toNamed.Gains, toEveryone.Gains);
+	}
+
+	[Theory]
+	[InlineData("cy", "not in the party")]
+	[InlineData("nobody", "There is no character called 'nobody'")]
+	[InlineData(null, "There is no character called ''")]
+	public void Award_ToSomeoneOutsideTheParty_IsRefused_AndChangesNothing(string recipient, string expected)
+	{
+		PartyState party = PartyOfThree();
+		List<(string, World)> changes = Changes(party);
+
+		var thrown = Assert.Throws<ArgumentException>(() => party.Award(World.Fantasy, 12, new[] { Hero, recipient }));
+		Assert.Throws<ArgumentException>(() => party.PreviewAward(World.Fantasy, 12, new[] { Hero, recipient }));
+
+		Assert.Contains(expected, thrown.Message);
+		Assert.Empty(changes);
+		Assert.Equal(new LevelProgress(1, 0), party.ProgressOf(Hero, World.Fantasy).Level);
+	}
+
+	[Fact]
+	public void Award_ToTheSameMemberTwice_IsRefused_AndChangesNothing()
+	{
+		PartyState party = PartyOfThree();
+		List<(string, World)> changes = Changes(party);
+
+		var thrown = Assert.Throws<ArgumentException>(() => party.Award(World.Fantasy, 12, new[] { Hero, "abe", Hero }));
+
+		Assert.Contains("twice", thrown.Message);
+		Assert.Empty(changes);
+	}
+
+	[Fact]
+	public void Award_ToSomeMembers_RefusesAMissingList()
+	{
+		PartyState party = PartyOfThree();
+
+		Assert.Throws<ArgumentNullException>(() => party.Award(World.Fantasy, 12, null));
+		Assert.Throws<ArgumentNullException>(() => party.PreviewAward(World.Fantasy, 12, null));
+	}
+
 	[Fact]
 	public void Award_ANegativeAmount_IsRefused_AndChangesNothing()
 	{
