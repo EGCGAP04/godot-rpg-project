@@ -42,6 +42,10 @@
     <Compile Include="..\..\Game\Combat\CombatRunner.cs" Link="GameLogic\CombatRunner.cs" />
     <Compile Include="..\..\Game\Combat\CombatLineup.cs" Link="GameLogic\CombatLineup.cs" />
     <Compile Include="..\..\Game\Combat\CombatAftermath.cs" Link="GameLogic\CombatAftermath.cs" />
+    <Compile Include="..\..\Game\Combat\CombatantNames.cs" Link="GameLogic\CombatantNames.cs" />
+    <Compile Include="..\..\Game\Combat\CombatLog.cs" Link="GameLogic\CombatLog.cs" />
+    <Compile Include="..\..\Game\Combat\OrderEntry.cs" Link="GameLogic\OrderEntry.cs" />
+    <Compile Include="..\..\Game\Combat\CombatResultPages.cs" Link="GameLogic\CombatResultPages.cs" />
     <Compile Include="..\..\Game\Stats\ActionKind.cs" Link="GameLogic\ActionKind.cs" />
     <Compile Include="..\..\Game\Stats\BaseStats.cs" Link="GameLogic\BaseStats.cs" />
     <Compile Include="..\..\Game\Stats\DiminishingReturns.cs" Link="GameLogic\DiminishingReturns.cs" />

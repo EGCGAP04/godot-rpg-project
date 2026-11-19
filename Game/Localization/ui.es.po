@@ -25,6 +25,38 @@ msgstr "Experiencia ganada: {experience}."
 msgid "ui.combat.level_reached"
 msgstr "{name} llegó al nivel {level}."
 
+#. One line per character down at the end of a fight won. {name} is the character's name.
+msgid "ui.combat.was_down"
+msgstr "{name} cayó y no gana nada."
+
+#. Two combatants of one kind told apart. {name} is the name; {letter}, A to D.
+msgid "ui.combat.name_with_letter"
+msgstr "{name} {letter}"
+
+#. The fight's log. {round} is a number.
+msgid "ui.combat.log.round"
+msgstr "Ronda {round}"
+
+#. {attacker} and {target} are combatants' names; {damage}, a number.
+msgid "ui.combat.log.hit"
+msgstr "{attacker} golpea a {target}: {damage} de daño."
+
+#. {attacker} and {target} are combatants' names; {damage}, a number.
+msgid "ui.combat.log.critical"
+msgstr "¡Golpe crítico! {attacker} golpea a {target}: {damage} de daño."
+
+#. {attacker} and {target} are combatants' names.
+msgid "ui.combat.log.missed"
+msgstr "{attacker} no le acierta a {target}."
+
+#. {attacker} and {target} are combatants' names.
+msgid "ui.combat.log.evaded"
+msgstr "{target} esquiva el ataque de {attacker}."
+
+#. {name} is a combatant's name.
+msgid "ui.combat.log.downed"
+msgstr "{name} cae."
+
 #. {world} is a world's name (world.*); {cycle}, a number.
 msgid "ui.hud.world_and_cycle"
 msgstr "{world}  -  Ciclo {cycle}"
