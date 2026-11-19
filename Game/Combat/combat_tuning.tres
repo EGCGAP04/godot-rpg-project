@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="CombatTuning" format=3]
+
+[ext_resource type="Script" uid="uid://ducxckqlm408b" path="res://Combat/CombatTuning.cs" id="1_tuning"]
+
+[resource]
+script = ExtResource("1_tuning")
+MinimumDamage = 1
+DamageVariationPercent = 10.0
