@@ -7,10 +7,6 @@ msgstr ""
 msgid "ui.combat.attack"
 msgstr "Attack"
 
-#. {name} is a combatant's name; {hp} and {max_hp}, numbers.
-msgid "ui.combat.hp"
-msgstr "{name}   {hp}/{max_hp}"
-
 msgid "ui.combat.player_won"
 msgstr "Player wins."
 

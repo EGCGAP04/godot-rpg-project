@@ -34,7 +34,7 @@ public partial class Main : Node2D
 	private Player _player;
 	private ScreenFade _fade;
 	private Label _worldLabel;
-	private Combat _combat;
+	private CombatScreen _combat;
 	private Enemy _pendingEnemy;
 	private bool _combatOnCooldown;
 	private bool _transitioning;
@@ -223,7 +223,7 @@ public partial class Main : Node2D
 		{
 			case CombatRequestOutcome.Start:
 				_pendingEnemy = enemy;
-				CallDeferred(MethodName.StartCombat, FirstOf(enemy));
+				CallDeferred(MethodName.StartCombat);
 				break;
 
 			// The enemy is still touching the player, and its area will not report that
@@ -234,28 +234,23 @@ public partial class Main : Node2D
 		}
 	}
 
-	// Combat v1 is one against one, so until the screen of v2 replaces it the party
-	// fights the first enemy of the group and the others are not there.
-	private static EnemyData FirstOf(Enemy enemy) => enemy.Encounter.Enemies[0];
-
-	private void StartCombat(EnemyData enemyData)
+	// The fight is against _pendingEnemy, set by whoever deferred the call.
+	private void StartCombat()
 	{
-		_combat = GD.Load<PackedScene>("res://Combat/combat.tscn").Instantiate<Combat>();
-		_combat.EnemyData = enemyData;
+		_combat = GD.Load<PackedScene>("res://Combat/combat_screen.tscn").Instantiate<CombatScreen>();
+		_combat.Encounter = _pendingEnemy.Encounter;
 		_combat.CombatFinished += OnCombatFinished;
 
 		AddChild(_combat);
 		GetTree().Paused = true;
 	}
 
-	private void OnCombatFinished(bool playerWon)
+	private void OnCombatFinished()
 	{
-		// Read now: the enemy is forgotten below, and may be freed. v1 fought only the
-		// first enemy of the group, so the history says so.
-		var fought = new EncounterValues(_pendingEnemy.Encounter.Id, new[] { FirstOf(_pendingEnemy).ToValues() });
-		long experience = fought.Experience;
+		// Read now: the screen is freed below.
+		CombatAftermath aftermath = _combat.Aftermath;
 
-		if (playerWon)
+		if (aftermath.Won)
 		{
 			_pendingEnemy.QueueFree();
 		}
@@ -276,19 +271,20 @@ public partial class Main : Node2D
 		// run: anywhere earlier, a failure here would leave the game paused under the
 		// overlay. Here, the worst it can do is lose this fight's experience or leave the
 		// fight out of the history.
-		World world = GameState.Instance.CurrentWorld;
+		World world = aftermath.World;
 		PartyState party = Party.Instance.State;
 
-		// The experience first and the heal after it, so a level reached is full too.
-		// It is the award the combat screen announced: PreviewAward is the same
-		// computation, and nothing changes the party while a fight is on screen.
-		if (playerWon)
-			party.Award(world, experience);
+		// What the fight left first: each member's health and mana, then the experience
+		// for those standing. It is the award the screen announced: the aftermath's preview
+		// is the same computation, and the screen did not write the party.
+		aftermath.ApplyTo(party);
 
-		// Combat v1 heals whoever fought after every fight, won or lost.
-		party.FullHeal(party.Roster.Protagonist.Id, world);
+		// The heal after the experience, so a level reached is full too. The whole party
+		// is healed after every fight, won or lost, until #107 gives each world its rules.
+		foreach (string id in party.Members)
+			party.FullHeal(id, world);
 
-		DecisionRegistry.Instance.State.RecordCombat(world, GameState.Instance.CurrentCycle, fought, playerWon ? FightOutcome.Won : FightOutcome.Lost);
+		DecisionRegistry.Instance.State.RecordCombat(world, GameState.Instance.CurrentCycle, aftermath.Lineup.Encounter, aftermath.Outcome);
 	}
 
 	private void StartCombatCooldown()
@@ -372,7 +368,7 @@ public partial class Main : Node2D
 		if (queued != null && IsInstanceValid(queued))
 		{
 			_pendingEnemy = queued;
-			CallDeferred(MethodName.StartCombat, FirstOf(queued));
+			CallDeferred(MethodName.StartCombat);
 		}
 	}
 
