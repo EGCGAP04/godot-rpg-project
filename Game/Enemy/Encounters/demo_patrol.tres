@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncounterData" format=3 uid="uid://6xg1jda03ca"]
+
+[ext_resource type="Script" uid="uid://cytewr8q0ucpd" path="res://Enemy/EncounterData.cs" id="1_encounter"]
+[ext_resource type="Script" uid="uid://vwkaouolbgoh" path="res://Enemy/EnemyData.cs" id="2_enemy"]
+[ext_resource type="Resource" uid="uid://bdaltip3qhh3" path="res://Enemy/weak_enemy.tres" id="3_weak"]
+[ext_resource type="Resource" uid="uid://d1agh78tu4kyq" path="res://Enemy/demo_clumsy_enemy.tres" id="4_demo_clumsy"]
+
+[resource]
+script = ExtResource("1_encounter")
+Id = "demo_patrol"
+Enemies = Array[ExtResource("2_enemy")]([ExtResource("3_weak"), ExtResource("4_demo_clumsy")])

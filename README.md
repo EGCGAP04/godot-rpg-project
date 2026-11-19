@@ -12,7 +12,7 @@
 
 🚧 In development — core systems phase.
 
-The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight that can be won or lost, and a fight won gives the party experience. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. A friend there joins the party if asked, and a newcomer in the Fantasy world offers to take the friend's place. While exploring, `open_menu` (Tab) opens a status screen with each party member's level and base stats in the current world. Every text is in Spanish and English, and the game starts in the system's language. In a debug build, F3 opens an overlay to inspect and change the decision registry's flags, take and restore snapshots of them and of the party, change the party and see its derived stats, jump to any world and cycle, and switch the language. All art is placeholder (solid-colour rectangles and tinted tiles).
+The cycle is playable end to end: walk through the Real, Fantasy and Nightmare worlds in turn, move between them, and watch the cycle counter advance. Touching an enemy starts a turn-based fight of the whole party against a group of enemies: each round every member is given an attack and a target, the round plays out in a log, and a fight won gives experience to the members still standing. In the Real world, a neighbor can be talked to by facing it and pressing `confirm`; one answer skips that night's dream, and the next morning remembers which answer was given. A friend there joins the party if asked, and a newcomer in the Fantasy world offers to take the friend's place. While exploring, `open_menu` (Tab) opens a status screen with each party member's level and base stats in the current world. Every text is in Spanish and English, and the game starts in the system's language. In a debug build, F3 opens an overlay to inspect and change the decision registry's flags, take and restore snapshots of them and of the party, change the party and see its derived stats, jump to any world and cycle, and switch the language. All art is placeholder (solid-colour rectangles and tinted tiles).
 
 This is a personal learning project, with no deadline, developed following professional version control and code organization standards.
 
@@ -43,7 +43,7 @@ dotnet build --configuration Debug
 
 Use `Debug`: Godot-generated solutions don't define a `Release` configuration, only `Debug`, `ExportDebug` and `ExportRelease`.
 
-The rules that do not need the engine — combat resolution, the world/cycle progression, movement direction, the dialogue format, the translation tables, the decision registry, the stat formulas, how characters grow and level up, the party, and what the status screen shows — are covered by unit tests that run without it. Some of them check every conversation, every translation table, every data file and every character in the project, so a broken conversation, a missing translation, a misspelt flag or a character with a misspelt stat fails the build. The solution includes the test project, so from the same `Game/` folder:
+The rules that do not need the engine — combat, the world/cycle progression, movement direction, the dialogue format, the translation tables, the decision registry, the stat formulas, how characters grow and level up, the party, and what the status screen shows — are covered by unit tests that run without it. Some of them check every conversation, every translation table, every data file and every character in the project, so a broken conversation, a missing translation, a misspelt flag or a character with a misspelt stat fails the build. The solution includes the test project, so from the same `Game/` folder:
 
 ```bash
 dotnet test "Godot RPG Project.sln" --configuration Debug
@@ -72,7 +72,7 @@ godot-rpg-project/
 │   ├── Debug/          # the debug overlay and presets; debug builds only
 │   ├── Decisions/      # the decision registry and its flag catalogue
 │   ├── Dialogue/       # the dialogue format, its runner and its validators
-│   ├── Enemy/          # enemies and their data
+│   ├── Enemy/          # enemies, their groups and their data
 │   ├── Localization/   # translation tables, in English and Spanish
 │   ├── Party/          # the party's state
 │   ├── Player/         # the player and 4-directional movement

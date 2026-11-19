@@ -214,16 +214,16 @@ public class DecisionStateTests
 	{
 		var state = new DecisionState(Catalogue);
 
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
-		state.RecordCombat(World.Fantasy, 1, "strong", playerWon: false);
-		state.RecordCombat(World.Nightmare, 2, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("strong"), FightOutcome.Lost);
+		state.RecordCombat(World.Nightmare, 2, TestFights.Group("weak"), FightOutcome.Won);
 
 		Assert.Equal(
 			new[]
 			{
-				new CombatRecord(World.Fantasy, 1, "weak", true),
-				new CombatRecord(World.Fantasy, 1, "strong", false),
-				new CombatRecord(World.Nightmare, 2, "weak", true)
+				TestFights.Record(World.Fantasy, 1, "weak", FightOutcome.Won),
+				TestFights.Record(World.Fantasy, 1, "strong", FightOutcome.Lost),
+				TestFights.Record(World.Nightmare, 2, "weak", FightOutcome.Won)
 			},
 			state.Combats);
 		Assert.Equal(2, state.GetCounter(DecisionState.Wins));
@@ -237,21 +237,34 @@ public class DecisionStateTests
 		int fightsSeen = -1;
 		state.FlagChanged += name => fightsSeen = state.Combats.Count;
 
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
 
 		Assert.Equal(1, fightsSeen);
 	}
 
-	[Theory]
-	[InlineData(null)]
-	[InlineData("")]
-	public void RecordCombat_RejectsAFightWithoutAnEnemy(string enemyId)
+	[Fact]
+	public void RecordCombat_KeepsTheGroupAndEachOfItsEnemies_InTheirOrder()
+	{
+		var state = new DecisionState(Catalogue);
+		EnemyValues weak = TestFights.Group("weak").Enemies[0];
+		EnemyValues clumsy = TestFights.Group("demo_clumsy").Enemies[0];
+
+		state.RecordCombat(World.Fantasy, 3, new EncounterValues("demo_patrol", new[] { weak, clumsy, weak }), FightOutcome.Lost);
+
+		Assert.Equal(new[] { new CombatRecord(World.Fantasy, 3, "demo_patrol", new[] { "weak", "demo_clumsy", "weak" }, FightOutcome.Lost) }, state.Combats);
+		Assert.Equal(1, state.GetCounter(DecisionState.Losses));
+	}
+
+	[Fact]
+	public void RecordCombat_RejectsAFightWithoutAGroup_OrWithAnOutcomeThatDoesNotExist()
 	{
 		var state = new DecisionState(Catalogue);
 
-		Assert.Throws<ArgumentException>(() => state.RecordCombat(World.Fantasy, 1, enemyId, playerWon: true));
+		Assert.Throws<ArgumentNullException>(() => state.RecordCombat(World.Fantasy, 1, null, FightOutcome.Won));
+		Assert.Throws<ArgumentOutOfRangeException>(() => state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), (FightOutcome)2));
 		Assert.Empty(state.Combats);
 		Assert.Equal(0, state.GetCounter(DecisionState.Wins));
+		Assert.Equal(0, state.GetCounter(DecisionState.Losses));
 	}
 
 	[Fact]
@@ -259,7 +272,7 @@ public class DecisionStateTests
 	{
 		var state = new DecisionState(Catalogue);
 
-		Assert.Throws<NotSupportedException>(() => ((IList<CombatRecord>)state.Combats).Add(new CombatRecord(World.Real, 1, "weak", true)));
+		Assert.Throws<NotSupportedException>(() => ((IList<CombatRecord>)state.Combats).Add(TestFights.Record(World.Real, 1, "weak", FightOutcome.Won)));
 	}
 
 	[Fact]
@@ -267,7 +280,7 @@ public class DecisionStateTests
 	{
 		var state = new DecisionState(Catalogue);
 		ChangeEverything(state);
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
 
 		state.StartCycle();
 
@@ -299,7 +312,7 @@ public class DecisionStateTests
 	{
 		var state = new DecisionState(Catalogue);
 		ChangeEverything(state);
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
 
 		state.ResetPersistent();
 
@@ -338,7 +351,7 @@ public class DecisionStateTests
 	{
 		var state = new DecisionState(Catalogue);
 		ChangeEverything(state);
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: false);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Lost);
 
 		SlotSnapshot snapshot = state.TakeSnapshot();
 
@@ -348,7 +361,7 @@ public class DecisionStateTests
 		Assert.Equal(
 			new Dictionary<string, int> { ["combat.wins"] = 3, ["combat.losses"] = 4, ["test.steps"] = 3, ["test.visits"] = 3 },
 			snapshot.Counters);
-		Assert.Equal(new[] { new CombatRecord(World.Fantasy, 1, "weak", false) }, snapshot.Combats);
+		Assert.Equal(new[] { TestFights.Record(World.Fantasy, 1, "weak", FightOutcome.Lost) }, snapshot.Combats);
 	}
 
 	[Fact]
@@ -358,7 +371,7 @@ public class DecisionStateTests
 		SlotSnapshot snapshot = state.TakeSnapshot();
 
 		ChangeEverything(state);
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
 
 		Assert.All(snapshot.Flags.Values, Assert.False);
 		Assert.All(snapshot.Counters.Values, value => Assert.Equal(0, value));
@@ -371,17 +384,17 @@ public class DecisionStateTests
 		var state = new DecisionState(Catalogue);
 		state.SetFlag("test.promised", true);
 		state.AddToCounter("test.visits", 2);
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
 		SlotSnapshot saved = state.TakeSnapshot();
 
 		ChangeEverything(state);
 		state.SetFlag("test.promised", false);
-		state.RecordCombat(World.Fantasy, 1, "strong", playerWon: false);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("strong"), FightOutcome.Lost);
 		state.Restore(saved);
 
 		Assert.Equal(saved.Flags, state.TakeSnapshot().Flags);
 		Assert.Equal(saved.Counters, state.TakeSnapshot().Counters);
-		Assert.Equal(new[] { new CombatRecord(World.Fantasy, 1, "weak", true) }, state.Combats);
+		Assert.Equal(new[] { TestFights.Record(World.Fantasy, 1, "weak", FightOutcome.Won) }, state.Combats);
 		Assert.True(state.GetFlag("test.promised"));
 		Assert.Equal(2, state.GetCounter("test.visits"));
 		Assert.Equal(1, state.GetCounter(DecisionState.Wins));
@@ -454,7 +467,7 @@ public class DecisionStateTests
 	{
 		var state = Listened(out List<string> changed);
 		state.SetFlag("test.promised", true);
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
 		changed.Clear();
 
 		var error = Assert.Throws<ArgumentException>(() => state.Restore(snapshot));
@@ -483,7 +496,7 @@ public class DecisionStateTests
 		var clean = new DecisionState(Catalogue).TakeSnapshot();
 		var state = Listened(out List<string> changed);
 		state.SetFlag("test.promised", true);
-		state.RecordCombat(World.Fantasy, 1, "weak", playerWon: true);
+		state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), FightOutcome.Won);
 		changed.Clear();
 
 		state.CheckSnapshot(clean);

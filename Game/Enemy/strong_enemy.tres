@@ -6,7 +6,8 @@
 script = ExtResource("1_ikmei")
 Id = "strong"
 NameKey = "enemy.strong"
-MaxHp = 40
-AttackPower = 7
+HealthPoints = 40
+AttackDamage = 7
+HitRate = 100
 Experience = 20
 metadata/_custom_type_script = "uid://vwkaouolbgoh"

@@ -29,8 +29,9 @@ using System.Linq;
 /// code for it, since leaving only takes them off the list of members.
 /// </para>
 /// <para>
-/// Experience goes to every member, whole: it is not split, because splitting would
-/// punish recruiting. Awarding it cannot fail half way. The curves are checked when they
+/// Experience goes to every member it is given to, whole: it is not split, because
+/// splitting would punish recruiting. A fight gives it to the members still standing, and
+/// the others get none. Awarding it cannot fail half way. The curves are checked when they
 /// are built, and the constructor here checks that every character's stats can be
 /// computed up to each world's highest level.
 /// </para>
@@ -209,14 +210,27 @@ public sealed class PartyState : IPartyStore
 	/// In the Real world, which has no experience, nobody changes.
 	/// </summary>
 	/// <exception cref="ArgumentOutOfRangeException">The experience is negative.</exception>
-	public ExperienceAward PreviewAward(World world, long experience)
+	public ExperienceAward PreviewAward(World world, long experience) => PreviewAward(world, experience, _members);
+
+	/// <summary>
+	/// What awarding this experience in a world to some of the members would do to each of
+	/// them, without doing it. The rest of the party gets nothing and is left out of the
+	/// award, which lists the ones receiving it in the party's order, whatever order they
+	/// were given in.
+	/// </summary>
+	/// <exception cref="ArgumentOutOfRangeException">The experience is negative.</exception>
+	/// <exception cref="ArgumentException">
+	/// A recipient is not in the roster, is not in the party, or is given twice.
+	/// </exception>
+	public ExperienceAward PreviewAward(World world, long experience, IEnumerable<string> recipients)
 	{
 		if (experience < 0)
 			throw new ArgumentOutOfRangeException(nameof(experience), experience, "An award of experience cannot be negative.");
 
+		HashSet<string> receiving = CheckRecipients(recipients);
 		var gains = new List<MemberGain>();
 
-		foreach (string id in _members)
+		foreach (string id in _members.Where(receiving.Contains))
 		{
 			LevelProgress before = _progress[(id, world)].Level;
 			gains.Add(new MemberGain(id, before, Curves.Add(world, before, experience)));
@@ -231,9 +245,21 @@ public sealed class PartyState : IPartyStore
 	/// leaves the ones the character has as they are: levelling up does not heal.
 	/// </summary>
 	/// <exception cref="ArgumentOutOfRangeException">The experience is negative.</exception>
-	public ExperienceAward Award(World world, long experience)
+	public ExperienceAward Award(World world, long experience) => Award(world, experience, _members);
+
+	/// <summary>
+	/// Gives some of the members this experience in a world, whole, and says what it did,
+	/// as <see cref="PreviewAward(World, long, IEnumerable{string})"/> said it would. The
+	/// rest of the party gets nothing: a fight's award goes to those still standing.
+	/// </summary>
+	/// <exception cref="ArgumentOutOfRangeException">The experience is negative.</exception>
+	/// <exception cref="ArgumentException">
+	/// A recipient is not in the roster, is not in the party, or is given twice. Nobody
+	/// changes then.
+	/// </exception>
+	public ExperienceAward Award(World world, long experience, IEnumerable<string> recipients)
 	{
-		ExperienceAward award = PreviewAward(world, experience);
+		ExperienceAward award = PreviewAward(world, experience, recipients);
 		List<MemberGain> changed = award.Gains.Where(gain => gain.After != gain.Before).ToList();
 
 		foreach (MemberGain gain in changed)
@@ -342,6 +368,23 @@ public sealed class PartyState : IPartyStore
 
 		foreach ((string id, World world) in changed)
 			ProgressChanged?.Invoke(id, world);
+	}
+
+	private HashSet<string> CheckRecipients(IEnumerable<string> recipients)
+	{
+		ArgumentNullException.ThrowIfNull(recipients);
+		var receiving = new HashSet<string>();
+
+		foreach (string id in recipients)
+		{
+			if (!IsMember(id))
+				throw new ArgumentException($"'{id}' cannot receive experience: they are not in the party.", nameof(recipients));
+
+			if (!receiving.Add(id))
+				throw new ArgumentException($"'{id}' is given experience twice.", nameof(recipients));
+		}
+
+		return receiving;
 	}
 
 	private void CheckMembers(PartySnapshot snapshot)

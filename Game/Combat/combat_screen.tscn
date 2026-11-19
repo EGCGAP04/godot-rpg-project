@@ -1,0 +1,64 @@
+[gd_scene format=3 uid="uid://uuklcpoga7nx"]
+
+[ext_resource type="Script" uid="uid://mvqlu3uxfer1" path="res://Combat/CombatScreen.cs" id="1_screen"]
+[ext_resource type="PackedScene" uid="uid://lq8i0psxlit" path="res://UI/screen_fade.tscn" id="2_fade"]
+
+[node name="CombatScreen" type="CanvasLayer" unique_id=1467711794]
+process_mode = 3
+script = ExtResource("1_screen")
+
+[node name="Background" type="ColorRect" parent="." unique_id=102402350]
+offset_right = 640.0
+offset_bottom = 360.0
+color = Color(0.09, 0.09, 0.13, 1)
+
+[node name="Enemies" type="HBoxContainer" parent="." unique_id=371185375]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 624.0
+offset_bottom = 76.0
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="LogPanel" type="Panel" parent="." unique_id=1320720831]
+offset_left = 16.0
+offset_top = 88.0
+offset_right = 624.0
+offset_bottom = 200.0
+
+[node name="LogLabel" type="Label" parent="LogPanel" unique_id=1317628666]
+auto_translate_mode = 2
+layout_mode = 0
+offset_left = 12.0
+offset_top = 6.0
+offset_right = 596.0
+offset_bottom = 106.0
+
+[node name="ResultLabel" type="Label" parent="LogPanel" unique_id=2093401384]
+auto_translate_mode = 2
+layout_mode = 0
+offset_left = 12.0
+offset_top = 6.0
+offset_right = 596.0
+offset_bottom = 106.0
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Commands" type="VBoxContainer" parent="." unique_id=1405115015]
+offset_left = 16.0
+offset_top = 212.0
+offset_right = 160.0
+offset_bottom = 244.0
+
+[node name="AttackButton" type="Button" parent="Commands" unique_id=831428884]
+layout_mode = 2
+text = "ui.combat.attack"
+
+[node name="Members" type="HBoxContainer" parent="." unique_id=1453983390]
+offset_left = 16.0
+offset_top = 260.0
+offset_right = 624.0
+offset_bottom = 344.0
+theme_override_constants/separation = 8
+
+[node name="ScreenFade" parent="." unique_id=1131560000 instance=ExtResource("2_fade")]

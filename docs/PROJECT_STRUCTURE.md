@@ -38,23 +38,29 @@ godot-rpg-project/
 │   │   ├── demo_newcomer.tres             # placeholder: the one who takes a place in the party
 │   │   └── roster.tres                    # every character the game has, the protagonist named
 │   │
-│   ├── Combat/                         # combat v1, and the engine-free core of v2 beside it
+│   ├── Combat/                         # combat: its engine-free rules and the screen that shows them
 │   │   ├── AttackResult.cs (+.uid)     # engine-free: one attack worked out
-│   │   ├── Combat.cs (+.uid)           # v1: turn state, timers, input, UI
+│   │   ├── CombatAftermath.cs (+.uid)  # engine-free: what a finished fight leaves, and writing it to the party
 │   │   ├── CombatEvent.cs (+.uid)      # engine-free: what happened in a fight
+│   │   ├── CombatLineup.cs (+.uid)     # engine-free: who goes into a fight, from the party and a group
+│   │   ├── CombatLog.cs (+.uid)        # engine-free: the log's line for each event
 │   │   ├── CombatOrder.cs (+.uid)      # engine-free: what a member is told to do
-│   │   ├── CombatResolver.cs (+.uid)   # v1: engine-free, covered by tests
-│   │   ├── CombatResultText.cs (+.uid) # engine-free: what the screen says when a fight ends
+│   │   ├── CombatResultPages.cs (+.uid) # engine-free: what the screen says when a fight ends, in pages
 │   │   ├── CombatRunner.cs (+.uid)     # engine-free: a fight, a round at a time
+│   │   ├── CombatScreen.cs (+.uid)     # the screen: timing, input and controls
+│   │   ├── CombatTuning.cs (+.uid)     # Resource: combat's tuning, editable in the Inspector
 │   │   ├── CombatTuningValues.cs (+.uid) # engine-free: combat's tunable numbers
 │   │   ├── Combatant.cs (+.uid)        # engine-free: one side's member while a fight lasts
 │   │   ├── CombatantId.cs (+.uid)      # engine-free: a side and a position
+│   │   ├── CombatantNames.cs (+.uid)   # engine-free: the name each combatant is shown by, with a letter for repeats
 │   │   ├── CombatantSetup.cs (+.uid)   # engine-free: what a combatant brings into a fight
 │   │   ├── DamagePipeline.cs (+.uid)   # engine-free: accuracy, evasion, critical, armor
 │   │   ├── ICombatRandom.cs (+.uid)    # engine-free: every roll a fight makes
+│   │   ├── OrderEntry.cs (+.uid)       # engine-free: the menu's way through a round
 │   │   ├── SeededCombatRandom.cs (+.uid) # engine-free: the game's dice, from a seed
 │   │   ├── TurnOrder.cs (+.uid)        # engine-free: who acts when in a round
-│   │   └── combat.tscn                 # v1: overlay scene, not a scene swap
+│   │   ├── combat_screen.tscn          # overlay scene, not a scene swap
+│   │   └── combat_tuning.tres          # combat's tuning; every number is provisional
 │   │
 │   ├── Debug/                         # debug builds only (#75)
 │   │   ├── Presets/
@@ -121,11 +127,23 @@ godot-rpg-project/
 │   │   └── PartyUses.cs (+.uid)           # engine-free: the characters a condition or an effect names
 │   │
 │   ├── Enemy/
-│   │   ├── Enemy.cs (+.uid)
-│   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding the id, stats, experience and the name's key
+│   │   ├── Encounters/                 # groups of enemies, each file named after its id
+│   │   │   ├── demo_patrol.tres        # weak + demo_clumsy, on the map — the protagonist alone wins
+│   │   │   ├── demo_showcase.tres      # demo_armored + demo_nimble + demo_lucky — a party of three wins
+│   │   │   └── demo_wall.tres          # strong + strong, on the map — the party loses
+│   │   │
+│   │   ├── EncounterData.cs (+.uid)    # [GlobalClass] Resource: a group's id and its enemies
+│   │   ├── EncounterValues.cs (+.uid)  # engine-free: a group, checked, and its experience
+│   │   ├── Enemy.cs (+.uid)            # the enemy on the map, carrying a group
+│   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding the id, the seven stats, experience and the name's key
+│   │   ├── EnemyValues.cs (+.uid)      # engine-free: an enemy, checked
+│   │   ├── demo_armored_enemy.tres     # high armor
+│   │   ├── demo_clumsy_enemy.tres      # a low hit rate
+│   │   ├── demo_lucky_enemy.tres       # high luck
+│   │   ├── demo_nimble_enemy.tres      # high agility, so it evades
 │   │   ├── enemy.tscn
-│   │   ├── strong_enemy.tres           # 40 HP, 7 atk — the player loses
-│   │   └── weak_enemy.tres             # 10 HP, 3 atk — the player wins
+│   │   ├── strong_enemy.tres           # 40 HP, 7 attack
+│   │   └── weak_enemy.tres             # 10 HP, 3 attack
 │   │
 │   ├── Localization/                      # the tables of no single conversation, one per kind of key
 │   │   ├── LocalizationNames.cs (+.uid)   # the languages and how a table's file is named
@@ -225,10 +243,15 @@ godot-rpg-project/
 │       ├── CharacterRosterTests.cs # the roster lists every character once, and makes a party
 │       ├── CharacterRosterValuesTests.cs
 │       ├── CharacterValuesTests.cs
-│       ├── CombatResolverTests.cs
-│       ├── CombatResultTextTests.cs
+│       ├── CombatAftermathTests.cs
+│       ├── CombatLineupTests.cs
+│       ├── CombatLogTests.cs
+│       ├── CombatRecordTests.cs
+│       ├── CombatResultPagesTests.cs
 │       ├── CombatRunnerTests.cs    # includes a whole fight of four against three
+│       ├── CombatTuningTests.cs    # the combat tuning file writes every value
 │       ├── CombatTuningValuesTests.cs
+│       ├── CombatantNamesTests.cs
 │       ├── CombatantTests.cs
 │       ├── ConversationReaderTests.cs
 │       ├── ConversationRulesTests.cs
@@ -246,7 +269,10 @@ godot-rpg-project/
 │       ├── DialogueValidatorTests.cs # includes the tests that check every conversation and its text
 │       ├── DiminishingReturnsTests.cs
 │       ├── DirectionResolverTests.cs
+│       ├── EncounterDataTests.cs   # every group's file makes a group; every enemy on a map carries one
+│       ├── EncounterValuesTests.cs
 │       ├── EnemyDataTests.cs       # every enemy writes its name, HP and experience
+│       ├── EnemyValuesTests.cs
 │       ├── ExperienceCurveTests.cs
 │       ├── ExperienceCurvesTests.cs
 │       ├── FacingTests.cs
@@ -264,6 +290,7 @@ godot-rpg-project/
 │       ├── InMemoryPartyStore.cs   # stand-in for the party, in dialogue tests
 │       ├── LocalizationValidatorTests.cs # includes the test that checks every table
 │       ├── MenuRulesTests.cs
+│       ├── OrderEntryTests.cs
 │       ├── PartyEditsTests.cs
 │       ├── PartyProgressTests.cs
 │       ├── PartySnapshotTests.cs
@@ -283,6 +310,7 @@ godot-rpg-project/
 │       ├── StatTuningValuesTests.cs
 │       ├── StatusSheetTests.cs
 │       ├── StatusTextTests.cs
+│       ├── TestFights.cs           # groups and whole scripted fights the combat tests share
 │       ├── TestRoster.cs           # the characters, curves and party the party's tests use
 │       ├── TestTuning.cs           # the tuning and the stats the formula and combat tests use
 │       ├── TextTemplateTests.cs

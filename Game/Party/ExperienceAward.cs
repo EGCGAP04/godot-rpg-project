@@ -18,5 +18,8 @@ public sealed record MemberGain(string Id, LevelProgress Before, LevelProgress A
 /// </summary>
 /// <param name="World">The world the experience belongs to.</param>
 /// <param name="Experience">What each member receives: the whole award, or 0 in a world with no experience.</param>
-/// <param name="Gains">One entry per member of the party, in the party's order.</param>
+/// <param name="Gains">
+/// One entry per member who receives the award, in the party's order. After a fight, a
+/// member who went down receives nothing and has no entry.
+/// </param>
 public sealed record ExperienceAward(World World, long Experience, IReadOnlyList<MemberGain> Gains);

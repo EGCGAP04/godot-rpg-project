@@ -26,8 +26,6 @@
     review. Add a line here for every new engine-free class that gets tests.
   -->
   <ItemGroup>
-    <Compile Include="..\..\Game\Combat\CombatResolver.cs" Link="GameLogic\CombatResolver.cs" />
-    <Compile Include="..\..\Game\Combat\CombatResultText.cs" Link="GameLogic\CombatResultText.cs" />
     <Compile Include="..\..\Game\Combat\ICombatRandom.cs" Link="GameLogic\ICombatRandom.cs" />
     <Compile Include="..\..\Game\Combat\SeededCombatRandom.cs" Link="GameLogic\SeededCombatRandom.cs" />
     <Compile Include="..\..\Game\Combat\CombatTuningValues.cs" Link="GameLogic\CombatTuningValues.cs" />
@@ -40,6 +38,12 @@
     <Compile Include="..\..\Game\Combat\CombatOrder.cs" Link="GameLogic\CombatOrder.cs" />
     <Compile Include="..\..\Game\Combat\CombatEvent.cs" Link="GameLogic\CombatEvent.cs" />
     <Compile Include="..\..\Game\Combat\CombatRunner.cs" Link="GameLogic\CombatRunner.cs" />
+    <Compile Include="..\..\Game\Combat\CombatLineup.cs" Link="GameLogic\CombatLineup.cs" />
+    <Compile Include="..\..\Game\Combat\CombatAftermath.cs" Link="GameLogic\CombatAftermath.cs" />
+    <Compile Include="..\..\Game\Combat\CombatantNames.cs" Link="GameLogic\CombatantNames.cs" />
+    <Compile Include="..\..\Game\Combat\CombatLog.cs" Link="GameLogic\CombatLog.cs" />
+    <Compile Include="..\..\Game\Combat\OrderEntry.cs" Link="GameLogic\OrderEntry.cs" />
+    <Compile Include="..\..\Game\Combat\CombatResultPages.cs" Link="GameLogic\CombatResultPages.cs" />
     <Compile Include="..\..\Game\Stats\ActionKind.cs" Link="GameLogic\ActionKind.cs" />
     <Compile Include="..\..\Game\Stats\BaseStats.cs" Link="GameLogic\BaseStats.cs" />
     <Compile Include="..\..\Game\Stats\DiminishingReturns.cs" Link="GameLogic\DiminishingReturns.cs" />
@@ -51,6 +55,8 @@
     <Compile Include="..\..\Game\Stats\LevelProgress.cs" Link="GameLogic\LevelProgress.cs" />
     <Compile Include="..\..\Game\Stats\ExperienceCurve.cs" Link="GameLogic\ExperienceCurve.cs" />
     <Compile Include="..\..\Game\Stats\ExperienceCurves.cs" Link="GameLogic\ExperienceCurves.cs" />
+    <Compile Include="..\..\Game\Enemy\EnemyValues.cs" Link="GameLogic\EnemyValues.cs" />
+    <Compile Include="..\..\Game\Enemy\EncounterValues.cs" Link="GameLogic\EncounterValues.cs" />
     <Compile Include="..\..\Game\Characters\CharacterValues.cs" Link="GameLogic\CharacterValues.cs" />
     <Compile Include="..\..\Game\Characters\CharacterRosterValues.cs" Link="GameLogic\CharacterRosterValues.cs" />
     <Compile Include="..\..\Game\Party\CharacterProgress.cs" Link="GameLogic\CharacterProgress.cs" />

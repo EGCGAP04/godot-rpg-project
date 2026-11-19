@@ -4,9 +4,10 @@
 [ext_resource type="Script" uid="uid://c7atfmo0m3awh" path="res://World/WorldScene.cs" id="2_script"]
 [ext_resource type="PackedScene" uid="uid://ojvb3ure7une" path="res://World/world_exit.tscn" id="3_exit"]
 [ext_resource type="PackedScene" uid="uid://cnkkaoa8kax27" path="res://Enemy/enemy.tscn" id="4_enemy"]
-[ext_resource type="Resource" uid="uid://bdaltip3qhh3" path="res://Enemy/weak_enemy.tres" id="5_weak"]
-[ext_resource type="Resource" uid="uid://dp32vd5ebymxt" path="res://Enemy/strong_enemy.tres" id="6_strong"]
+[ext_resource type="Resource" uid="uid://6xg1jda03ca" path="res://Enemy/Encounters/demo_patrol.tres" id="5_patrol"]
+[ext_resource type="Resource" uid="uid://dc3un8wugmpcw" path="res://Enemy/Encounters/demo_wall.tres" id="6_wall"]
 [ext_resource type="PackedScene" uid="uid://bph022c6r1qv8" path="res://World/interactable.tscn" id="7_interactable"]
+[ext_resource type="Resource" uid="uid://dq1slxf0xq2w4" path="res://Enemy/Encounters/demo_showcase.tres" id="8_d1uxm"]
 
 [node name="FantasyWorld" type="Node2D" unique_id=627251250]
 script = ExtResource("2_script")
@@ -26,11 +27,11 @@ position = Vector2(72, 56)
 
 [node name="Enemy" parent="." unique_id=6218544 instance=ExtResource("4_enemy")]
 position = Vector2(552, 72)
-Data = ExtResource("5_weak")
+Encounter = ExtResource("5_patrol")
 
 [node name="StrongEnemy" parent="." unique_id=960578697 instance=ExtResource("4_enemy")]
 position = Vector2(568, 312)
-Data = ExtResource("6_strong")
+Encounter = ExtResource("6_wall")
 
 [node name="Exit" parent="." unique_id=1539596280 instance=ExtResource("3_exit")]
 position = Vector2(600, 136)
@@ -39,7 +40,12 @@ position = Vector2(600, 136)
 position = Vector2(184, 56)
 Conversation = "demo_replace"
 
+[node name="ShowcaseEnemy" parent="." unique_id=1800058179 instance=ExtResource("4_enemy")]
+position = Vector2(152, 296)
+Encounter = ExtResource("8_d1uxm")
+
 [connection signal="CombatTriggered" from="Enemy" to="." method="OnCombatTriggered"]
 [connection signal="CombatTriggered" from="StrongEnemy" to="." method="OnCombatTriggered"]
 [connection signal="ExitTriggered" from="Exit" to="." method="OnExitTriggered"]
 [connection signal="InteractionTriggered" from="Newcomer" to="." method="OnInteractionTriggered"]
+[connection signal="CombatTriggered" from="ShowcaseEnemy" to="." method="OnCombatTriggered"]

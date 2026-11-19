@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- The engine-free core of combat v2, in `Combat/`, covered by unit tests. No scene uses it yet: the fights in the game are still combat v1
+- The engine-free core of combat v2, in `Combat/`, covered by unit tests
 - `ICombatRandom`, the one way combat rolls: a percent roll and a pick among a count. `SeededCombatRandom` is the game's implementation, which repeats its rolls from a seed it reports
 - `DamagePipeline`, which works out one attack in a fixed order of rolls: accuracy, evasion, the critical hit and a variation of the base damage, with armor taken out at the end. A stage that is reached always rolls, the damage is rounded down once, and a hit that lands does at least 1
 - `CombatTuningValues`, combat's own provisional numbers: the least damage of a landed hit and the variation of the base damage, 10% either way
@@ -17,13 +17,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CombatRunner`, which plays a fight a round at a time. It takes an order for every standing member, works the round out, and stops on each enemy attack until it is answered with the damage taken, so a fight where the player dodges in real time can answer with another number. An attack whose target went down moves to another standing enemy by a roll, and the fight ends when a whole side is down
 - `ScriptedCombatRandom`, in the test project: rolls written by hand, so no combat test is statistical
 - A Combat Core section in `docs/CONVENTIONS.md`
+- **The combat screen: the whole party fights a whole group from the map.** Each round every member standing is given an order, attack for now, with a target chosen among the enemies standing; `cancel` goes back a step. The round then plays out in a log, a line at a time, with the health on screen falling with the text, and `confirm` hurries it. The result comes in pages
+- Groups of enemies: `EncounterData`, a resource in `Enemy/Encounters/` with from one enemy to four, the same kind more than once if wanted. Two of one kind are told apart on screen by a letter, *Strong Enemy A* and *Strong Enemy B*, and a group's experience is the sum of its enemies'
+- Four placeholder enemies, each showing one stage of the damage pipeline (armor, evasion, luck and a low hit rate), and three groups for the demo: `demo_patrol` and `demo_wall` where the weak and the strong enemy stood, and `demo_showcase`, to be placed on the map
+- `CombatTuning`, combat's own numbers as a resource, editable in the Inspector in `Combat/combat_tuning.tres`, with a test that requires the file to write every value
+- `CombatLineup` and `CombatAftermath`, engine-free, which take the party into a fight and write back what it left
+- `OrderEntry`, `CombatantNames`, `CombatLog` and `CombatResultPages`, engine-free: the menu's way through a round, the combatants' names, the log's lines and the result's pages
+- The combat screen's text in English and Spanish
 
 ### Changed
 
+- Enemies have the seven base stats, fixed, with no level and no growth, instead of a health and an attack
+- **A member who goes down leaves the fight with 1 health point and 1 mana point,** or no mana if they have none, and gets no experience from it. Only the members standing at the end of a fight won receive its experience, whole
+- The whole party is healed after every fight, won or lost, until the rules of defeat and healing per world arrive
+- The history of fights records the group fought and each of its enemies, and its outcome is `Won` or `Lost` instead of a yes or no. The debug overlay lists a fight as `Fantasy, cycle 1: demo_patrol (weak, demo_clumsy), won`
+- `PartyState.PreviewAward` and `Award` can be told which members receive the experience
 - The tree of every file in the repository moved from the README to a document of its own, `docs/PROJECT_STRUCTURE.md`. The README keeps a short tree of the folders, with a line on each, and a link to the full one
 - The pull request template and the Docs Issue form now name `docs/PROJECT_STRUCTURE.md` as the tree to keep up to date
 - **The license changed from MIT to the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).** From this change on, the project may be used, modified and shared for noncommercial purposes only, every copy must carry the license's terms and the `Required Notice` line at the top of `LICENSE`, and commercial use needs the maintainer's permission. Everything published before this change, the versions up to `v0.4.0` included, was released under MIT and stays available under it
 - The README's *License* section says what the new license allows and how to ask for commercial permission, and a new *Contributing* note says under which terms a contribution is accepted
+
+### Removed
+
+- Combat v1: `Combat.cs`, `combat.tscn`, `CombatResolver` and `CombatResultText`, with their tests and the `ui.combat.hp` text
 
 ## [0.4.0] - 2026-11-16
 
