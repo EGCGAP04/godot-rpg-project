@@ -417,7 +417,8 @@ public partial class CombatScreen : CanvasLayer
 		_resultLabel.Visible = true;
 		ShowPage(keepPage: false);
 
-		GD.Print($"Combat over: {Aftermath.Result}. Standing: {string.Join(", ", Aftermath.Standing)}. Experience {_award.Experience}.");
+		string standing = Aftermath.Standing.Count == 0 ? "nobody" : string.Join(", ", Aftermath.Standing);
+		GD.Print($"Combat over: {Aftermath.Result}. Standing: {standing}. Experience {_award.Experience}.");
 
 		foreach (MemberGain gain in _award.Gains)
 			GD.Print($"  {gain.Id}: level {gain.Before.Level} ({gain.Before.Experience}) -> level {gain.After.Level} ({gain.After.Experience})");
