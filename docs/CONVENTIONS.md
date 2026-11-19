@@ -78,22 +78,22 @@ When creating the first scene of a feature (e.g. `Player/player.tscn`), the root
 
 ## Combat Overlay Architecture
 
-Combat does **not** replace the exploration scene. `Combat/combat.tscn` is a `CanvasLayer` instanced on top of the paused world map. Keeping the map alive means the player's position survives the fight for free, with no state to save and restore.
+Combat does **not** replace the exploration scene. `Combat/combat_screen.tscn` is a `CanvasLayer` instanced on top of the paused world map. Keeping the map alive means the player's position survives the fight for free, with no state to save and restore.
 
 The flow is:
 
 1. `Enemy` (an `Area2D`) detects player contact and emits `CombatTriggered(enemy)`.
 2. The `WorldScene` re-emits it as `CombatRequested(enemy)`.
-3. `Main` (on `main.tscn`) handles it: it instances `combat.tscn`, sets the enemy stats, adds it as a child and sets `GetTree().Paused = true`.
-4. When the fight ends, `Combat` emits `CombatFinished(playerWon)`. `Main` applies the outcome, frees the overlay, unpauses, and only then hands out the experience and records the fight in the decision registry (see [After a fight](#after-a-fight) and [Fights](#fights) for why last).
+3. `Main` (on `main.tscn`) handles it: it instances `combat_screen.tscn`, hands it the group of enemies the touched enemy carries, adds it as a child and sets `GetTree().Paused = true`.
+4. When the fight is over and the screen has faded out, `CombatScreen` emits `CombatFinished`, and `Main` reads what it left from its `Aftermath`. `Main` frees the enemy or sends the player back to the spawn, frees the overlay, unpauses, and only then writes the fight into the party and records it in the decision registry (see [After a fight](#after-a-fight) and [Fights](#fights) for why last).
 
 `Main` is the coordinator because it is the only node that sees both the `Player` and the world — the `Player` is a **sibling** of the world scene, not a child of it. It holds a `WorldScene`, never a concrete world, so the same flow works in all three.
 
 Five details are load-bearing:
 
 - **The overlay must be added deferred.** The trigger fires inside a physics callback (`body_entered`), where adding or freeing nodes is not allowed, so `Main` uses `CallDeferred(MethodName.StartCombat, ...)`.
-- **`Combat` sets `process_mode = 3` (Always).** Otherwise the paused tree would freeze the overlay too, and its turn timers would never fire.
-- **Enemy stats are assigned before `AddChild`,** so they are already set when `Combat._Ready()` runs.
+- **`CombatScreen` sets `process_mode = 3` (Always).** Otherwise the paused tree would freeze the overlay too, and the clock of its log would never run.
+- **The group is assigned before `AddChild`,** so it is already set when `CombatScreen._Ready()` runs.
 - **The player is spawned from `Main._EnterTree()`, not `_Ready()`.** A `CharacterBody2D` registers its transform with the physics server when it enters the tree, and a parent's `_EnterTree` runs before its children enter, so spawning there is what keeps the server from ever seeing the position authored in `main.tscn`. Moving the player afterwards leaves enemy areas paired against that stale transform for one frame, which reports a contact — a `body_entered` followed immediately by `body_exited` — that never happened. `WorldScene.PlayerSpawnPosition` is a computed property rather than a value cached in `_Ready` for the same reason: it has to be readable before the world's `_Ready` has run.
 - **The fade tween is created on the `ScreenFade` node itself** (`CreateTween()`), not on the tree. A tween is bound to the node that creates it and follows that node's process mode, and `UI/screen_fade.tscn` sets `process_mode = Always`, which is what keeps the fade playing while the world is paused. The same scene is reused for world transitions, so the two never drift apart in colour or duration.
 
@@ -153,7 +153,7 @@ Both keep the player still, through `Player.CanMove`, and every exit closed. Hel
 - `confirm` moves past a line or picks the highlighted option, and `move_up` / `move_down` move the highlight, going round at either end. A choice keeps the last line on screen, since that line is usually the question.
 - **Every text is a key, and the labels translate themselves,** so a change of language shows at once. A narration line shows no name.
 - The box is a `CanvasLayer` with `process_mode = Always`, because a forced conversation pauses the tree around it.
-- **The box ignores input while the debug overlay is open,** and so do `Combat` and the status screen. Godot runs every node's `_Input` before any control sees the event, so without that a key pressed in the overlay also moved the conversation behind it; `Combat`, which listens in `_UnhandledInput`, still received `confirm` with an overlay control holding the focus (both measured headless).
+- **The box ignores input while the debug overlay is open,** and so do the combat screen and the status screen. Godot runs every node's `_Input` before any control sees the event, so without that a key pressed in the overlay also moved the conversation behind it; combat v1, which listened in `_UnhandledInput`, still received `confirm` with an overlay control holding the focus (both measured headless).
 
 **A conversation that shows nothing ends at once, without a box.** When no line's condition holds and the start node goes straight to `END`, `DialogueRunner.Start` is already at the end. That is what lets a world have an opening conversation that only sometimes has something to say, as the demo's morning does. A conversation that fails to load is read before anything changes, so the game carries on as it was, with the error in the log.
 
@@ -172,7 +172,7 @@ The status screen is the player's menu, for now its only page: one member of the
 
 - **`Party/StatusSheet`**, engine-free, is what the screen shows of one character in one world: the level, the experience since the last level and what the next one costs, the points left, and the base stats.
 - **In the Real world the level is an age and there is no experience.** At a world's highest level there is no next level either, which the sheet settles before asking the curve, since `ToNextLevel` throws there.
-- **`UI/StatusText`**, engine-free, turns a sheet into the screen's lines. The stats' names are keys of their own, `ui.stat.*`, because the combat screen will name the same stats.
+- **`UI/StatusText`**, engine-free, turns a sheet into the screen's lines. The stats' names are keys of their own, `ui.stat.*`, because the combat screen names the same stats.
 - **The derived stats are not on it.** The design hides them from the player; they show in the debug overlay.
 - Its text is built in code, so its labels have auto-translation off and the screen rebuilds them on `NotificationTranslationChanged` (see [In the game](#in-the-game)). The members' buttons and the world's name hold keys and translate themselves.
 - **It listens to the party's signals,** so a change made behind it shows at once. If the member shown leaves, the focus goes to the protagonist.
@@ -185,7 +185,7 @@ The status screen is the player's menu, for now its only page: one member of the
   - The press that closes it does not reach `Main`. Without the mark, `Main`, just unpaused, opened the screen again on the same press (verified headless by removing it).
   - Godot's own focus keys never see the event, so an arrow does not move the focus twice, and Tab, which is both `open_menu` and Godot's "next control", only closes.
   - `move_up`, `move_down` and `confirm` do nothing yet, and are marked too.
-- **It ignores input while the debug overlay is open,** like the box and `Combat`. Without that, `cancel` pressed in the overlay closed the screen and unpaused the tree behind the overlay (verified headless by removing it).
+- **It ignores input while the debug overlay is open,** like the box and the combat screen. Without that, `cancel` pressed in the overlay closed the screen and unpaused the tree behind the overlay (verified headless by removing it).
 - **It takes the focus back when the overlay closes,** on `DebugTools.OverlayClosed`. The overlay takes the focus while it is open, and frees the control that had it.
 
 ## Dialogue Format
@@ -311,9 +311,9 @@ msgstr ""
 "Language: es\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
-#. {name} is a combatant's name; {hp} and {max_hp}, numbers.
-msgid "ui.combat.hp"
-msgstr "{name}   {hp}/{max_hp}"
+#. {attacker} and {target} are combatants' names; {damage}, a number.
+msgid "ui.combat.log.hit"
+msgstr "{attacker} golpea a {target}: {damage} de daño."
 ```
 
 - **A table is a file `<name>.<locale>.po`, and every key in it starts with `<name>.`** That way two tables can never hold the same key. This matters because Godot merges every table of a language into one, and when a key appears twice it keeps one of them without saying.
@@ -340,10 +340,10 @@ A new kind of content, such as items or skills, gets a pair of tables of its own
 
 ### Placeholders
 
-A text with something in it from the code names its placeholders: `{hp}/{max_hp}`, never `{0}/{1}`. Each language puts them in whatever order reads naturally, and whoever translates sees what goes where.
+A text with something in it from the code names its placeholders: `{attacker} hits {target}`, never `{0} hits {1}`. Each language puts them in whatever order reads naturally, and whoever translates sees what goes where.
 
 ```csharp
-_enemyHpLabel.Text = TextTemplate.Fill(Tr("ui.combat.hp"), ("name", Tr(EnemyData.NameKey)), ("hp", hp), ("max_hp", maxHp));
+TextTemplate.Fill(translate(Hit), ("attacker", names.Of(attack.Attacker)), ("target", names.Of(attack.Target)), ("damage", attack.DamageTaken));
 ```
 
 - **A placeholder is a word between braces.** Any other brace is plain text.
@@ -354,8 +354,8 @@ _enemyHpLabel.Text = TextTemplate.Fill(Tr("ui.combat.hp"), ("name", Tr(EnemyData
 ### In the game
 
 - **The starting language needs no code.** Godot starts in the system's language when a table exists for it (`es_AR` finds `es`) and falls back to English otherwise, and English is already Godot's default fallback, so `project.godot` does not repeat it. Remembering the player's choice waits for a place to store settings, in M9 at the latest.
-- **A fixed text is a key, and Godot translates it by itself.** A `Control` whose `text` is a key shows its translation, and updates when the language changes: the Attack button holds `ui.combat.attack` in `combat.tscn`, and `Combat` assigns the result's key to its label.
-- **A text built in code goes through `Tr()` and `TextTemplate`,** as the HP labels, the world and cycle label and the status screen's lines do. Those labels have `auto_translate_mode` set to *Disabled*; otherwise Godot would look the finished text up as a key again, and pseudolocalization would rewrite it twice. They are rebuilt on `NotificationTranslationChanged`, which Godot sends every node when the language changes.
+- **A fixed text is a key, and Godot translates it by itself.** A `Control` whose `text` is a key shows its translation, and updates when the language changes: the Attack button holds `ui.combat.attack` in `combat_screen.tscn`.
+- **A text built in code goes through `Tr()` and `TextTemplate`,** as the combat screen's names, numbers, log and result, the world and cycle label and the status screen's lines do. Those labels have `auto_translate_mode` set to *Disabled*; otherwise Godot would look the finished text up as a key again, and pseudolocalization would rewrite it twice. They are rebuilt on `NotificationTranslationChanged`, which Godot sends every node when the language changes.
 - **The debug overlay switches the language** (see [Debug Tooling](#debug-tooling)), on every screen and while a fight pauses the tree. It replaced F2, a temporary key from #72.
 - **The debug overlay's own text is the one exception to "every text is a key".** It is a tool, not part of the game, so it is in English, its panel has auto-translation off, and `GameKeysTests` skips `Debug/`.
 - **Pseudolocalization checks that no text bypasses the tables.** It rewrites every translated text with accents and brackets (`[Åŧáćáŕ]`), so any text on screen without brackets did not come from a table. Turn it on for one run with an `override.cfg` beside `project.godot`, which `.gitignore` already lists:
@@ -385,7 +385,7 @@ _enemyHpLabel.Text = TextTemplate.Fill(Tr("ui.combat.hp"), ("name", Tr(EnemyData
 
 The decision registry is what the game remembers of the player: every flag of the catalogue, the fights, and which optional worlds those open. It is in memory for now; saving it is M9's job, and the snapshot below is what M9 will save.
 
-It follows the split of `CombatResolver` and `Combat`. The logic is engine-free in `Decisions/`, and the `DecisionRegistry` autoload is a thin node around it:
+It follows the split of the combat core and its screen. The logic is engine-free in `Decisions/`, and the `DecisionRegistry` autoload is a thin node around it:
 
 - **`DecisionState`** holds every flag's value and the history of fights, and implements `IFlagStore`, so the dialogue runner reads and writes it directly.
 - **`WorldAccess`** reads `Decisions/world_access.json` and computes which optional worlds are open.
@@ -407,11 +407,15 @@ Code names a flag as a string, as it does a translation key: `State.SetFlag("wor
 
 ### Fights
 
-`Main` calls `RecordCombat` when a fight ends, with the world, the cycle, the enemy's `Id` and the result. It adds a `CombatRecord` to the history and 1 to `combat.wins` or `combat.losses`, always together, so the totals and the history never disagree. The two counters are declared in the catalogue, and `DecisionState` refuses a catalogue without them. Dialogue can read the totals like any counter. The history is not a flag: only code reads it, it belongs to the slot like the `run` flags, and each entry keeps its cycle, so "in this cycle" is a filter.
+`Main` calls `RecordCombat` when a fight ends, with the world, the cycle, the group fought (an `EncounterValues`) and a `FightOutcome`, `Won` or `Lost`. It adds a `CombatRecord` to the history, with the group's id and each of its enemies' ids in order, repeats included, and 1 to `combat.wins` or `combat.losses`, always together, so the totals and the history never disagree. The two counters are declared in the catalogue, and `DecisionState` refuses a catalogue without them. Dialogue can read the totals like any counter. The history is not a flag: only code reads it, it belongs to the slot like the `run` flags, and each entry keeps its cycle, so "in this cycle" is a filter.
 
 **It is the last step of `Main.OnCombatFinished`, after unpausing,** on purpose. An exception thrown in a signal handler is logged with its stack, and the game goes on, but the rest of that handler does not run (verified headless). Anywhere earlier, a failure would leave the game paused under the combat overlay. There, the worst it can do is leave one fight out of the history.
 
-An enemy's `Id` is a lowercase word in its `EnemyData`, separate from its `NameKey`, so the history keeps meaning the same when the name's text changes. It is empty by default, and `GameFlagsTests` requires every `EnemyData` resource to have one of its own.
+An enemy's `Id` is a lowercase word in its `EnemyData`, separate from its `NameKey`, so the history keeps meaning the same when the name's text changes, and a group's is the `Id` of its `EncounterData`. Both are empty by default, `GameFlagsTests` requires every `EnemyData` resource to have one of its own, and `EncounterDataTests` every group.
+
+- **`FightOutcome` is apart from the core's `CombatResult`,** which also has `Ongoing`: a fight in the history is never still going on.
+- **`CombatRecord` writes its equality by hand.** A record compares a list by reference, so two fights against the same enemies would differ; here they are equal when their enemies are the same ids in the same order. It keeps a copy of the list it is given, and checks itself when built: a group, at least one enemy, no empty id, an outcome that exists.
+- **The debug overlay lists a fight as the record's own line:** `Fantasy, cycle 1: demo_patrol (weak, demo_clumsy), won`.
 
 ### World access
 
@@ -451,7 +455,7 @@ The logic is engine-free, as in the rest of the game. `DebugPreset` reads and ch
 
 **Every change goes through the registry's API,** so its signals fire as if the game had made it: a number is set by adding the difference with `AddToCounter`. The overlay follows `FlagChanged`, so a change the game makes while it is open shows too. Its rows are built from the catalogue each time it opens.
 
-**Opening pauses the tree unless something already had, and closing unpauses it only if opening paused it,** so a fight or a forced conversation stays paused behind it. The one gap: a forced conversation that starts while the overlay is open, which only a world's fade in can do, is unpaused when it closes. While the box, `Combat` and the status screen ignore input, nothing behind the overlay reacts to a key pressed in it (see [The box and its input](#the-box-and-its-input)). `DebugTools` emits `OverlayClosed` once it has closed, for whatever lost the keyboard focus to it.
+**Opening pauses the tree unless something already had, and closing unpauses it only if opening paused it,** so a fight or a forced conversation stays paused behind it. The one gap: a forced conversation that starts while the overlay is open, which only a world's fade in can do, is unpaused when it closes. While the box, the combat screen and the status screen ignore input, nothing behind the overlay reacts to a key pressed in it (see [The box and its input](#the-box-and-its-input)). `DebugTools` emits `OverlayClosed` once it has closed, for whatever lost the keyboard focus to it.
 
 **The overlay's text fields have a whole border,** set on its theme. The default theme draws a field as a line under it with rounded ends, which at the overlay's size read as a box with its bottom border cut.
 
@@ -512,11 +516,11 @@ godot --headless --path . --quit-after 800 -- --world fantasy --cycle 2 --do "se
 
 ## Engine-Free Game Logic
 
-Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `Combat/CombatResolver.cs`, `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas, the growth of stats and the experience curves in `Stats/`, a character's values and the roster's in `Characters/`, the party's state in `Party/`, what the status screen shows (`Party/StatusSheet.cs`, `UI/StatusText.cs`), the text of a fight's result (`Combat/CombatResultText.cs`), the combat core in `Combat/` (its dice, the damage pipeline, the turn order and the runner of a fight), and the rules for conversations (`Dialogue/ConversationRules.cs`), for the menu (`UI/MenuRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
+Rules that are pure decisions — how much damage an attack does, whether a fight is over, who won — live in plain C# classes with no Godot base type and no `using Godot;`, next to the feature they belong to — `World/CycleProgression.cs`, `Player/DirectionResolver.cs`, the whole dialogue format in `Dialogue/`, the reading and checking of the translation tables in `Localization/`, the decision registry's state and world access in `Decisions/`, the debug tooling's presets, command line and snapshots in `Debug/`, the stat formulas, the growth of stats and the experience curves in `Stats/`, a character's values and the roster's in `Characters/`, the party's state in `Party/`, what the status screen shows (`Party/StatusSheet.cs`, `UI/StatusText.cs`), the combat core in `Combat/` (its dice, the damage pipeline, the turn order, the runner of a fight, who goes into one and what it leaves, the menu's way through a round and the screen's text), and the rules for conversations (`Dialogue/ConversationRules.cs`), for the menu (`UI/MenuRules.cs`) and for facing something (`Player/Facing.cs`). The `Node` keeps what actually needs the engine: child nodes, input, timers, tweens, signals and UI.
 
 The point is testability. A `Node` can only run inside a scene tree, so anything mixed into it can only be checked by playing the game; a plain class can be exercised directly by a unit test, and by a headless run, without an engine around it.
 
-When a plain class and an Autoload hold the same number, the plain class decides it and the `Node` writes the result into the Autoload — never both applying the same arithmetic. `CombatResolver` owns the fight's HP while it lasts; `Combat` copies it into the party's state, which is what carries it back out to the map.
+When a plain class and an Autoload hold the same number, the plain class decides it and the `Node` writes the result into the Autoload — never both applying the same arithmetic. `CombatRunner` owns the fight's health while it lasts; `CombatAftermath` writes what is left into the party's state once it is over, which is what carries it back out to the map.
 
 ### Where the tests live
 
@@ -525,7 +529,7 @@ The xUnit project sits at `tests/Game.Tests/`, outside `Game/`. Godot's C# SDK c
 It does **not** use a `ProjectReference` to the Godot project. Instead it compiles the engine-free sources directly:
 
 ```xml
-<Compile Include="..\..\Game\Combat\CombatResolver.cs" Link="GameLogic\CombatResolver.cs" />
+<Compile Include="..\..\Game\Combat\DamagePipeline.cs" Link="GameLogic\DamagePipeline.cs" />
 ```
 
 Referencing the Godot project would pull its source generators into the test assembly, where they fail with `CS8785` because `GodotProjectDir` is not set outside a Godot build. Compiling the source directly also turns this whole convention into a compiler check: a `using Godot;` added to one of these files breaks the test project immediately, instead of waiting for someone to notice it in review.
@@ -540,13 +544,15 @@ The file is stored in the format VS Code's C# Dev Kit writes (a newline after th
 
 ## Stats as Resources
 
-Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). A new enemy type is a new `.tres` file, with an `Id` of its own for the decision registry's history of fights, plus its name in the two `Localization/enemy.*.po` tables, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
+Per-entity stats live in `Resource` subclasses marked `[GlobalClass]`, authored as `.tres` files (e.g. `Enemy/EnemyData.cs` with `Enemy/weak_enemy.tres` and `Enemy/strong_enemy.tres`). An enemy has the seven base stats, fixed, with no level and no growth. A new enemy type is a new `.tres` file, with an `Id` of its own for the decision registry's history of fights, plus its name in the two `Localization/enemy.*.po` tables, not new code or per-instance values typed into a scene, and adding a stat means adding one property instead of changing every method signature it travels through.
 
-A resource's defaults are empty or zero, never one real entity's values. The editor leaves out of a `.tres` every property that equals its default, so when `EnemyData`'s defaults were the weak enemy's stats, saving `weak_enemy.tres` emptied it of them. `EnemyDataTests` requires every enemy to write its name, its HP and the experience it gives, so every enemy gives at least 1.
+A resource's defaults are empty or zero, never one real entity's values. The editor leaves out of a `.tres` every property that equals its default, so when `EnemyData`'s defaults were the weak enemy's stats, saving `weak_enemy.tres` emptied it of them. `EnemyDataTests` requires every enemy to write its name, its HP and the experience it gives, so every enemy gives at least 1, and refuses a line that is not one of its properties: Godot ignores a misspelt stat in silence. It rebuilds every enemy file as the `EnemyValues` the rules read.
+
+**A group of enemies is a resource of its own,** `Enemy/EncounterData.cs`, in `Enemy/Encounters/`, named after its `Id`: from one enemy to four, the same kind as often as it is wanted, in the order they stand in the fight. Its `ToValues()` builds an `EncounterValues`, whose experience is the sum of its enemies'. The enemy on the map carries a group (`Enemy.Encounter`), and is one node whatever the group's size. `EncounterDataTests` rebuilds every group, and requires every enemy node on a map to carry one.
 
 What changes while playing is the exception: a resource is shared by everything that loads it, so it holds what an entity is and never its current HP. The party's levels, experience and health points live in the `Party` autoload. See *The Party*.
 
-A resource is a Godot type, so an engine-free class cannot take one. When plain logic needs a resource's numbers, the resource builds a plain value from them and the logic only ever sees that value: `Stats/StatTuning.cs` has a `ToValues()` that returns a `StatTuningValues`, which is what `StatFormulas` reads. See *Stat Formulas*. A character does the same: `Characters/CharacterData.cs` builds a `CharacterValues`. See *Characters and Levels*.
+A resource is a Godot type, so an engine-free class cannot take one. When plain logic needs a resource's numbers, the resource builds a plain value from them and the logic only ever sees that value: `Stats/StatTuning.cs` has a `ToValues()` that returns a `StatTuningValues`, which is what `StatFormulas` reads. See *Stat Formulas*. `Combat/CombatTuning.cs` does the same for combat's own numbers. A character does the same: `Characters/CharacterData.cs` builds a `CharacterValues`. See *Characters and Levels*.
 
 ## Stat Formulas
 
@@ -709,17 +715,18 @@ Being in the roster is not being in the party. The party starts with the protago
 
 ### Experience
 
-**Every member receives a fight's whole experience; it is not split,** because splitting would punish recruiting. Whoever is not in the party receives none, and the Real world gives none to anyone.
+**Every member standing at the end of a fight receives its whole experience; it is not split,** because splitting would punish recruiting. A member who went down receives none, nor does whoever is not in the party, and the Real world gives none to anyone.
 
-- **`PreviewAward(world, experience)`** computes what each member would gain and changes nothing. **`Award`** is the same computation, applied. So what a screen announces and what the party receives cannot differ.
+- **`PreviewAward(world, experience, recipients)`** computes what each member it names would gain and changes nothing; without the list it is every member. **`Award`** is the same computation, applied. So what a screen announces and what the party receives cannot differ.
+- **A recipient outside the party, or named twice, is refused,** and nobody changes. The award lists those who receive it in the party's order, whatever order they were named in.
 - **An award cannot fail half way.** A curve is checked whole when it is built, and `PartyState`'s constructor checks that every character's stats can be computed at each world's highest level. A character whose growth overflows there is refused when the game starts, not in the middle of a fight's award.
 
 ### After a fight
 
-Combat v1 is still one against one: `Combat` fights with the protagonist's stats in the world the fight happens in, and writes their health points back to the party. The whole party fights in M8.
+The whole party fights, with its stats in the world the fight happens in, and **the party is not written while the fight is on**: the screen shows its own copy of the health, and the party is written once, at the end.
 
-1. When the fight is won, `Combat` asks for `PreviewAward` and shows the result: who won, the experience gained, and a line for each member who reaches a level. `Combat/CombatResultText` builds those lines, engine-free. A loss gives nothing.
-2. Once the overlay is gone and the tree is unpaused, `Main.OnCombatFinished` calls `Award`, then heals whoever fought, then records the fight. The heal comes after the award so that a level reached is full too.
+1. When the fight is over, the screen builds its `CombatAftermath` and asks it for `PreviewAward`, and shows the result in pages: how it ended, the experience gained, a line for each member who reaches a level, and after a win a line for each who was down and gains nothing. `Combat/CombatResultPages` builds them, engine-free. A loss gives nothing.
+2. Once the overlay is gone and the tree is unpaused, `Main.OnCombatFinished` calls the aftermath's `ApplyTo`, which writes each member's health and mana and then gives the experience to those standing; then it heals the whole party, and records the fight. The heal comes after the award so that a level reached is full too. Healing everyone after every fight is temporary: #107 gives each world its rules.
 
 All three come after unpausing for the reason [Fights](#fights) gives: an exception in a signal handler skips the rest of the handler, and anywhere earlier it would leave the game paused.
 
@@ -732,18 +739,21 @@ All three come after unpausing for the reason [Fights](#fights) gives: an except
 
 ## Combat Core
 
-`Game/Combat/` holds the rules of combat v2 as engine-free classes: what a fight rolls, how an attack becomes damage, who acts when, and the runner that plays a fight a round at a time. No scene uses them yet. The fights in the game are still combat v1 (`CombatResolver`, `Combat.cs` and `combat.tscn`, see *Combat Overlay Architecture*), which stays as it is until the screen of v2 replaces it.
+`Game/Combat/` holds the rules of combat as engine-free classes: what a fight rolls, how an attack becomes damage, who acts when, the runner that plays a fight a round at a time, who goes into it and what it leaves, and everything the screen shows. `CombatScreen` drives them (see *The combat screen* below), and is the only node.
 
 | File | What it is |
 |---|---|
 | `ICombatRandom` | Every roll a fight makes: `Percent()`, from 0 up to but not including 100, and `Index(count)`, a pick among a count. |
 | `SeededCombatRandom` | The game's dice, over a `System.Random` built from a seed it reports in `Seed`. |
-| `CombatTuningValues` | Combat's own tunable numbers, as a plain checked record. |
+| `CombatTuningValues`, `CombatTuning` | Combat's own tunable numbers, as a plain checked record and as the resource in `combat_tuning.tres`. |
 | `AttackResult`, `DamagePipeline` | One attack worked out: missed, evaded or hit, whether it was critical, and the damage. |
 | `CombatantId`, `CombatantSetup`, `Combatant` | Who is in a fight: a side and a position, what a combatant brings in, and what it has left while the fight lasts. |
 | `TurnOrder` | Who acts when in a round. |
 | `CombatOrder`, `CombatEvent` | What a member is told to do, and what happened, each as a record with one subtype per kind. |
 | `CombatRunner` | The fight. |
+| `CombatLineup`, `CombatAftermath` | From the party to the fight, and back. |
+| `OrderEntry`, `CombatantNames`, `CombatLog`, `CombatResultPages` | What the screen shows: the menu's way through a round, the combatants' names, the log's lines and the result. |
+| `CombatScreen` | The screen, on `combat_screen.tscn`: timing, input and controls. |
 
 ### Rolls
 
@@ -788,7 +798,7 @@ damage = max(minimum damage, round down(damage))
 | `MinimumDamage` | The least a hit that lands does | 1 or more | 1 |
 | `DamageVariationPercent` | How far the base damage moves either way | 0 to below 100 | 10 |
 
-A record nobody filled in is all zeros and is refused by the minimum. There is no resource or file for them yet: they arrive with the combat screen. The tests use `TestTuning.Combat()`.
+They are in `Combat/combat_tuning.tres`, a `CombatTuning` resource whose `ToValues()` builds the record, as `StatTuning` does. A record nobody filled in is all zeros and is refused by the minimum. A variation of 0 is a real value, the one that turns it off, so an editor save could drop its line in silence; `CombatTuningTests` requires the file to write both. The tests of the rules use `TestTuning.Combat()`.
 
 ### Combatants and the turn order
 
@@ -820,4 +830,46 @@ A round takes its orders in advance, works out the turn order once, and plays ea
 
 - **A new action is a new record under `CombatOrder`,** and a new kind of event one under `CombatEvent`, so no signature changes for it.
 - **The party has from one to four members and there is at least one enemy,** with someone standing on each side. How many enemies fit on screen is not the runner's to decide.
-- **What a fight leaves behind is not here.** Leaving with 1 health and 1 mana, and experience only for those standing, happen when the fight's result goes back to the party.
+- **What a fight leaves behind is not here,** but in `CombatAftermath`, below.
+
+### From the party to the fight, and back
+
+**`CombatLineup.For(party, world, encounter)`** says who goes in: the members in the party's order, with their stats in the world and the health and mana they have left, and the group's enemies at full. A member with no health left comes in down. It remembers which character stands in each of the party's positions (`MemberIds`, `MemberAt`), and changes nothing in the party.
+
+**`CombatAftermath.Of(lineup, runner)`** reads a finished fight against its lineup, and refuses a fight that is not over or a runner whose sides are not the lineup's:
+
+- **A member standing leaves with the health and mana they had left.**
+- **A member who went down leaves with 1 health point and 1 mana point,** or 0 mana where their most is 0, whatever they had before: going down drains the mana too. They get none of the experience.
+- **After a loss everyone is down,** so everyone leaves that way, and there is no experience.
+- `Standing`, `Result`, `Outcome` for the history, and `Experience`: the group's after a win, 0 after a loss.
+
+`ApplyTo(party)` writes it: each member's health and mana first, since a level reached does not heal, then the experience for those standing. `PreviewAward(party)` is that award without writing it, for the screen to announce. The party should not change while a fight is on, but the debug overlay can open over one and dismiss a member; such a member still has their health written, and is left out of the award instead of making it fail.
+
+### The menu and the text
+
+**`OrderEntry`** walks the menu for one round, over the runner's `MembersToOrder` and the enemies standing:
+
+| Step | The screen shows | `confirm` | `cancel` |
+|---|---|---|---|
+| `Command` | The commands; today only *Attack* | `ChooseAttack()`, to the target | `Back()`: the target of the member before, whose order is forgotten; on the first member, nothing |
+| `Target` | The enemies standing | `ChooseTarget(id)`, to the next member's command | `Back()`: the same member's command |
+| `Complete` | Nothing: `Orders` go to `SubmitOrders` | | |
+
+**`CombatantNames`** gives each combatant the name it is shown by. Two of one kind on a side are told apart by a letter, A to D, through `ui.combat.name_with_letter`. A kind alone on its side has no letter. The letters are given by position, once, so they do not move when one goes down.
+
+**`CombatLog.LineFor(event, names, translate)`** is the log's line for each event: `ui.combat.log.round`, `.hit`, `.critical`, `.missed`, `.evaded` and `.downed`. The damage it gives is the damage taken, which for an enemy is what the screen answered. `FightEnded` has no line.
+
+**`CombatResultPages`** says how the fight ended, in pages of four lines. A loss is one line; nobody gains anything, so a line per member would say nothing.
+
+### The combat screen
+
+`Combat/combat_screen.tscn`, with `CombatScreen.cs`, is the only part of combat that needs the engine. It decides nothing about the fight: what it adds is the timing, the input and the controls.
+
+- **The layout,** at 640x360: the enemies along the top, each a button with its name and health; the log of the last four lines in the middle, where the result's pages take its place; the command menu; and the party along the bottom with health and mana. The member choosing is marked, and one who is down is dimmed.
+- **A target is chosen by moving the focus** along the enemies standing, with `move_left` and `move_right` calling `FindValidFocusNeighbor`, as the status screen does along its members. Each button names its neighbours, so the row goes round; an enemy down cannot take the focus.
+- **The log runs on a clock.** Each line waits `LineDelay` (0.6 s) before the next, and `confirm` ends the wait. An enemy's attack is answered when its turn in the log comes, with the damage the pipeline worked out, so its line appears the moment it is answered.
+- **The health shown follows the log, not the runner.** The runner works out a whole round up to the next enemy's attack at once; the screen keeps its own copy of each combatant's health, moved by each line as it appears, so the numbers fall with the text.
+- **The result ignores `confirm` for `ResultInputDelay`** (0.4 s) when it appears, so a player hurrying the log does not skip the first page. `confirm` turns the page, and after the last the screen fades out and emits `CombatFinished`.
+- **Input is read in `_Input`, and every press the screen uses is marked as handled,** like the status screen. With the debug overlay open it reads nothing, and its clock stops.
+- **Every fight uses a random seed,** printed when it starts. Choosing one from the command line is #107's.
+- **Run on its own,** `combat_screen.tscn` fights `demo_patrol` in the world the game starts in.
