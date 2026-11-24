@@ -86,6 +86,7 @@
     <Compile Include="..\..\Game\Dialogue\DialogueValidator.cs" Link="GameLogic\DialogueValidator.cs" />
     <Compile Include="..\..\Game\Dialogue\ConversationRules.cs" Link="GameLogic\ConversationRules.cs" />
     <Compile Include="..\..\Game\UI\MenuRules.cs" Link="GameLogic\MenuRules.cs" />
+    <Compile Include="..\..\Game\UI\StickPresses.cs" Link="GameLogic\StickPresses.cs" />
     <Compile Include="..\..\Game\Party\StatusSheet.cs" Link="GameLogic\StatusSheet.cs" />
     <Compile Include="..\..\Game\UI\StatusText.cs" Link="GameLogic\StatusText.cs" />
     <Compile Include="..\..\Game\Dialogue\FlagUses.cs" Link="GameLogic\FlagUses.cs" />
