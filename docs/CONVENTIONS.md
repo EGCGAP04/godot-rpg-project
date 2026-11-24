@@ -91,7 +91,7 @@ The flow is:
 
 Five details are load-bearing:
 
-- **The overlay must be added deferred.** The trigger fires inside a physics callback (`body_entered`), where adding or freeing nodes is not allowed, so `Main` uses `CallDeferred(MethodName.StartCombat, ...)`.
+- **The overlay must be added deferred.** The trigger fires inside a physics callback (`body_entered`), where adding or freeing nodes is not allowed, so `Main` uses `CallDeferred(MethodName.StartCombat)`, with no arguments: the enemy waits in `_pendingEnemy`.
 - **`CombatScreen` sets `process_mode = 3` (Always).** Otherwise the paused tree would freeze the overlay too, and the clock of its log would never run.
 - **The group is assigned before `AddChild`,** so it is already set when `CombatScreen._Ready()` runs.
 - **The player is spawned from `Main._EnterTree()`, not `_Ready()`.** A `CharacterBody2D` registers its transform with the physics server when it enters the tree, and a parent's `_EnterTree` runs before its children enter, so spawning there is what keeps the server from ever seeing the position authored in `main.tscn`. Moving the player afterwards leaves enemy areas paired against that stale transform for one frame, which reports a contact — a `body_entered` followed immediately by `body_exited` — that never happened. `WorldScene.PlayerSpawnPosition` is a computed property rather than a value cached in `_Ready` for the same reason: it has to be readable before the world's `_Ready` has run.
@@ -150,7 +150,7 @@ Both keep the player still, through `Player.CanMove`, and every exit closed. Hel
 ### The box and its input
 
 - **The box reads input in `_Input`, and marks every press it uses as handled.** `_Input` runs before any node's `_UnhandledInput`, which is where the interactables listen. Without it, the `confirm` that ends a conversation reaches the character the player was talking to and starts the conversation again, on the same press (verified headless by removing it).
-- `confirm` moves past a line or picks the highlighted option, and `move_up` / `move_down` move the highlight, going round at either end. A choice keeps the last line on screen, since that line is usually the question.
+- `confirm` moves past a line or picks the highlighted option, and `move_up` / `move_down` move the highlight, going round at either end. The stick moves it one option per push, through `StickPresses`, as in the status screen. A choice keeps the last line on screen, since that line is usually the question.
 - **Every text is a key, and the labels translate themselves,** so a change of language shows at once. A narration line shows no name.
 - The box is a `CanvasLayer` with `process_mode = Always`, because a forced conversation pauses the tree around it.
 - **The box ignores input while the debug overlay is open,** and so do the combat screen and the status screen. Godot runs every node's `_Input` before any control sees the event, so without that a key pressed in the overlay also moved the conversation behind it; combat v1, which listened in `_UnhandledInput`, still received `confirm` with an overlay control holding the focus (both measured headless).
@@ -185,6 +185,7 @@ The status screen is the player's menu, for now its only page: one member of the
   - The press that closes it does not reach `Main`. Without the mark, `Main`, just unpaused, opened the screen again on the same press (verified headless by removing it).
   - Godot's own focus keys never see the event, so an arrow does not move the focus twice, and Tab, which is both `open_menu` and Godot's "next control", only closes.
   - `move_up`, `move_down` and `confirm` do nothing yet, and are marked too.
+- **A stick press goes through `StickPresses`, a key or a button through Godot** (#117). Godot sends an `InputEventJoypadMotion` every time an axis moves, and every one past the deadzone answers `true` to `IsActionPressed`, with no echo, so one push of the stick read that way moved a menu several steps (9 for one push, measured). `MenuInput.Pressed` hands a motion to the menu's own `StickPresses`, engine-free, which counts a press when the strength rises to `PressAt` (0.5) and a release only once it falls below `ReleaseBelow` (0.3): two thresholds chosen by the state, which is what makes it hysteresis. A menu reads every direction on every event, before deciding what to do with any, so the state sees every release. The combat screen and the dialogue box do the same.
 - **It ignores input while the debug overlay is open,** like the box and the combat screen. Without that, `cancel` pressed in the overlay closed the screen and unpaused the tree behind the overlay (verified headless by removing it).
 - **It takes the focus back when the overlay closes,** on `DebugTools.OverlayClosed`. The overlay takes the focus while it is open, and frees the control that had it.
 
@@ -866,7 +867,7 @@ A round takes its orders in advance, works out the turn order once, and plays ea
 `Combat/combat_screen.tscn`, with `CombatScreen.cs`, is the only part of combat that needs the engine. It decides nothing about the fight: what it adds is the timing, the input and the controls.
 
 - **The layout,** at 640x360: the enemies along the top, each a button with its name and health; the log of the last four lines in the middle, where the result's pages take its place; the command menu; and the party along the bottom with health and mana. The member choosing is marked, and one who is down is dimmed.
-- **A target is chosen by moving the focus** along the enemies standing, with `move_left` and `move_right` calling `FindValidFocusNeighbor`, as the status screen does along its members. Each button names its neighbours, so the row goes round; an enemy down cannot take the focus.
+- **A target is chosen by moving the focus** along the enemies standing, with `move_left` and `move_right` calling `FindValidFocusNeighbor`, as the status screen does along its members, and the stick moves it one enemy per push, through `StickPresses`. Each button names its neighbours, so the row goes round; an enemy down cannot take the focus.
 - **The log runs on a clock.** Each line waits `LineDelay` (0.6 s) before the next, and `confirm` ends the wait. An enemy's attack is answered when its turn in the log comes, with the damage the pipeline worked out, so its line appears the moment it is answered.
 - **The health shown follows the log, not the runner.** The runner works out a whole round up to the next enemy's attack at once; the screen keeps its own copy of each combatant's health, moved by each line as it appears, so the numbers fall with the text.
 - **The result ignores `confirm` for `ResultInputDelay`** (0.4 s) when it appears, so a player hurrying the log does not skip the first page. `confirm` turns the page, and after the last the screen fades out and emits `CombatFinished`.

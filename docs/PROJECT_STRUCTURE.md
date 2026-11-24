@@ -200,10 +200,12 @@ godot-rpg-project/
 │   │
 │   ├── UI/
 │   │   ├── DialogueBox.cs (+.uid)      # shows a conversation and reads its input
+│   │   ├── MenuInput.cs (+.uid)        # a menu's press: a key through Godot, a stick through StickPresses
 │   │   ├── MenuRules.cs (+.uid)        # engine-free: when the player's menu can open
 │   │   ├── ScreenFade.cs (+.uid)       # shared fade, used by combat and transitions
 │   │   ├── StatusScreen.cs (+.uid)     # the status screen: one party member at a time
 │   │   ├── StatusText.cs (+.uid)       # engine-free: the status screen's lines
+│   │   ├── StickPresses.cs (+.uid)     # engine-free: one press per push of the stick
 │   │   ├── dialogue_box.tscn
 │   │   ├── screen_fade.tscn
 │   │   └── status_screen.tscn          # opened with open_menu, closed with it or cancel
@@ -219,10 +221,10 @@ godot-rpg-project/
 │   │   ├── floor_placeholder.png (+.import)
 │   │   ├── wall_placeholder.png (+.import)
 │   │   ├── tileset.tres
-│   │   ├── fantasy_world.tscn          # the old test room, tinted; keeps both enemies
+│   │   ├── fantasy_world.tscn          # the old test room, tinted; the three enemies and the newcomer
 │   │   ├── interactable.tscn           # something to talk to, with a body of its own
 │   │   ├── nightmare_world.tscn        # placeholder room, dark tint, no enemies yet
-│   │   ├── real_world.tscn             # placeholder room, holds the bed and the neighbor
+│   │   ├── real_world.tscn             # placeholder room, holds the bed, the neighbor and the friend
 │   │   └── world_exit.tscn             # reusable bed / exit trigger
 │   │
 │   ├── Godot RPG Project.csproj
@@ -310,6 +312,7 @@ godot-rpg-project/
 │       ├── StatTuningValuesTests.cs
 │       ├── StatusSheetTests.cs
 │       ├── StatusTextTests.cs
+│       ├── StickPressesTests.cs
 │       ├── TestFights.cs           # groups and whole scripted fights the combat tests share
 │       ├── TestRoster.cs           # the characters, curves and party the party's tests use
 │       ├── TestTuning.cs           # the tuning and the stats the formula and combat tests use
