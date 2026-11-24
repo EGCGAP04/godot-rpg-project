@@ -35,8 +35,14 @@ public enum CombatResult
 
 /// <summary>
 /// An enemy's attack, worked out and not applied yet: who attacks, whom, and what the
-/// damage pipeline answered, with armor already taken out of the damage.
+/// damage pipeline answered, with armor and the target's defence already taken out of
+/// the damage.
 /// </summary>
+/// <remarks>
+/// A fight where the player dodges in real time answers with what got through, as it is.
+/// Such a scene will need to know whether the target defends, to take the defence out of
+/// what it lets through; the day it exists, this record carries that too.
+/// </remarks>
 public sealed record PendingEnemyAttack(CombatantId Attacker, CombatantId Target, AttackResult Result);
 
 /// <summary>
@@ -75,6 +81,12 @@ public sealed record PendingEnemyAttack(CombatantId Attacker, CombatantId Target
 /// <para>
 /// Whoever goes down before its turn loses it. The fight ends the moment a whole side is
 /// down, and nobody after that acts.
+/// </para>
+/// <para>
+/// <b>A member who defends is protected from the round's start,</b> so an enemy faster
+/// than them is no reason to defend in vain: a <see cref="Defended"/> comes right after
+/// <see cref="RoundStarted"/>, for each in the party's order, and their own turn passes
+/// with nothing. The defence lasts until the round ends. It rolls nothing.
 /// </para>
 /// </remarks>
 public sealed class CombatRunner
@@ -186,6 +198,9 @@ public sealed class CombatRunner
 		_turn = 0;
 		_events.Add(new RoundStarted(Round, _turns.Select(combatant => combatant.Id).ToArray()));
 
+		foreach (Combatant member in Standing(_party).Where(member => _orders[member.Id] is DefendOrder))
+			_events.Add(new Defended(member.Id));
+
 		Continue();
 	}
 
@@ -259,14 +274,23 @@ public sealed class CombatRunner
 			if (Find(order.Actor).IsDown)
 				throw new ArgumentException($"An order is for {order.Actor}, who is down.", nameof(orders));
 
-			if (order is not AttackOrder attack)
-				throw new ArgumentException($"The fight does not know the kind of order given to {order.Actor}, {order.GetType().Name}.", nameof(orders));
+			switch (order)
+			{
+				case AttackOrder attack:
+					if (attack.Target.Side != CombatSide.Enemy || !Exists(attack.Target))
+						throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is not an enemy in this fight.", nameof(orders));
 
-			if (attack.Target.Side != CombatSide.Enemy || !Exists(attack.Target))
-				throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is not an enemy in this fight.", nameof(orders));
+					if (Find(attack.Target).IsDown)
+						throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is already down.", nameof(orders));
 
-			if (Find(attack.Target).IsDown)
-				throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is already down.", nameof(orders));
+					break;
+
+				case DefendOrder:
+					break;
+
+				default:
+					throw new ArgumentException($"The fight does not know the kind of order given to {order.Actor}, {order.GetType().Name}.", nameof(orders));
+			}
 
 			if (!checkedOrders.TryAdd(order.Actor, order))
 				throw new ArgumentException($"{order.Actor} was given two orders.", nameof(orders));
@@ -297,21 +321,23 @@ public sealed class CombatRunner
 			if (actor.Id.Side == CombatSide.Enemy)
 			{
 				Combatant victim = PickStanding(_party);
-				AttackResult worked = _pipeline.Resolve(actor.Stats, victim.Stats, ActionKind.Attack, _random);
+				AttackResult worked = _pipeline.Resolve(actor.Stats, victim.Stats, ActionKind.Attack, _random, defending: Defends(victim));
 
 				PendingAttack = new PendingEnemyAttack(actor.Id, victim.Id, worked);
 				Step = CombatStep.EnemyAttackPending;
 				return;
 			}
 
-			var order = (AttackOrder)_orders[actor.Id];
-			Combatant target = Find(order.Target);
+			switch (_orders[actor.Id])
+			{
+				case AttackOrder order:
+					Attack(actor, order);
+					break;
 
-			if (target.IsDown)
-				target = PickStanding(_enemies);
-
-			AttackResult result = _pipeline.Resolve(actor.Stats, target.Stats, ActionKind.Attack, _random);
-			Apply(actor.Id, target, result, result.Damage);
+				// Defending acted when the round started.
+				case DefendOrder:
+					break;
+			}
 
 			if (Step == CombatStep.Finished)
 				return;
@@ -323,6 +349,23 @@ public sealed class CombatRunner
 		Step = CombatStep.AwaitingOrders;
 	}
 
+	/// <summary>A member's attack, on the ordered target or, if it went down, on another standing enemy.</summary>
+	private void Attack(Combatant actor, AttackOrder order)
+	{
+		Combatant target = Find(order.Target);
+
+		if (target.IsDown)
+			target = PickStanding(_enemies);
+
+		// Enemies only attack: none of them defends.
+		AttackResult result = _pipeline.Resolve(actor.Stats, target.Stats, ActionKind.Attack, _random, defending: false);
+		Apply(actor.Id, target, result, result.Damage);
+	}
+
+	/// <summary>Whether a member defends in the round being worked out.</summary>
+	private bool Defends(Combatant member) =>
+		_orders.TryGetValue(member.Id, out CombatOrder order) && order is DefendOrder;
+
 	/// <summary>One of the side's standing combatants, by a roll that is made even when one is left.</summary>
 	private Combatant PickStanding(List<Combatant> side)
 	{
@@ -333,7 +376,7 @@ public sealed class CombatRunner
 	private void Apply(CombatantId attacker, Combatant target, AttackResult result, int damageTaken)
 	{
 		target.TakeDamage(damageTaken);
-		_events.Add(new AttackResolved(attacker, target.Id, result, damageTaken));
+		_events.Add(new AttackResolved(attacker, target.Id, result, damageTaken, target.HealthPoints));
 
 		if (!target.IsDown)
 			return;

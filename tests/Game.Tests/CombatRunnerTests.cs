@@ -38,6 +38,8 @@ public class CombatRunnerTests
 
 	private static AttackOrder Attack(int member, int enemy) => new(P(member), E(enemy));
 
+	private static DefendOrder Defend(int member) => new(P(member));
+
 	private static CombatantSetup Fighter(int healthPoints, int attackDamage, int agility, int armor = 0, int? healthLeft = null) =>
 		new(
 			"speaker.someone",
@@ -147,7 +149,7 @@ public class CombatRunnerTests
 		var started = Assert.IsType<RoundStarted>(events[0]);
 		Assert.Equal(1, started.Round);
 		Assert.Equal(new[] { P(0), E(0) }, started.TurnOrder);
-		Assert.Equal(new AttackResolved(P(0), E(0), AttackResult.Hit(10, isCritical: false), 10), events[1]);
+		Assert.Equal(new AttackResolved(P(0), E(0), AttackResult.Hit(10, isCritical: false), 10, 15), events[1]);
 
 		runner.AnswerEnemyAttack(7);
 
@@ -158,7 +160,7 @@ public class CombatRunnerTests
 		Assert.Equal(new[] { 23 }, Health(runner.Party));
 		Assert.Equal(new[] { P(0) }, runner.MembersToOrder);
 		Assert.Equal(
-			new CombatEvent[] { new AttackResolved(E(0), P(0), AttackResult.Hit(7, isCritical: false), 7) },
+			new CombatEvent[] { new AttackResolved(E(0), P(0), AttackResult.Hit(7, isCritical: false), 7, 23) },
 			runner.TakeEvents());
 		random.RequireUsedUp();
 	}
@@ -237,7 +239,7 @@ public class CombatRunnerTests
 		runner.AnswerEnemyAttack(0);
 
 		Assert.Equal(new[] { 30 }, Health(runner.Party));
-		Assert.Contains(new AttackResolved(E(0), P(0), AttackResult.Missed, 0), runner.TakeEvents());
+		Assert.Contains(new AttackResolved(E(0), P(0), AttackResult.Missed, 0, 30), runner.TakeEvents());
 		random.RequireUsedUp();
 	}
 
@@ -304,7 +306,7 @@ public class CombatRunnerTests
 		runner.AnswerEnemyAttack(answer);
 
 		Assert.Equal(healthLeft, runner.Party[0].HealthPoints);
-		Assert.Equal(new AttackResolved(E(0), P(0), AttackResult.Hit(20, isCritical: false), answer), runner.TakeEvents()[0]);
+		Assert.Equal(new AttackResolved(E(0), P(0), AttackResult.Hit(20, isCritical: false), answer, healthLeft), runner.TakeEvents()[0]);
 		random.RequireUsedUp();
 	}
 
@@ -373,9 +375,9 @@ public class CombatRunnerTests
 		Assert.Equal(
 			new CombatEvent[]
 			{
-				new AttackResolved(E(0), P(1), AttackResult.Hit(20, isCritical: false), 20),
+				new AttackResolved(E(0), P(1), AttackResult.Hit(20, isCritical: false), 20, 0),
 				new CombatantDowned(P(1)),
-				new AttackResolved(P(0), E(0), AttackResult.Hit(10, isCritical: false), 10)
+				new AttackResolved(P(0), E(0), AttackResult.Hit(10, isCritical: false), 10, 30)
 			},
 			runner.TakeEvents().Skip(1));
 		random.RequireUsedUp();
@@ -417,7 +419,7 @@ public class CombatRunnerTests
 		AnswerAsWorkedOut(runner);
 
 		Assert.Equal(new[] { 0, 10, 5 }, Health(runner.Enemies));
-		Assert.Contains(new AttackResolved(P(1), E(2), AttackResult.Hit(5, isCritical: false), 5), runner.TakeEvents());
+		Assert.Contains(new AttackResolved(P(1), E(2), AttackResult.Hit(5, isCritical: false), 5, 5), runner.TakeEvents());
 		random.RequireUsedUp();
 	}
 
@@ -475,7 +477,7 @@ public class CombatRunnerTests
 		Assert.Equal(
 			new CombatEvent[]
 			{
-				new AttackResolved(P(0), E(0), AttackResult.Hit(50, isCritical: false), 50),
+				new AttackResolved(P(0), E(0), AttackResult.Hit(50, isCritical: false), 50, 0),
 				new CombatantDowned(E(0)),
 				new FightEnded(CombatResult.Won)
 			},
@@ -508,9 +510,9 @@ public class CombatRunnerTests
 		Assert.Equal(
 			new CombatEvent[]
 			{
-				new AttackResolved(E(0), P(0), AttackResult.Hit(20, isCritical: false), 20),
+				new AttackResolved(E(0), P(0), AttackResult.Hit(20, isCritical: false), 20, 0),
 				new CombatantDowned(P(0)),
-				new AttackResolved(E(1), P(1), AttackResult.Hit(20, isCritical: false), 20),
+				new AttackResolved(E(1), P(1), AttackResult.Hit(20, isCritical: false), 20, 0),
 				new CombatantDowned(P(1)),
 				new FightEnded(CombatResult.Lost)
 			},
@@ -541,6 +543,105 @@ public class CombatRunnerTests
 		Assert.Empty(runner.TakeEvents());
 	}
 
+	// --- Defending ---
+
+	[Fact]
+	public void TheDefence_HoldsFromTheRoundsStart_BeforeAFasterEnemyActs()
+	{
+		var random = new ScriptedCombatRandom().Target(0, among: 1).Hit();
+		CombatRunner runner = Start(random, new[] { Fighter(30, 10, 10) }, new[] { Fighter(25, 20, 20) });
+
+		runner.SubmitOrders(new[] { Defend(0) });
+
+		Assert.Equal(new PendingEnemyAttack(E(0), P(0), AttackResult.Hit(10, isCritical: false)), runner.PendingAttack);
+
+		IReadOnlyList<CombatEvent> events = runner.TakeEvents();
+		Assert.Equal(2, events.Count);
+		Assert.IsType<RoundStarted>(events[0]);
+		Assert.Equal(new Defended(P(0)), events[1]);
+
+		runner.AnswerEnemyAttack(10);
+		Assert.Equal(new[] { 20 }, Health(runner.Party));
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void ADefender_TakesNoTurn_AndRollsNothing()
+	{
+		// The member is the faster: had their turn done anything, it would come before the
+		// enemy's attack, and the script holds only the enemy's rolls.
+		var random = new ScriptedCombatRandom().Target(0, among: 1).Hit();
+		CombatRunner runner = Start(random, new[] { Fighter(30, 10, 30) }, new[] { Fighter(25, 20, 20) });
+
+		runner.SubmitOrders(new[] { Defend(0) });
+
+		Assert.Equal(CombatStep.EnemyAttackPending, runner.Step);
+		Assert.Equal(2, runner.TakeEvents().Count);
+		Assert.Equal(new[] { 25 }, Health(runner.Enemies));
+
+		runner.AnswerEnemyAttack(10);
+		Assert.Equal(CombatStep.AwaitingOrders, runner.Step);
+		Assert.DoesNotContain(runner.TakeEvents(), happened => happened is AttackResolved attack && attack.Attacker == P(0));
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheDefences_ComeInThePartysOrder_RightAfterTheRoundStarts()
+	{
+		// The fastest member attacks first, yet both defences are already out.
+		var random = new ScriptedCombatRandom().Hit().Target(0, among: 3).Hit();
+		CombatRunner runner = Start(
+			random,
+			new[] { Fighter(30, 10, 10), Fighter(30, 10, 30), Fighter(30, 10, 20) },
+			new[] { Fighter(50, 20, 5) });
+
+		runner.SubmitOrders(new CombatOrder[] { Defend(2), Attack(1, 0), Defend(0) });
+
+		IReadOnlyList<CombatEvent> events = runner.TakeEvents();
+		Assert.IsType<RoundStarted>(events[0]);
+		Assert.Equal(new Defended(P(0)), events[1]);
+		Assert.Equal(new Defended(P(2)), events[2]);
+		Assert.Equal(new AttackResolved(P(1), E(0), AttackResult.Hit(10, isCritical: false), 10, 40), events[3]);
+		Assert.Equal(4, events.Count);
+
+		Assert.Equal(AttackResult.Hit(10, isCritical: false), runner.PendingAttack.Result);
+		runner.AnswerEnemyAttack(10);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void OnlyTheMemberWhoDefends_TakesLess()
+	{
+		var random = new ScriptedCombatRandom().Target(1, among: 2).Hit().Hit();
+		CombatRunner runner = Start(random, new[] { Fighter(30, 10, 10), Fighter(30, 10, 9) }, new[] { Fighter(100, 20, 20) });
+
+		runner.SubmitOrders(new CombatOrder[] { Defend(0), Attack(1, 0) });
+
+		Assert.Equal(new PendingEnemyAttack(E(0), P(1), AttackResult.Hit(20, isCritical: false)), runner.PendingAttack);
+		runner.AnswerEnemyAttack(20);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheDefence_LastsOnlyItsRound()
+	{
+		var random = new ScriptedCombatRandom()
+			.Target(0, among: 1).Hit()
+			.Target(0, among: 1).Hit().Hit();
+		CombatRunner runner = Start(random, new[] { Fighter(60, 10, 10) }, new[] { Fighter(100, 20, 20) });
+
+		runner.SubmitOrders(new[] { Defend(0) });
+		Assert.Equal(10, runner.PendingAttack.Result.Damage);
+		runner.AnswerEnemyAttack(10);
+
+		runner.SubmitOrders(new[] { Attack(0, 0) });
+		Assert.Equal(20, runner.PendingAttack.Result.Damage);
+		runner.AnswerEnemyAttack(20);
+
+		Assert.Equal(new[] { 30 }, Health(runner.Party));
+		random.RequireUsedUp();
+	}
+
 	// --- Orders that do not fit ---
 
 	private sealed record WaveOrder(CombatantId Actor) : CombatOrder(Actor);
@@ -564,7 +665,10 @@ public class CombatRunnerTests
 		{ "a target that is not there", new CombatOrder[] { Attack(0, 0), Attack(1, 9) } },
 		{ "a target already down", new CombatOrder[] { Attack(0, 0), Attack(1, 1) } },
 		{ "a missing order", new CombatOrder[] { Attack(0, 0), null } },
-		{ "a kind the fight does not know", new CombatOrder[] { Attack(0, 0), new WaveOrder(P(1)) } }
+		{ "a kind the fight does not know", new CombatOrder[] { Attack(0, 0), new WaveOrder(P(1)) } },
+		{ "a defence for a member who is down", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Defend(2) } },
+		{ "a defence and an attack for the same member", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Defend(0) } },
+		{ "a defence for an enemy", new CombatOrder[] { Attack(0, 0), Attack(1, 0), new DefendOrder(E(0)) } }
 	};
 
 	[Theory]

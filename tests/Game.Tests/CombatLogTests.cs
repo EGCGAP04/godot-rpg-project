@@ -27,8 +27,9 @@ public class CombatLogTests
 
 	private static string Line(CombatEvent happened) => CombatLog.LineFor(happened, Names, Translate);
 
+	// The health left is not on the line, so every attack here leaves 0.
 	private static AttackResolved Attack(CombatantId attacker, CombatantId target, AttackResult result, int damageTaken) =>
-		new(attacker, target, result, damageTaken);
+		new(attacker, target, result, damageTaken, HealthAfter: 0);
 
 	[Fact]
 	public void ARound_SaysItsNumber()

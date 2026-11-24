@@ -9,6 +9,12 @@ public abstract record CombatEvent;
 /// <summary>A round started, with everyone standing in the order they will act.</summary>
 public sealed record RoundStarted(int Round, IReadOnlyList<CombatantId> TurnOrder) : CombatEvent;
 
+/// <summary>
+/// A member defends this round. It comes right after <see cref="RoundStarted"/>, before
+/// any turn, because the defence holds from the round's start.
+/// </summary>
+public sealed record Defended(CombatantId Member) : CombatEvent;
+
 /// <summary>An attack was worked out and its damage taken.</summary>
 /// <param name="Attacker">Who attacked.</param>
 /// <param name="Target">
@@ -21,7 +27,11 @@ public sealed record RoundStarted(int Round, IReadOnlyList<CombatantId> TurnOrde
 /// For an enemy's it is what was answered, which is another number once the player can
 /// dodge.
 /// </param>
-public sealed record AttackResolved(CombatantId Attacker, CombatantId Target, AttackResult Result, int DamageTaken) : CombatEvent;
+/// <param name="HealthAfter">
+/// The target's health once the damage is taken, 0 at the least. Whoever shows the fight
+/// copies it, so it never works the health out a second time.
+/// </param>
+public sealed record AttackResolved(CombatantId Attacker, CombatantId Target, AttackResult Result, int DamageTaken, int HealthAfter) : CombatEvent;
 
 /// <summary>A combatant's health reached 0.</summary>
 public sealed record CombatantDowned(CombatantId Combatant) : CombatEvent;

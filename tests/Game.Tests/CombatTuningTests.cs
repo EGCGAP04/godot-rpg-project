@@ -88,7 +88,8 @@ public class CombatTuningTests
 			TestTuning.Stats(attackDamage: 1, hitRate: 100),
 			TestTuning.Stats(armor: 1_000_000),
 			ActionKind.Attack,
-			random);
+			random,
+			defending: false);
 
 		Assert.Equal(AttackOutcome.Hit, result.Outcome);
 		Assert.Equal(tuning.MinimumDamage, result.Damage);

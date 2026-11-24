@@ -29,9 +29,9 @@ public class DamagePipelineTests
 	private static ScriptedCombatRandom PlainHit() =>
 		new ScriptedCombatRandom().Percent(0).Percent(Max).Percent(Max).Percent(50);
 
-	private AttackResult Resolve(BaseStats attacker, BaseStats defender, ScriptedCombatRandom random, ActionKind kind = ActionKind.Attack, DamagePipeline pipeline = null)
+	private AttackResult Resolve(BaseStats attacker, BaseStats defender, ScriptedCombatRandom random, ActionKind kind = ActionKind.Attack, DamagePipeline pipeline = null, bool defending = false)
 	{
-		AttackResult result = (pipeline ?? _pipeline).Resolve(attacker, defender, kind, random);
+		AttackResult result = (pipeline ?? _pipeline).Resolve(attacker, defender, kind, random, defending);
 		random.RequireUsedUp();
 		return result;
 	}
@@ -46,7 +46,7 @@ public class DamagePipelineTests
 	[Fact]
 	public void Resolve_RefusesMissingDice()
 	{
-		Assert.Throws<ArgumentNullException>(() => _pipeline.Resolve(Attacker(), Defender(), ActionKind.Attack, null!));
+		Assert.Throws<ArgumentNullException>(() => _pipeline.Resolve(Attacker(), Defender(), ActionKind.Attack, null!, defending: false));
 	}
 
 	// --- Accuracy ---
@@ -264,6 +264,88 @@ public class DamagePipelineTests
 		AttackResult result = Resolve(Attacker(attackDamage: 1000), Defender(), PlainHit(), pipeline: pipeline);
 
 		Assert.Equal(1000, result.Damage);
+	}
+
+	// --- Defending ---
+
+	[Fact]
+	public void Defending_TakesItsShareOffWhatTheArmorLeft()
+	{
+		// 100 armor leaves 55% of 20, which is 11; defending takes half of that, 5.5.
+		Assert.Equal(11, Resolve(Attacker(attackDamage: 20), Defender(armor: 100), PlainHit()).Damage);
+		Assert.Equal(5, Resolve(Attacker(attackDamage: 20), Defender(armor: 100), PlainHit(), defending: true).Damage);
+	}
+
+	[Fact]
+	public void Defending_IsOutsideTheArmorsCap()
+	{
+		// Armor this high is a hair under its 90% cap and leaves 10 of 100. A defence that
+		// counted towards the cap would add nothing; outside it, it halves the 10.
+		Assert.Equal(10, Resolve(Attacker(attackDamage: 100), Defender(armor: 1_000_000), PlainHit()).Damage);
+		Assert.Equal(5, Resolve(Attacker(attackDamage: 100), Defender(armor: 1_000_000), PlainHit(), defending: true).Damage);
+	}
+
+	[Fact]
+	public void ADefendedHit_IsRoundedDownOnce()
+	{
+		// A variation roll of 45 makes 10 into 9.9, and a 5% defence makes that 9.405. Rounding
+		// the 9.9 down before the defence would give 9 * 0.95 = 8.55, so 8.
+		var pipeline = new DamagePipeline(TestTuning.Formulas(), TestTuning.Combat(defendReductionPercent: 5));
+		var random = new ScriptedCombatRandom().Percent(0).Percent(Max).Percent(Max).Percent(45);
+
+		AttackResult result = Resolve(Attacker(attackDamage: 10), Defender(), random, pipeline: pipeline, defending: true);
+
+		Assert.Equal(9, result.Damage);
+	}
+
+	[Theory]
+	[InlineData(50, 1)]  // Half of 1.
+	[InlineData(100, 20)] // Nothing left at all.
+	public void ADefendedHit_StillDoesTheMinimum(int defendReductionPercent, int attackDamage)
+	{
+		var pipeline = new DamagePipeline(TestTuning.Formulas(), TestTuning.Combat(defendReductionPercent: defendReductionPercent));
+
+		AttackResult result = Resolve(Attacker(attackDamage: attackDamage), Defender(), PlainHit(), pipeline: pipeline, defending: true);
+
+		Assert.Equal(AttackResult.Hit(1, isCritical: false), result);
+	}
+
+	[Fact]
+	public void ADefenceOfZero_ChangesNothing()
+	{
+		var pipeline = new DamagePipeline(TestTuning.Formulas(), TestTuning.Combat(defendReductionPercent: 0));
+
+		Assert.Equal(20, Resolve(Attacker(attackDamage: 20), Defender(), PlainHit(), pipeline: pipeline, defending: true).Damage);
+	}
+
+	[Fact]
+	public void Defending_IsTheTunings()
+	{
+		var pipeline = new DamagePipeline(TestTuning.Formulas(), TestTuning.Combat(defendReductionPercent: 25));
+
+		Assert.Equal(15, Resolve(Attacker(attackDamage: 20), Defender(), PlainHit(), pipeline: pipeline, defending: true).Damage);
+	}
+
+	[Fact]
+	public void Defending_TakesNoRollOfItsOwn_AndStopsNoMissOrEvasion()
+	{
+		// Each script is used up, so a defence that rolled would fail here.
+		Assert.Equal(AttackResult.Missed, Resolve(Attacker(hitRate: 50), Defender(), new ScriptedCombatRandom().Percent(60), defending: true));
+		Assert.Equal(AttackResult.Evaded, Resolve(Attacker(), Defender(luck: 100), new ScriptedCombatRandom().Percent(0).Percent(5), defending: true));
+		Assert.Equal(AttackOutcome.Hit, Resolve(Attacker(), Defender(), PlainHit(), defending: true).Outcome);
+	}
+
+	[Fact]
+	public void ADefendedCriticalHit_IsStillCritical_AndHalved()
+	{
+		// The critical damage is 150 + 20 / 5 + 100 / 5 = 174%, so 20 becomes 34.8, and half
+		// of it is 17.4.
+		var random = new ScriptedCombatRandom().Percent(0).Percent(Max).Percent(0).Percent(50);
+
+		AttackResult result = Resolve(Attacker(attackDamage: 20, luck: 100), Defender(), random, defending: true);
+
+		Assert.True(result.IsCritical);
+		Assert.Equal(17, result.Damage);
 	}
 
 	// --- Rounding and the minimum ---

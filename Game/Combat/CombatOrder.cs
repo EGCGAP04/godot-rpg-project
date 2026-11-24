@@ -12,3 +12,11 @@ public abstract record CombatOrder(CombatantId Actor);
 /// member's turn, the attack moves to another standing enemy, picked by a roll.
 /// </param>
 public sealed record AttackOrder(CombatantId Actor, CombatantId Target) : CombatOrder(Actor);
+
+/// <summary>
+/// The member defends: for the whole round, from its start, every attack on them does
+/// <see cref="CombatTuningValues.DefendReductionPercent"/> less after the armor. It takes
+/// no turn of its own, since it acted when the round started.
+/// </summary>
+/// <param name="Actor">The member who defends.</param>
+public sealed record DefendOrder(CombatantId Actor) : CombatOrder(Actor);
