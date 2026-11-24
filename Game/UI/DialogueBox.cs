@@ -35,6 +35,7 @@ public partial class DialogueBox : CanvasLayer
 	private Label _textLabel;
 	private VBoxContainer _choiceList;
 	private int _selected;
+	private readonly StickPresses _stick = new();
 
 	/// <summary>
 	/// Hands over the conversation to show, already started. Called before the box enters
@@ -64,17 +65,21 @@ public partial class DialogueBox : CanvasLayer
 		if (DebugTools.Instance?.IsOpen == true)
 			return;
 
+		// Both directions are read on every event, so the stick's state sees every release.
+		bool up = _stick.Pressed(@event, "move_up");
+		bool down = _stick.Pressed(@event, "move_down");
+
 		if (@event.IsActionPressed("confirm"))
 		{
 			GetViewport().SetInputAsHandled();
 			Continue();
 		}
-		else if (_runner.Step == DialogueStep.Choice && @event.IsActionPressed("move_up"))
+		else if (_runner.Step == DialogueStep.Choice && up)
 		{
 			GetViewport().SetInputAsHandled();
 			Select(_selected - 1);
 		}
-		else if (_runner.Step == DialogueStep.Choice && @event.IsActionPressed("move_down"))
+		else if (_runner.Step == DialogueStep.Choice && down)
 		{
 			GetViewport().SetInputAsHandled();
 			Select(_selected + 1);

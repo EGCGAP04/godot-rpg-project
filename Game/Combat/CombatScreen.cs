@@ -78,6 +78,7 @@ public partial class CombatScreen : CanvasLayer
 	private CombatRunner _runner;
 	private CombatantNames _names;
 	private OrderEntry _entry;
+	private readonly StickPresses _stick = new();
 
 	// The log: what is still to be shown, and the last lines that were.
 	private readonly Queue<CombatEvent> _toShow = new();
@@ -186,12 +187,15 @@ public partial class CombatScreen : CanvasLayer
 		if (DebugTools.Instance?.IsOpen == true)
 			return;
 
+		// Every action is read on every event, so the stick's state sees every release.
 		bool confirm = @event.IsActionPressed("confirm");
 		bool cancel = @event.IsActionPressed("cancel");
-		bool left = @event.IsActionPressed("move_left");
-		bool right = @event.IsActionPressed("move_right");
+		bool left = _stick.Pressed(@event, "move_left");
+		bool right = _stick.Pressed(@event, "move_right");
+		bool up = _stick.Pressed(@event, "move_up");
+		bool down = _stick.Pressed(@event, "move_down");
 
-		if (!(confirm || cancel || left || right || @event.IsActionPressed("move_up") || @event.IsActionPressed("move_down")))
+		if (!(confirm || cancel || left || right || up || down))
 			return;
 
 		// Every one of these is the screen's while it is open.

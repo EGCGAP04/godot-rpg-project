@@ -38,6 +38,7 @@ public partial class StatusScreen : CanvasLayer
 	public delegate void ClosedEventHandler();
 
 	private readonly List<string> _ids = new();
+	private readonly StickPresses _stick = new();
 
 	private HBoxContainer _members;
 	private Label _worldLabel;
@@ -91,22 +92,28 @@ public partial class StatusScreen : CanvasLayer
 		if (DebugTools.Instance?.IsOpen == true)
 			return;
 
+		// Every direction is read on every event, so the stick's state sees every release.
+		bool left = _stick.Pressed(@event, "move_left");
+		bool right = _stick.Pressed(@event, "move_right");
+		bool up = _stick.Pressed(@event, "move_up");
+		bool down = _stick.Pressed(@event, "move_down");
+
 		if (@event.IsActionPressed("open_menu") || @event.IsActionPressed("cancel"))
 		{
 			GetViewport().SetInputAsHandled();
 			EmitSignal(SignalName.Closed);
 		}
-		else if (@event.IsActionPressed("move_left"))
+		else if (left)
 		{
 			GetViewport().SetInputAsHandled();
 			MoveFocus(Side.Left);
 		}
-		else if (@event.IsActionPressed("move_right"))
+		else if (right)
 		{
 			GetViewport().SetInputAsHandled();
 			MoveFocus(Side.Right);
 		}
-		else if (@event.IsActionPressed("move_up") || @event.IsActionPressed("move_down") || @event.IsActionPressed("confirm"))
+		else if (up || down || @event.IsActionPressed("confirm"))
 		{
 			// Nothing to do with these yet, but they are the screen's while it is open.
 			GetViewport().SetInputAsHandled();

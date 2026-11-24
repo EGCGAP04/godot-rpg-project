@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A Combat Core section in `docs/CONVENTIONS.md`
 - **The combat screen: the whole party fights a whole group from the map.** Each round every member standing is given an order, attack for now, with a target chosen among the enemies standing; `cancel` goes back a step. The round then plays out in a log, a line at a time, with the health on screen falling with the text, and `confirm` hurries it. The result comes in pages
 - Groups of enemies: `EncounterData`, a resource in `Enemy/Encounters/` with from one enemy to four, the same kind more than once if wanted. Two of one kind are told apart on screen by a letter, *Strong Enemy A* and *Strong Enemy B*, and a group's experience is the sum of its enemies'
-- Four placeholder enemies, each showing one stage of the damage pipeline (armor, evasion, luck and a low hit rate), and three groups for the demo: `demo_patrol` and `demo_wall` where the weak and the strong enemy stood, and `demo_showcase`, to be placed on the map
+- Four placeholder enemies, each showing one stage of the damage pipeline (armor, evasion, luck and a low hit rate), and three groups for the demo: `demo_patrol` and `demo_wall` where the weak and the strong enemy stood, and `demo_showcase`, in a room of its own on the map
 - `CombatTuning`, combat's own numbers as a resource, editable in the Inspector in `Combat/combat_tuning.tres`, with a test that requires the file to write every value
 - `CombatLineup` and `CombatAftermath`, engine-free, which take the party into a fight and write back what it left
 - `OrderEntry`, `CombatantNames`, `CombatLog` and `CombatResultPages`, engine-free: the menu's way through a round, the combatants' names, the log's lines and the result's pages
@@ -36,10 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The pull request template and the Docs Issue form now name `docs/PROJECT_STRUCTURE.md` as the tree to keep up to date
 - **The license changed from MIT to the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).** From this change on, the project may be used, modified and shared for noncommercial purposes only, every copy must carry the license's terms and the `Required Notice` line at the top of `LICENSE`, and commercial use needs the maintainer's permission. Everything published before this change, the versions up to `v0.4.0` included, was released under MIT and stays available under it
 - The README's *License* section says what the new license allows and how to ask for commercial permission, and a new *Contributing* note says under which terms a contribution is accepted
+- Test dependency bumped by Dependabot: `Microsoft.NET.Test.Sdk` 18.11.0 -> 18.12.0
 
 ### Removed
 
 - Combat v1: `Combat.cs`, `combat.tscn`, `CombatResolver` and `CombatResultText`, with their tests and the `ui.combat.hp` text
+
+### Fixed
+
+- **One push of the analog stick moved a menu several steps:** Godot sends a motion every time the stick moves, and every one past the deadzone read as a new press, so the combat screen, the status screen and a conversation's choices ended up on an option more or less at random. A push is now one press, as a key or a D-pad button is: it counts when the stick is pushed past half way, and the stick has to come back below 0.3 before it counts again, so a stick trembling at the threshold does not press twice. Keys, buttons and walking are unchanged
 
 ## [0.4.0] - 2026-11-16
 
