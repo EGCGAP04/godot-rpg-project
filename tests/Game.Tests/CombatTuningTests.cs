@@ -16,7 +16,16 @@ namespace GodotRPGProject.Tests;
 /// </remarks>
 public class CombatTuningTests
 {
-	private static readonly string[] ExpectedProperties = { "MinimumDamage", "DamageVariationPercent" };
+	private static readonly string[] ExpectedProperties =
+	{
+		"MinimumDamage", "DamageVariationPercent", "DefendReductionPercent", "FocusAttackPercent", "FocusRounds", "MeditatePercent", "MeditateMinimum"
+	};
+
+	/// <summary>The values the resource holds as an <c>int</c>, which the file must write as whole numbers.</summary>
+	private static readonly string[] WholeNumbers =
+	{
+		"MinimumDamage", "DefendReductionPercent", "FocusAttackPercent", "FocusRounds", "MeditatePercent", "MeditateMinimum"
+	};
 
 	private static string ResourceSource => ProjectFiles.ReadText("Combat", "CombatTuning.cs");
 
@@ -54,10 +63,17 @@ public class CombatTuningTests
 	{
 		Dictionary<string, double> v = StatTuningTests.WrittenValues(TuningFile);
 
-		double minimum = v["MinimumDamage"];
-		Assert.True(minimum == (int)minimum, $"combat_tuning.tres writes MinimumDamage as {minimum}, and it is a whole number.");
+		foreach (string name in WholeNumbers)
+			Assert.True(v[name] == (int)v[name], $"combat_tuning.tres writes {name} as {v[name]}, and it is a whole number.");
 
-		var tuning = new CombatTuningValues((int)minimum, v["DamageVariationPercent"]);
+		var tuning = new CombatTuningValues(
+			(int)v["MinimumDamage"],
+			v["DamageVariationPercent"],
+			(int)v["DefendReductionPercent"],
+			(int)v["FocusAttackPercent"],
+			(int)v["FocusRounds"],
+			(int)v["MeditatePercent"],
+			(int)v["MeditateMinimum"]);
 
 		// The pipeline works with it: a hit against armor that stops everything still does
 		// the minimum, so a tuning that builds but breaks the pipeline fails here.

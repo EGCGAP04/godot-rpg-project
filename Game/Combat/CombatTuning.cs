@@ -12,11 +12,11 @@ using Godot;
 /// </para>
 /// <para>
 /// Every default is zero, never a real value, as in <see cref="StatTuning"/>: the editor
-/// leaves out of a <c>.tres</c> each property that equals its default. A minimum damage of
-/// 0 is refused by <see cref="CombatTuningValues"/>, so a file that lost that line stops
-/// whoever reads it. A variation of 0 is a real value, the one that turns it off, so it
-/// could vanish from the file in silence; <c>CombatTuningTests</c> requires the file to
-/// write both.
+/// leaves out of a <c>.tres</c> each property that equals its default. A minimum damage, a
+/// focus length or a meditation minimum of 0 is refused by <see cref="CombatTuningValues"/>,
+/// so a file that lost one of those lines stops whoever reads it. The others can be a real
+/// 0 (a variation of 0 turns it off), so they could vanish from the file in silence;
+/// <c>CombatTuningTests</c> requires the file to write every value.
 /// </para>
 /// <para>
 /// A property added here needs its line in the file and its parameter in
@@ -36,9 +36,36 @@ public partial class CombatTuning : Resource
 	[Export]
 	public double DamageVariationPercent { get; set; }
 
+	[ExportGroup("Defend")]
+
+	/// <summary>How much less damage a member who defends takes, as a percentage, after the armor.</summary>
+	[Export]
+	public int DefendReductionPercent { get; set; }
+
+	[ExportGroup("Focus")]
+
+	/// <summary>How much a focus raises the attack, as a percentage.</summary>
+	[Export]
+	public int FocusAttackPercent { get; set; }
+
+	/// <summary>How many rounds a focus lasts, after the round the member focused in.</summary>
+	[Export]
+	public int FocusRounds { get; set; }
+
+	[ExportGroup("Meditate")]
+
+	/// <summary>The share of the most mana a meditation gives back, as a percentage.</summary>
+	[Export]
+	public int MeditatePercent { get; set; }
+
+	/// <summary>The least mana a meditation gives back.</summary>
+	[Export]
+	public int MeditateMinimum { get; set; }
+
 	/// <summary>
 	/// The plain values the fight reads. Throws when a value is missing or wrong, naming
 	/// it, so a broken tuning stops whoever asks for it instead of reaching a fight.
 	/// </summary>
-	public CombatTuningValues ToValues() => new(MinimumDamage, DamageVariationPercent);
+	public CombatTuningValues ToValues() =>
+		new(MinimumDamage, DamageVariationPercent, DefendReductionPercent, FocusAttackPercent, FocusRounds, MeditatePercent, MeditateMinimum);
 }

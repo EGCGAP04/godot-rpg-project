@@ -6,3 +6,8 @@
 script = ExtResource("1_tuning")
 MinimumDamage = 1
 DamageVariationPercent = 10.0
+DefendReductionPercent = 50
+FocusAttackPercent = 50
+FocusRounds = 3
+MeditatePercent = 25
+MeditateMinimum = 1
