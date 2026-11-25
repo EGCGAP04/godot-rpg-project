@@ -23,12 +23,19 @@ public partial class EncounterData : Resource
 	[Export]
 	public Godot.Collections.Array<EnemyData> Enemies { get; set; } = new();
 
+	/// <summary>
+	/// Whether the party cannot flee from this group. Off by default, so most groups can be
+	/// fled from and their files do not write it.
+	/// </summary>
+	[Export]
+	public bool CannotFlee { get; set; }
+
 	/// <summary>This group as the plain values the rules of a fight read.</summary>
 	public EncounterValues ToValues()
 	{
 		if (Enemies.Any(enemy => enemy == null))
 			throw new System.ArgumentException($"The encounter '{Id}' has an empty entry among its enemies.");
 
-		return new EncounterValues(Id, Enemies.Select(enemy => enemy.ToValues()));
+		return new EncounterValues(Id, Enemies.Select(enemy => enemy.ToValues()), CannotFlee);
 	}
 }

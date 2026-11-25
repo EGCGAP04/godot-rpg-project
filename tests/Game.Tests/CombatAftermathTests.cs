@@ -33,7 +33,7 @@ public class CombatAftermathTests
 	}
 
 	private static CombatRunner Start(CombatLineup lineup, ScriptedCombatRandom random) =>
-		CombatRunner.Start(lineup.Party, lineup.Enemies, TestTuning.Formulas(), TestTuning.Combat(), random);
+		CombatRunner.Start(lineup.Party, lineup.Enemies, canFlee: true, TestTuning.Formulas(), TestTuning.Combat(), random);
 
 	/// <summary>
 	/// A win where abe goes down: the foe hits abe for 25 first, then the hero hits the foe
@@ -55,6 +55,37 @@ public class CombatAftermathTests
 		Assert.Equal(CombatResult.Won, runner.Result);
 		random.RequireUsedUp();
 		return (lineup, runner);
+	}
+
+	[Fact]
+	public void AFlight_GivesNoExperience_AndWhoWentDownBeforeIt_LeavesWithOneHealthAndOneMana()
+	{
+		PartyState party = HeroAndAbe();
+		CombatAftermath aftermath = TestFights.AFlight(party, lastGoesDownFirst: true);
+
+		Assert.Equal(CombatResult.Fled, aftermath.Result);
+		Assert.Equal(FightOutcome.Fled, aftermath.Outcome);
+		Assert.False(aftermath.Won);
+		Assert.Equal(0, aftermath.Experience);
+		Assert.Equal(new[] { Hero }, aftermath.Standing);
+		Assert.Equal(
+			new[] { new MemberAftermath(Hero, 20, 10, WentDown: false), new MemberAftermath("abe", 1, 1, WentDown: true) },
+			aftermath.Members);
+
+		ExperienceAward award = aftermath.ApplyTo(party);
+
+		Assert.Equal(0, award.Experience);
+		Assert.Equal(new CharacterProgress(new LevelProgress(1, 0), 20, 10), party.ProgressOf(Hero, World.Fantasy));
+		Assert.Equal(new CharacterProgress(new LevelProgress(1, 0), 1, 1), party.ProgressOf("abe", World.Fantasy));
+	}
+
+	[Fact]
+	public void AFlight_LeavesTheEnemyOnTheMap_AndThePlayerWhereTheyAre()
+	{
+		CombatAftermath aftermath = TestFights.AFlight(HeroAndAbe(), lastGoesDownFirst: false);
+
+		Assert.False(aftermath.DefeatsTheEnemy);
+		Assert.False(aftermath.SendsThePlayerBack);
 	}
 
 	/// <summary>A loss: the hero, alone, takes <paramref name="damage"/> from the foe and goes down.</summary>

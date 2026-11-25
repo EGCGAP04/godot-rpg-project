@@ -7,11 +7,30 @@ msgstr ""
 msgid "ui.combat.attack"
 msgstr "Attack"
 
+#. A combat command. Room for about twelve characters.
+msgid "ui.combat.defend"
+msgstr "Defend"
+
+#. A combat command. Room for about twelve characters.
+msgid "ui.combat.focus"
+msgstr "Focus"
+
+#. A combat command. Room for about twelve characters.
+msgid "ui.combat.meditate"
+msgstr "Meditate"
+
+#. A combat command. Room for about twelve characters.
+msgid "ui.combat.flee"
+msgstr "Flee"
+
 msgid "ui.combat.player_won"
 msgstr "Player wins."
 
 msgid "ui.combat.player_lost"
 msgstr "Player loses."
+
+msgid "ui.combat.player_fled"
+msgstr "The party got away."
 
 #. Under the result of a fight won. {experience} is a number.
 msgid "ui.combat.experience_gained"
@@ -28,6 +47,10 @@ msgstr "{name} was down and gains nothing."
 #. Two combatants of one kind told apart. {name} is the name; {letter}, A to D.
 msgid "ui.combat.name_with_letter"
 msgstr "{name} {letter}"
+
+#. Under a member who focused. {rounds} is a number: the rounds the focus has left.
+msgid "ui.combat.focused"
+msgstr "Focused: {rounds}"
 
 #. The fight's log. {round} is a number.
 msgid "ui.combat.log.round"
@@ -52,6 +75,21 @@ msgstr "{target} evades {attacker}'s attack."
 #. {name} is a combatant's name.
 msgid "ui.combat.log.downed"
 msgstr "{name} goes down."
+
+#. {name} is a member's name.
+msgid "ui.combat.log.defends"
+msgstr "{name} defends."
+
+#. {name} is a member's name.
+msgid "ui.combat.log.focuses"
+msgstr "{name} focuses."
+
+#. {name} is a member's name; {mana}, a number.
+msgid "ui.combat.log.meditates"
+msgstr "{name} meditates and recovers {mana} MP."
+
+msgid "ui.combat.log.escape_failed"
+msgstr "The party tries to flee, but cannot get away."
 
 #. {world} is a world's name (world.*); {cycle}, a number.
 msgid "ui.hud.world_and_cycle"

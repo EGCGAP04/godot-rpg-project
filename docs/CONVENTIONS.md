@@ -85,7 +85,7 @@ The flow is:
 1. `Enemy` (an `Area2D`) detects player contact and emits `CombatTriggered(enemy)`.
 2. The `WorldScene` re-emits it as `CombatRequested(enemy)`.
 3. `Main` (on `main.tscn`) handles it: it instances `combat_screen.tscn`, hands it the group of enemies the touched enemy carries, adds it as a child and sets `GetTree().Paused = true`.
-4. When the fight is over and the screen has faded out, `CombatScreen` emits `CombatFinished`, and `Main` reads what it left from its `Aftermath`. `Main` frees the enemy or sends the player back to the spawn, frees the overlay, unpauses, and only then writes the fight into the party and records it in the decision registry (see [After a fight](#after-a-fight) and [Fights](#fights) for why last).
+4. When the fight is over and the screen has faded out, `CombatScreen` emits `CombatFinished`, and `Main` reads what it left from its `Aftermath`. `Main` frees the enemy after a win (`DefeatsTheEnemy`), sends the player back to the spawn after a loss (`SendsThePlayerBack`), and after a flight does neither. Then it frees the overlay, unpauses, and only then writes the fight into the party and records it in the decision registry (see [After a fight](#after-a-fight) and [Fights](#fights) for why last).
 
 `Main` is the coordinator because it is the only node that sees both the `Player` and the world — the `Player` is a **sibling** of the world scene, not a child of it. It holds a `WorldScene`, never a concrete world, so the same flow works in all three.
 
@@ -97,7 +97,9 @@ Five details are load-bearing:
 - **The player is spawned from `Main._EnterTree()`, not `_Ready()`.** A `CharacterBody2D` registers its transform with the physics server when it enters the tree, and a parent's `_EnterTree` runs before its children enter, so spawning there is what keeps the server from ever seeing the position authored in `main.tscn`. Moving the player afterwards leaves enemy areas paired against that stale transform for one frame, which reports a contact — a `body_entered` followed immediately by `body_exited` — that never happened. `WorldScene.PlayerSpawnPosition` is a computed property rather than a value cached in `_Ready` for the same reason: it has to be readable before the world's `_Ready` has run.
 - **The fade tween is created on the `ScreenFade` node itself** (`CreateTween()`), not on the tree. A tween is bound to the node that creates it and follows that node's process mode, and `UI/screen_fade.tscn` sets `process_mode = Always`, which is what keeps the fade playing while the world is paused. The same scene is reused for world transitions, so the two never drift apart in colour or duration.
 
-`Main` also guards against starting more than one combat: a trigger arriving while a fight is pending or running is ignored, which matters when two enemies overlap the player in the same frame. The same guard also holds for a short cooldown after a fight ends, so a player who loses and respawns inside another enemy's area is not pulled straight into the next fight.
+`Main` also guards against starting more than one combat: a trigger arriving while a fight is pending or running is ignored, which matters when two enemies overlap the player in the same frame. The same guard also holds for a short cooldown after a fight ends, so a player who loses and respawns inside another enemy's area is not pulled straight into the next fight. An enemy that carries no group is refused before anything pauses, with an error in the log; the screen itself falls back to `demo_patrol` only when it is the scene's root, and throws anywhere else.
+
+**The cooldown delays a contact; it does not drop it** (#105). `body_entered` fires once per entry, so a contact refused while the cooldown ran is never reported again. A flight is the first ending that leaves the player on the enemy, and measuring it found the gap: standing still, or stepping off and back on before the second was over, the player stood on the enemy and no fight ever started. So when a cooldown ends, `Main.RecheckContacts` asks, through `OnCombatRequested` and its rules like any contact, for the fight against an enemy the player still touches; with several, the first in the tree. It runs on the next physics frame rather than in the timer's callback, because the timer ignores the pause: a cooldown that ends behind the menu, the debug overlay or a forced conversation is checked once the tree runs again (measured with the menu), and one behind a voluntary conversation is queued like any contact. Stepping off for good before the end starts nothing.
 
 ## World and Cycle Coordination
 
@@ -123,7 +125,7 @@ Three fixes that look obviously right were tried and **measured to fail**, each 
 - waiting a physics frame between moving the player and adding the world;
 - removing the player from the tree, adding the world, then reattaching the player — an exact replica of the start-up ordering that does work.
 
-What works is refusing the trigger: `Main` ignores combat requests while a transition is in flight and for `CombatCooldown` after one completes. Both were confirmed active at the instant the phantom arrived. This is the same mechanism already used after a lost fight, and the same trade-off comes with it — a player who genuinely lands on an enemy at the new world's spawn is not pulled into a fight either, because `body_entered` does not fire again once the cooldown lapses. That is a level-design constraint, not a bug to fix in code.
+What works is refusing the trigger: `Main` ignores combat requests while a transition is in flight and for `CombatCooldown` after one completes. Both were confirmed active at the instant the phantom arrived. This is the same mechanism already used after a lost fight. Until #105 the same trade-off came with it: a player who genuinely landed on an enemy at the new world's spawn was not pulled into a fight either, because `body_entered` does not fire again once the cooldown lapses. Now the check at the cooldown's end pulls them in a second after arriving, and it does not bring the phantom back: a second later the phantom pair is gone, and the check finds nothing (measured with an enemy where the player stood in the outgoing world, and one at the incoming world's spawn). Right after a respawn, `OverlapsBody` still reads the stale pair, as #40 found; a second later it no longer does.
 
 **Do not "simplify" this by removing the guards and relying on ordering.** It has been tried.
 
@@ -408,7 +410,7 @@ Code names a flag as a string, as it does a translation key: `State.SetFlag("wor
 
 ### Fights
 
-`Main` calls `RecordCombat` when a fight ends, with the world, the cycle, the group fought (an `EncounterValues`) and a `FightOutcome`, `Won` or `Lost`. It adds a `CombatRecord` to the history, with the group's id and each of its enemies' ids in order, repeats included, and 1 to `combat.wins` or `combat.losses`, always together, so the totals and the history never disagree. The two counters are declared in the catalogue, and `DecisionState` refuses a catalogue without them. Dialogue can read the totals like any counter. The history is not a flag: only code reads it, it belongs to the slot like the `run` flags, and each entry keeps its cycle, so "in this cycle" is a filter.
+`Main` calls `RecordCombat` when a fight ends, with the world, the cycle, the group fought (an `EncounterValues`) and a `FightOutcome`: `Won`, `Lost` or `Fled`. It adds a `CombatRecord` to the history, with the group's id and each of its enemies' ids in order, repeats included, and 1 to the outcome's counter, `combat.wins`, `combat.losses` or `combat.escapes` (`DecisionState.CounterFor`), always together, so the totals and the history never disagree. The counters are declared in the catalogue, and `DecisionState` refuses a catalogue without any of `DecisionState.FightCounters`, which is built from the enum, so a new outcome cannot be left out of it. Dialogue can read the totals like any counter. The history is not a flag: only code reads it, it belongs to the slot like the `run` flags, and each entry keeps its cycle, so "in this cycle" is a filter.
 
 **It is the last step of `Main.OnCombatFinished`, after unpausing,** on purpose. An exception thrown in a signal handler is logged with its stack, and the game goes on, but the rest of that handler does not run (verified headless). Anywhere earlier, a failure would leave the game paused under the combat overlay. There, the worst it can do is leave one fight out of the history.
 
@@ -416,7 +418,8 @@ An enemy's `Id` is a lowercase word in its `EnemyData`, separate from its `NameK
 
 - **`FightOutcome` is apart from the core's `CombatResult`,** which also has `Ongoing`: a fight in the history is never still going on.
 - **`CombatRecord` writes its equality by hand.** A record compares a list by reference, so two fights against the same enemies would differ; here they are equal when their enemies are the same ids in the same order. It keeps a copy of the list it is given, and checks itself when built: a group, at least one enemy, no empty id, an outcome that exists.
-- **The debug overlay lists a fight as the record's own line:** `Fantasy, cycle 1: demo_patrol (weak, demo_clumsy), won`.
+- **The debug overlay lists a fight as the record's own line:** `Fantasy, cycle 1: demo_patrol (weak, demo_clumsy), won`, or `lost`, or `fled`. It refreshes the list when any of `FightCounters` changes.
+- **Every place that tells the outcomes apart is a `switch` expression ending in a throw,** and `FightOutcomesTests` puts every value of `FightOutcome` and every finished `CombatResult` through all of them: the counter, the record's word, the aftermath's outcome and what it does to the map, and the result's first line. The compiler does not guard a `switch` over an enum, and its warnings do not stop the build; that test fails until a test fight ends in any new way. `Main` and the overlay only read answers given there, so it covers them too.
 
 ### World access
 
@@ -726,7 +729,7 @@ Being in the roster is not being in the party. The party starts with the protago
 
 The whole party fights, with its stats in the world the fight happens in, and **the party is not written while the fight is on**: the screen shows its own copy of the health, and the party is written once, at the end.
 
-1. When the fight is over, the screen builds its `CombatAftermath` and asks it for `PreviewAward`, and shows the result in pages: how it ended, the experience gained, a line for each member who reaches a level, and after a win a line for each who was down and gains nothing. `Combat/CombatResultPages` builds them, engine-free. A loss gives nothing.
+1. When the fight is over, the screen builds its `CombatAftermath` and asks it for `PreviewAward`, and shows the result in pages: how it ended, the experience gained, a line for each member who reaches a level, and after a win a line for each who was down and gains nothing. `Combat/CombatResultPages` builds them, engine-free. A loss and a flight give nothing.
 2. Once the overlay is gone and the tree is unpaused, `Main.OnCombatFinished` calls the aftermath's `ApplyTo`, which writes each member's health and mana and then gives the experience to those standing; then it heals the whole party, and records the fight. The heal comes after the award so that a level reached is full too. Healing everyone after every fight is temporary: #107 gives each world its rules.
 
 All three come after unpausing for the reason [Fights](#fights) gives: an exception in a signal handler skips the rest of the handler, and anywhere earlier it would leave the game paused.
@@ -767,7 +770,7 @@ All three come after unpausing for the reason [Fights](#fights) gives: an except
 
 ### The damage pipeline
 
-`DamagePipeline.Resolve(attacker, defender, kind, random)` reads the two sides' `BaseStats` and changes nobody's health. Its rolls, in order:
+`DamagePipeline.Resolve(attacker, defender, kind, random, defending)` reads the two sides' `BaseStats` and changes nobody's health. `defending` has no default, so no caller can forget it. Its rolls, in order:
 
 | # | Roll | If it comes up | Otherwise |
 |---|---|---|---|
@@ -783,11 +786,13 @@ factor = 1 + variation / 100 * (roll - 50) / 50
 damage = attack damage * factor
          * critical damage / 100        (only when critical)
          * (1 - armor reduction / 100)
+         * (1 - defend reduction / 100)  (only when defending)
 damage = max(minimum damage, round down(damage))
 ```
 
 - **The variation moves the base damage** from `-variation%` at a roll of 0 up to, but not reaching, `+variation%`. A roll of 50 changes nothing, whatever the variation, which is what a test that is not about it scripts.
 - **It is rounded down once, at the end,** and a hit that got this far does at least the minimum. A miss or an evaded attack does 0, not the minimum.
+- **Defending is inside the pipeline, after armor,** so it is rounded and given the minimum with the rest, once, and it reduces a skill's damage as much as an attack's. It is outside armor's cap, and rolls nothing.
 - **The arithmetic is in `double`, rounded to nine decimals before rounding down.** A result that should be whole can land a hair under: 90 damage against a 30% reduction is `62.99999999999999`. `decimal` does not solve it here as it does for `StatLine`: a reduction is a ratio, and one like 6.666…% has no exact decimal either, so 15 damage against it would come out as 13.99… and not 14. A test holds each of the two cases.
 
 ### Tuning
@@ -798,8 +803,13 @@ damage = max(minimum damage, round down(damage))
 |---|---|---|---|
 | `MinimumDamage` | The least a hit that lands does | 1 or more | 1 |
 | `DamageVariationPercent` | How far the base damage moves either way | 0 to below 100 | 10 |
+| `DefendReductionPercent` | How much less damage a member who defends takes, after armor and outside its cap | 0 to 100 | 50 |
+| `FocusAttackPercent` | How much a focus raises the attack | 0 or more | 50 |
+| `FocusRounds` | How many rounds a focus lasts, from the one after it | 1 or more | 3 |
+| `MeditatePercent` | The share of the most mana a meditation gives back, rounded down | 0 to 100 | 25 |
+| `MeditateMinimum` | The least mana a meditation gives back | 1 or more | 1 |
 
-They are in `Combat/combat_tuning.tres`, a `CombatTuning` resource whose `ToValues()` builds the record, as `StatTuning` does. A record nobody filled in is all zeros and is refused by the minimum. A variation of 0 is a real value, the one that turns it off, so an editor save could drop its line in silence; `CombatTuningTests` requires the file to write both. The tests of the rules use `TestTuning.Combat()`.
+They are in `Combat/combat_tuning.tres`, a `CombatTuning` resource whose `ToValues()` builds the record, as `StatTuning` does. A record nobody filled in is all zeros and is refused by the minimum. A value of 0 can be real (a variation of 0 turns it off), so an editor save could drop its line in silence; `CombatTuningTests` requires the file to write every value. The five numbers of the actions are whole, so the raised attack and the mana got back come out exact. The tests of the rules use `TestTuning.Combat()`, which takes a default for each.
 
 ### Combatants and the turn order
 
@@ -815,19 +825,26 @@ A `CombatantSetup` is what comes into a fight: the key of a name, the stats, and
 |---|---|---|
 | `AwaitingOrders` | An order for each of `MembersToOrder`, the members standing | `SubmitOrders(orders)` |
 | `EnemyAttackPending` | The damage taken from `PendingAttack` | `AnswerEnemyAttack(damageTaken)` |
-| `Finished` | Nothing: `Result` is `Won` or `Lost` | |
+| `Finished` | Nothing: `Result` is `Won`, `Lost` or `Fled` | |
 
-A round takes its orders in advance, works out the turn order once, and plays each turn in it:
+`Start(party, enemies, canFlee, formulas, tuning, random)` begins it; `canFlee` has no default, and the screen passes the group's `!CannotFlee`. A round takes its orders in advance, works out the turn order once, and plays each turn in it:
 
-- **A member** attacks the ordered target. If that target went down earlier in the round, the attack moves to another standing enemy by an index roll.
-- **An enemy** picks its target by an index roll among the standing members, the attack is worked out, and the runner stops.
+- **A member** does what they were ordered, on their turn:
+  - **attack** the ordered target; if that target went down earlier in the round, the attack moves to another standing enemy by an index roll;
+  - **defend:** they are protected from the round's start, not from their turn, so an enemy faster than them is no reason to defend in vain. A `Defended` comes right after `RoundStarted`, for each in the party's order, and their own turn passes with nothing;
+  - **focus:** their attack is raised by `FocusAttackPercent`, rounded down, for the `FocusRounds` rounds after this one. The pipeline gets a copy of their stats with the attack raised, so the critical damage sees it too. Focusing again starts the count again, and going down loses it. `FocusRoundsLeft(id)` says how many are left;
+  - **meditate:** they get back `MeditatePercent` of their most mana, at least `MeditateMinimum` and never past the most. Only a member below their most can be ordered to (`CanMeditate`): nothing takes mana away during a round, so one ordered at the most would always be wasted.
+- **Fleeing is the whole party's,** a `FleeOrder` that is the round's only order, given from any member's menu, and only where `CanFlee`. The round starts as any other, and before any turn one roll is made against `StatFormulas.EscapeRate`, over those standing on each side. If it comes up the fight ends, `Fled`, and nobody acts; if not, the members' turns pass with nothing, and the enemies act.
+- **An enemy** picks its target by an index roll among the standing members, the attack is worked out, and the runner stops. Enemies only attack, for now.
 - **Whoever went down before its turn loses it.** The fight ends the moment a whole side is down, and nobody after that acts.
 
-**An enemy's attack is a step, not a result.** The runner stops on every one, the ones that miss included, so the stop is always the same. `PendingAttack` carries the attacker, the target and the `AttackResult`, with armor already taken out of its damage. The driver answers with the damage that was taken, and that number comes out of the target's health as it is, without going through armor again. Today the answer is `PendingAttack.Result.Damage`. A fight where the player dodges in real time answers with what got through, and nothing in the runner changes for it.
+Defending, focusing and meditating roll nothing. The flee's roll is the only one an order other than an attack makes, and it comes after the turn order's, so every round starts with the same rolls.
 
-**What happened is a list, not a step.** `TakeEvents()` hands over the events since the last call, in order, and forgets them: `RoundStarted` with the turn order, `AttackResolved`, `CombatantDowned` and `FightEnded`. The driver takes them whenever the runner stops and shows them at its own pace. On an enemy's attack, `AttackResolved` carries both the pipeline's result and the damage that was answered, which need not match.
+**An enemy's attack is a step, not a result.** The runner stops on every one, the ones that miss included, so the stop is always the same. `PendingAttack` carries the attacker, the target and the `AttackResult`, with armor, and the target's defence if they defend, already taken out of its damage. The driver answers with the damage that was taken, and that number comes out of the target's health as it is, without going through armor again. Today the answer is `PendingAttack.Result.Damage`. A fight where the player dodges in real time answers with what got through, and nothing in the runner changes for it.
 
-**Orders that do not fit are refused** with `ArgumentException`, before anything changes or is rolled: one missing, one for somebody who is down or is not a member, two for the same member, a kind the fight does not know, and an attack on someone who is not an enemy or is already down. Calling a method at the wrong step throws `InvalidOperationException`.
+**What happened is a list, not a step.** `TakeEvents()` hands over the events since the last call, in order, and forgets them: `RoundStarted` with the turn order, `Defended`, `EscapeAttempted`, `Focused` with the rounds it lasts, `Meditated` with the mana got back and the mana after, `AttackResolved` with the health after, `CombatantDowned` and `FightEnded`. The driver takes them whenever the runner stops and shows them at its own pace. On an enemy's attack, `AttackResolved` carries both the pipeline's result and the damage that was answered, which need not match. **Each event that changes a number carries the value it leaves,** so a driver showing them later copies it instead of working it out again.
+
+**Orders that do not fit are refused** with `ArgumentException`, before anything changes or is rolled: one missing, one for somebody who is down or is not a member, two for the same member, a kind the fight does not know, an attack on someone who is not an enemy or is already down, a meditation by someone who cannot, a flee in a fight that cannot be fled, and a flee that does not come alone. With a flee, nobody else needs an order. The core refuses exactly what the menu does not offer. Calling a method at the wrong step throws `InvalidOperationException`.
 
 - **A new action is a new record under `CombatOrder`,** and a new kind of event one under `CombatEvent`, so no signature changes for it.
 - **The party has from one to four members and there is at least one enemy,** with someone standing on each side. How many enemies fit on screen is not the runner's to decide.
@@ -842,7 +859,8 @@ A round takes its orders in advance, works out the turn order once, and plays ea
 - **A member standing leaves with the health and mana they had left.**
 - **A member who went down leaves with 1 health point and 1 mana point,** or 0 mana where their most is 0, whatever they had before: going down drains the mana too. They get none of the experience.
 - **After a loss everyone is down,** so everyone leaves that way, and there is no experience.
-- `Standing`, `Result`, `Outcome` for the history, and `Experience`: the group's after a win, 0 after a loss.
+- **After a flight there is no experience either,** for anyone: if the enemies already down gave some, the way to play a group would be to down its weakest and flee. Who went down before it leaves as any member down.
+- `Standing`, `Result`, `Outcome` for the history, `Experience` (the group's after a win, 0 otherwise), and what the fight does to the map: `DefeatsTheEnemy` after a win, `SendsThePlayerBack` after a loss, neither after a flight.
 
 `ApplyTo(party)` writes it: each member's health and mana first, since a level reached does not heal, then the experience for those standing. `PreviewAward(party)` is that award without writing it, for the screen to announce. The party should not change while a fight is on, but the debug overlay can open over one and dismiss a member; such a member still has their health written, and is left out of the award instead of making it fail.
 
@@ -852,25 +870,28 @@ A round takes its orders in advance, works out the turn order once, and plays ea
 
 | Step | The screen shows | `confirm` | `cancel` |
 |---|---|---|---|
-| `Command` | The commands; today only *Attack* | `ChooseAttack()`, to the target | `Back()`: the target of the member before, whose order is forgotten; on the first member, nothing |
+| `Command` | The five commands, `CombatCommand` | `Choose(command)`: *Attack* goes to the target; *Defend*, *Focus* and *Meditate* are the member's order, and the next member chooses; *Flee* forgets the orders given and completes the round alone | `Back()`: the member before, whose order is forgotten, on their target if it was an attack and on their command if not; on the first member, nothing |
 | `Target` | The enemies standing | `ChooseTarget(id)`, to the next member's command | `Back()`: the same member's command |
 | `Complete` | Nothing: `Orders` go to `SubmitOrders` | | |
 
+`CanChoose(command)` offers *Meditate* only to the members the runner's `CanMeditate` lets, and *Flee* only where the runner's `CanFlee`; the entry takes both when it is built, and `Choose` refuses the rest.
+
 **`CombatantNames`** gives each combatant the name it is shown by. Two of one kind on a side are told apart by a letter, A to D, through `ui.combat.name_with_letter`. A kind alone on its side has no letter. The letters are given by position, once, so they do not move when one goes down.
 
-**`CombatLog.LineFor(event, names, translate)`** is the log's line for each event: `ui.combat.log.round`, `.hit`, `.critical`, `.missed`, `.evaded` and `.downed`. The damage it gives is the damage taken, which for an enemy is what the screen answered. `FightEnded` has no line.
+**`CombatLog.LineFor(event, names, translate)`** is the log's line for each event: `ui.combat.log.round`, `.hit`, `.critical`, `.missed`, `.evaded`, `.downed`, `.defends`, `.focuses`, `.meditates` (with the mana got back) and `.escape_failed`. The damage it gives is the damage taken, which for an enemy is what the screen answered. `FightEnded` has no line, and neither has an escape that got away: the result pages tell both.
 
-**`CombatResultPages`** says how the fight ended, in pages of four lines. A loss is one line; nobody gains anything, so a line per member would say nothing.
+**`CombatResultPages`** says how the fight ended, in pages of four lines. A loss is one line, and so is a flight (`ui.combat.player_fled`); nobody gains anything, so a line per member would say nothing.
 
 ### The combat screen
 
 `Combat/combat_screen.tscn`, with `CombatScreen.cs`, is the only part of combat that needs the engine. It decides nothing about the fight: what it adds is the timing, the input and the controls.
 
-- **The layout,** at 640x360: the enemies along the top, each a button with its name and health; the log of the last four lines in the middle, where the result's pages take its place; the command menu; and the party along the bottom with health and mana. The member choosing is marked, and one who is down is dimmed.
+- **The layout,** at 640x360: the enemies along the top, each a button with its name and health; the log of the last four lines in the middle, where the result's pages take its place; the five commands in a row; and the party along the bottom with health, mana and, for a member who focused, a fourth line with the rounds the focus has left (`ui.combat.focused`). The member choosing is marked, and one who is down is dimmed.
+- **The commands are walked like the enemies,** with `move_left` and `move_right`, and the row goes round. One the member cannot choose (`OrderEntry.CanChoose`) stays in its place, disabled, and cannot take the focus, so the menu keeps its shape and the focus never lands on a button that does nothing. The focus starts on *Attack*. A column was the first idea, but five buttons take some 171 px of the 360.
 - **A target is chosen by moving the focus** along the enemies standing, with `move_left` and `move_right` calling `FindValidFocusNeighbor`, as the status screen does along its members, and the stick moves it one enemy per push, through `StickPresses`. Each button names its neighbours, so the row goes round; an enemy down cannot take the focus.
 - **The log runs on a clock.** Each line waits `LineDelay` (0.6 s) before the next, and `confirm` ends the wait. An enemy's attack is answered when its turn in the log comes, with the damage the pipeline worked out, so its line appears the moment it is answered.
-- **The health shown follows the log, not the runner.** The runner works out a whole round up to the next enemy's attack at once; the screen keeps its own copy of each combatant's health, moved by each line as it appears, so the numbers fall with the text.
+- **The numbers shown follow the log, not the runner.** The runner works out a whole round up to the next enemy's attack at once; the screen keeps its own copy of each combatant's health, each member's mana and each focus, and copies into it the value each event carries as its line appears (`HealthAfter`, `ManaAfter`, `Focused.Rounds`), so the numbers move with the text. When the orders begin the log has caught up, and the rounds a focus has left are read from the runner.
 - **The result ignores `confirm` for `ResultInputDelay`** (0.4 s) when it appears, so a player hurrying the log does not skip the first page. `confirm` turns the page, and after the last the screen fades out and emits `CombatFinished`.
 - **Input is read in `_Input`, and every press the screen uses is marked as handled,** like the status screen. With the debug overlay open it reads nothing, and its clock stops.
 - **Every fight uses a random seed,** printed when it starts. Choosing one from the command line is #107's.
-- **Run on its own,** `combat_screen.tscn` fights `demo_patrol` in the world the game starts in.
+- **Run on its own,** `combat_screen.tscn` fights `demo_patrol` in the world the game starts in. That fallback applies only when the screen is the scene's root; added anywhere else without a group, it throws.

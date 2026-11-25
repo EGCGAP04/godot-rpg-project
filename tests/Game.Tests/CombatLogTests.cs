@@ -16,6 +16,10 @@ public class CombatLogTests
 		[CombatLog.Missed] = "{attacker} missed {target}",
 		[CombatLog.Evaded] = "{target} evaded {attacker}",
 		[CombatLog.Downed] = "{name} down",
+		[CombatLog.Defends] = "{name} defends",
+		[CombatLog.Focuses] = "{name} focuses",
+		[CombatLog.Meditates] = "{name} +{mana}",
+		[CombatLog.EscapeFailed] = "no escape",
 		[CombatantNames.NameWithLetter] = "{name}{letter}",
 		["speaker.hero"] = "Hero",
 		["enemy.weak"] = "Weak"
@@ -27,8 +31,9 @@ public class CombatLogTests
 
 	private static string Line(CombatEvent happened) => CombatLog.LineFor(happened, Names, Translate);
 
+	// The health left is not on the line, so every attack here leaves 0.
 	private static AttackResolved Attack(CombatantId attacker, CombatantId target, AttackResult result, int damageTaken) =>
-		new(attacker, target, result, damageTaken);
+		new(attacker, target, result, damageTaken, HealthAfter: 0);
 
 	[Fact]
 	public void ARound_SaysItsNumber()
@@ -74,6 +79,22 @@ public class CombatLogTests
 		Assert.Null(Line(new FightEnded(CombatResult.Won)));
 	}
 
+	[Fact]
+	public void ADefence_AFocus_AndAMeditation_SayWho_AndTheManaGotBack()
+	{
+		Assert.Equal("Hero defends", Line(new Defended(CombatantId.Party(0))));
+		Assert.Equal("Hero focuses", Line(new Focused(CombatantId.Party(0), 3)));
+		Assert.Equal("Hero +4", Line(new Meditated(CombatantId.Party(0), 4, 9)));
+	}
+
+	[Fact]
+	public void AFailedFlee_HasALine_AndOneThatGotAway_HasNone()
+	{
+		// The result pages tell a flight that got away, as they tell the end of any fight.
+		Assert.Equal("no escape", Line(new EscapeAttempted(false)));
+		Assert.Null(Line(new EscapeAttempted(true)));
+	}
+
 	private sealed record Unknown : CombatEvent;
 
 	[Fact]
@@ -114,15 +135,15 @@ public class CombatLogTests
 		random.Hit();
 		random.Hit();
 
-		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, TestTuning.Formulas(), TestTuning.Combat(), random);
+		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, canFlee: true, TestTuning.Formulas(), TestTuning.Combat(), random);
 		runner.SubmitOrders(new CombatOrder[] { new AttackOrder(CombatantId.Party(0), CombatantId.Enemy(0)), new AttackOrder(CombatantId.Party(1), CombatantId.Enemy(0)) });
 		runner.AnswerEnemyAttack(runner.PendingAttack.Result.Damage);
 		return runner;
 	}
 
 	[Theory]
-	[InlineData("en", "Round 2|Enemy A hits Strong Enemy for 6.|Critical hit! Enemy B hits Strong Enemy for 12.|Enemy A misses Strong Enemy.|Strong Enemy evades Enemy B's attack.|Enemy B goes down.")]
-	[InlineData("es", "Ronda 2|Enemigo A golpea a Enemigo fuerte: 6 de daño.|¡Golpe crítico! Enemigo B golpea a Enemigo fuerte: 12 de daño.|Enemigo A no le acierta a Enemigo fuerte.|Enemigo fuerte esquiva el ataque de Enemigo B.|Enemigo B cae.")]
+	[InlineData("en", "Round 2|Enemy A hits Strong Enemy for 6.|Critical hit! Enemy B hits Strong Enemy for 12.|Enemy A misses Strong Enemy.|Strong Enemy evades Enemy B's attack.|Enemy B goes down.|Enemy A defends.|Enemy B focuses.|Enemy A meditates and recovers 2 MP.|The party tries to flee, but cannot get away.")]
+	[InlineData("es", "Ronda 2|Enemigo A golpea a Enemigo fuerte: 6 de daño.|¡Golpe crítico! Enemigo B golpea a Enemigo fuerte: 12 de daño.|Enemigo A no le acierta a Enemigo fuerte.|Enemigo fuerte esquiva el ataque de Enemigo B.|Enemigo B cae.|Enemigo A se defiende.|Enemigo B se concentra.|Enemigo A medita y recupera 2 PM.|El grupo intenta huir, pero no puede escapar.")]
 	public void WithTheGamesTables_EveryLineIsFilled(string locale, string expected)
 	{
 		Dictionary<string, string> texts = ProjectFiles.TranslationFiles()
@@ -140,7 +161,11 @@ public class CombatLogTests
 			Attack(b, strong, AttackResult.Hit(12, isCritical: true), 12),
 			Attack(a, strong, AttackResult.Missed, 0),
 			Attack(b, strong, AttackResult.Evaded, 0),
-			new CombatantDowned(b)
+			new CombatantDowned(b),
+			new Defended(a),
+			new Focused(b, 3),
+			new Meditated(a, 2, 5),
+			new EscapeAttempted(false)
 		};
 
 		Assert.Equal(expected, string.Join("|", events.Select(happened => CombatLog.LineFor(happened, names, key => texts[key]))));

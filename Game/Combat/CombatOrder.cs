@@ -12,3 +12,39 @@ public abstract record CombatOrder(CombatantId Actor);
 /// member's turn, the attack moves to another standing enemy, picked by a roll.
 /// </param>
 public sealed record AttackOrder(CombatantId Actor, CombatantId Target) : CombatOrder(Actor);
+
+/// <summary>
+/// The member defends: for the whole round, from its start, every attack on them does
+/// <see cref="CombatTuningValues.DefendReductionPercent"/> less after the armor. It takes
+/// no turn of its own, since it acted when the round started.
+/// </summary>
+/// <param name="Actor">The member who defends.</param>
+public sealed record DefendOrder(CombatantId Actor) : CombatOrder(Actor);
+
+/// <summary>
+/// The member focuses, on their turn: for the <see cref="CombatTuningValues.FocusRounds"/>
+/// rounds after this one, their attack is raised by
+/// <see cref="CombatTuningValues.FocusAttackPercent"/>. Focusing again while focused starts
+/// the count again; it does not add to it.
+/// </summary>
+/// <param name="Actor">The member who focuses.</param>
+public sealed record FocusOrder(CombatantId Actor) : CombatOrder(Actor);
+
+/// <summary>
+/// The member meditates, on their turn, and gets back
+/// <see cref="CombatTuningValues.MeditatePercent"/> of their most mana, rounded down, but
+/// never less than <see cref="CombatTuningValues.MeditateMinimum"/> nor past the most. Only
+/// a member whose mana is below their most can be given it.
+/// </summary>
+/// <param name="Actor">The member who meditates.</param>
+public sealed record MeditateOrder(CombatantId Actor) : CombatOrder(Actor);
+
+/// <summary>
+/// The whole party tries to flee: the round's only order, worked out before anyone acts.
+/// If it fails, the party loses the round, and only the enemies act.
+/// </summary>
+/// <param name="Actor">
+/// The member whose menu it was chosen from. It is kept as the record of who asked, and
+/// changes nothing: the flee is the party's.
+/// </param>
+public sealed record FleeOrder(CombatantId Actor) : CombatOrder(Actor);

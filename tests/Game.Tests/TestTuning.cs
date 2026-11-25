@@ -40,10 +40,20 @@ public static class TestTuning
 
 	/// <summary>
 	/// The combat tuning the combat tests run with: a hit does at least 1, and the base
-	/// damage varies by 10% either way, so its ends are 90% and 110%.
+	/// damage varies by 10% either way, so its ends are 90% and 110%. Defending halves the
+	/// damage, a focus raises the attack by half for 3 rounds, and a meditation gives back
+	/// a quarter of the most mana, 1 at least: the game's own numbers today, written here
+	/// so tuning the game does not break the tests.
 	/// </summary>
-	public static CombatTuningValues Combat(int minimumDamage = 1, double damageVariationPercent = 10) =>
-		new(minimumDamage, damageVariationPercent);
+	public static CombatTuningValues Combat(
+		int minimumDamage = 1,
+		double damageVariationPercent = 10,
+		int defendReductionPercent = 50,
+		int focusAttackPercent = 50,
+		int focusRounds = 3,
+		int meditatePercent = 25,
+		int meditateMinimum = 1) =>
+		new(minimumDamage, damageVariationPercent, defendReductionPercent, focusAttackPercent, focusRounds, meditatePercent, meditateMinimum);
 
 	/// <summary>Stats with only the named ones set, so a test reads as what it is about.</summary>
 	public static BaseStats Stats(int healthPoints = 0, int attackDamage = 0, int armor = 0, int manaPoints = 0, int agility = 0, int luck = 0, int hitRate = 0) =>

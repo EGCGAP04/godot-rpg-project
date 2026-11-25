@@ -10,7 +10,8 @@ using System.Text.RegularExpressions;
 /// </summary>
 /// <remarks>
 /// The same kind of enemy may be in a group more than once. A group has from one enemy
-/// to <see cref="MaximumSize"/>, which is how many the combat screen has room for.
+/// to <see cref="MaximumSize"/>, which is how many the combat screen has room for. Most
+/// groups can be fled from; one that cannot says so with <see cref="CannotFlee"/>.
 /// </remarks>
 public sealed class EncounterValues
 {
@@ -19,7 +20,7 @@ public sealed class EncounterValues
 
 	private static readonly Regex IdShape = new(@"^[a-z][a-z0-9_]*\z");
 
-	public EncounterValues(string id, IEnumerable<EnemyValues> enemies)
+	public EncounterValues(string id, IEnumerable<EnemyValues> enemies, bool cannotFlee = false)
 	{
 		if (id is null || !IdShape.IsMatch(id))
 			throw new ArgumentException($"An encounter's id is lowercase letters, digits and underscores, starting with a letter; '{id}' is not.", nameof(id));
@@ -44,6 +45,7 @@ public sealed class EncounterValues
 
 		Id = id;
 		Enemies = group.AsReadOnly();
+		CannotFlee = cannotFlee;
 	}
 
 	/// <summary>The group, as the history of fights records it. It never changes with the text.</summary>
@@ -53,4 +55,7 @@ public sealed class EncounterValues
 
 	/// <summary>What a win over the group gives: the sum of its enemies' experience.</summary>
 	public long Experience { get; }
+
+	/// <summary>Whether the party is refused when it tries to flee from this group.</summary>
+	public bool CannotFlee { get; }
 }

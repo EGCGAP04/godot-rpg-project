@@ -17,9 +17,16 @@ using Godot;
 /// </para>
 /// <para>
 /// <b>The party is not written while the fight is on.</b> The screen keeps its own copy
-/// of the health shown, moved by each line of the log as it appears, so the numbers fall
-/// with the text and not before it. <c>Main</c> writes the party once, from
-/// <see cref="Aftermath"/>, after <see cref="CombatFinished"/>.
+/// of the health, the mana and the focus shown, and each line of the log copies into it
+/// the value its event carries, so the numbers move with the text and not before it: the
+/// runner has already worked out the whole round when the first line appears. Between
+/// rounds the two agree. <c>Main</c> writes the party once, from <see cref="Aftermath"/>,
+/// after <see cref="CombatFinished"/>.
+/// </para>
+/// <para>
+/// <b>The commands are a row,</b> walked with <c>move_left</c> and <c>move_right</c> like
+/// the enemies. One the member cannot choose (<see cref="OrderEntry.CanChoose"/>) stays
+/// in its place, disabled, and the focus passes over it.
 /// </para>
 /// <para>
 /// <b>The log runs on a clock.</b> Each line waits <see cref="LineDelay"/> before the next
@@ -43,7 +50,7 @@ public partial class CombatScreen : CanvasLayer
 
 	public const string TuningPath = "res://Combat/combat_tuning.tres";
 
-	/// <summary>The group fought when the scene runs on its own, without <c>Main</c>.</summary>
+	/// <summary>The group fought when the scene runs on its own, and only then.</summary>
 	public const string StandaloneEncounterPath = "res://Enemy/Encounters/demo_patrol.tres";
 
 	private const int LogLines = 4;
@@ -85,9 +92,11 @@ public partial class CombatScreen : CanvasLayer
 	private readonly List<CombatEvent> _shown = new();
 	private double _wait;
 
-	// The health each combatant shows, which follows the log rather than the runner.
+	// What each combatant shows, which follows the log rather than the runner.
 	private int[] _partyHealth;
 	private int[] _enemyHealth;
+	private int[] _partyMana;
+	private int[] _partyFocus;
 
 	private ExperienceAward _award;
 	private IReadOnlyList<string> _pages;
@@ -98,19 +107,31 @@ public partial class CombatScreen : CanvasLayer
 	private Label _logLabel;
 	private Label _resultLabel;
 	private Control _commands;
-	private Button _attackButton;
+	private readonly Dictionary<CombatCommand, Button> _commandButtons = new();
 	private ScreenFade _fade;
 
 	public override void _Ready()
 	{
-		Encounter ??= GD.Load<EncounterData>(StandaloneEncounterPath);
+		if (Encounter == null)
+		{
+			// In the game Main gives every fight its group, and refuses an enemy without one,
+			// so a screen with none was added by mistake.
+			if (GetTree().CurrentScene != this)
+				throw new InvalidOperationException("The combat screen was added without an Encounter.");
+
+			Encounter = GD.Load<EncounterData>(StandaloneEncounterPath);
+		}
 
 		_enemies = GetNode<HBoxContainer>("Enemies");
 		_members = GetNode<HBoxContainer>("Members");
 		_logLabel = GetNode<Label>("LogPanel/LogLabel");
 		_resultLabel = GetNode<Label>("LogPanel/ResultLabel");
 		_commands = GetNode<Control>("Commands");
-		_attackButton = GetNode<Button>("Commands/AttackButton");
+		_commandButtons[CombatCommand.Attack] = GetNode<Button>("Commands/AttackButton");
+		_commandButtons[CombatCommand.Defend] = GetNode<Button>("Commands/DefendButton");
+		_commandButtons[CombatCommand.Focus] = GetNode<Button>("Commands/FocusButton");
+		_commandButtons[CombatCommand.Meditate] = GetNode<Button>("Commands/MeditateButton");
+		_commandButtons[CombatCommand.Flee] = GetNode<Button>("Commands/FleeButton");
 		_fade = GetNode<ScreenFade>("ScreenFade");
 
 		_party = Party.Instance.State;
@@ -121,17 +142,22 @@ public partial class CombatScreen : CanvasLayer
 		_runner = CombatRunner.Start(
 			_lineup.Party,
 			_lineup.Enemies,
+			canFlee: !_lineup.Encounter.CannotFlee,
 			new StatFormulas(GD.Load<StatTuning>(Party.TuningPath).ToValues()),
 			GD.Load<CombatTuning>(TuningPath).ToValues(),
 			random);
 
 		_partyHealth = _lineup.Party.Select(member => member.HealthPoints).ToArray();
 		_enemyHealth = _lineup.Enemies.Select(enemy => enemy.HealthPoints).ToArray();
+		_partyMana = _lineup.Party.Select(member => member.ManaPoints).ToArray();
+		_partyFocus = new int[_lineup.Party.Count];
 		_names = CombatantNames.Of(_lineup, key => Tr(key));
 
 		BuildEnemies();
 		BuildMembers();
-		_attackButton.Pressed += OnAttackPressed;
+		foreach ((CombatCommand command, Button button) in _commandButtons)
+			button.Pressed += () => OnCommandPressed(command);
+
 		_commands.Visible = false;
 		_resultLabel.Visible = false;
 
@@ -210,6 +236,9 @@ public partial class CombatScreen : CanvasLayer
 				if (_entry.Back())
 					ShowOrderStep();
 				break;
+			case Phase.Ordering when (left || right) && _entry.Step == OrderStep.Command:
+				MoveCommandFocus(left ? Side.Left : Side.Right);
+				break;
 			case Phase.Ordering when (left || right) && _entry.Step == OrderStep.Target:
 				MoveTargetFocus(left ? Side.Left : Side.Right);
 				break;
@@ -226,8 +255,13 @@ public partial class CombatScreen : CanvasLayer
 
 	private void BeginOrders()
 	{
-		_entry = new OrderEntry(_runner.MembersToOrder, StandingEnemies());
+		_entry = new OrderEntry(_runner.MembersToOrder, StandingEnemies(), _runner.MembersToOrder.Where(_runner.CanMeditate), _runner.CanFlee);
 		_phase = Phase.Ordering;
+
+		// The log has caught up with the runner here, so the rounds a focus has left are the runner's.
+		for (int position = 0; position < _partyFocus.Length; position++)
+			_partyFocus[position] = _runner.FocusRoundsLeft(CombatantId.Party(position));
+
 		ShowOrderStep();
 	}
 
@@ -236,27 +270,33 @@ public partial class CombatScreen : CanvasLayer
 
 	private void Confirm()
 	{
-		if (_entry.Step == OrderStep.Command)
-		{
-			_entry.ChooseAttack();
-			ShowOrderStep();
-		}
+		if (_entry.Step == OrderStep.Command && FocusedCommand() is CombatCommand command)
+			Choose(command);
 		else if (_entry.Step == OrderStep.Target && FocusedEnemy() is CombatantId target)
-		{
 			ChooseTarget(target);
-		}
 	}
 
-	private void OnAttackPressed()
+	private void OnCommandPressed(CombatCommand command)
 	{
-		if (_phase == Phase.Ordering && _entry.Step == OrderStep.Command)
-			Confirm();
+		if (_phase == Phase.Ordering && _entry.Step == OrderStep.Command && _entry.CanChoose(command))
+			Choose(command);
+	}
+
+	private void Choose(CombatCommand command)
+	{
+		_entry.Choose(command);
+		AfterAChoice();
 	}
 
 	private void ChooseTarget(CombatantId target)
 	{
 		_entry.ChooseTarget(target);
+		AfterAChoice();
+	}
 
+	/// <summary>The round is played once every order is in; until then, the next step shows.</summary>
+	private void AfterAChoice()
+	{
 		if (_entry.Step == OrderStep.Complete)
 			Play();
 		else
@@ -268,15 +308,73 @@ public partial class CombatScreen : CanvasLayer
 	{
 		_commands.Visible = _entry.Step == OrderStep.Command;
 		RefreshMembers();
+		LinkCommands();
 		LinkTargets();
 
 		if (DebugTools.Instance?.IsOpen == true)
 			return;
 
 		if (_entry.Step == OrderStep.Command)
-			_attackButton.GrabFocus();
+			_commandButtons[CombatCommand.Attack].GrabFocus();
 		else if (_entry.Step == OrderStep.Target)
 			EnemyButton(_entry.Targets[0]).GrabFocus();
+	}
+
+	private void MoveCommandFocus(Side side)
+	{
+		Button current = FocusedCommand() is CombatCommand focused ? _commandButtons[focused] : _commandButtons[CombatCommand.Attack];
+
+		if (GetViewport().GuiGetFocusOwner() != current)
+			current.GrabFocus();
+
+		current.FindValidFocusNeighbor(side)?.GrabFocus();
+	}
+
+	private CombatCommand? FocusedCommand()
+	{
+		Control owner = GetViewport().GuiGetFocusOwner();
+
+		foreach ((CombatCommand command, Button button) in _commandButtons)
+		{
+			if (button == owner)
+				return command;
+		}
+
+		return null;
+	}
+
+	/// <summary>
+	/// Makes the commands the member can choose a row the focus goes round, and disables
+	/// the rest where they stand.
+	/// </summary>
+	private void LinkCommands()
+	{
+		if (_entry.Step != OrderStep.Command)
+			return;
+
+		List<Button> open = new();
+
+		foreach ((CombatCommand command, Button button) in _commandButtons)
+		{
+			bool canChoose = _entry.CanChoose(command);
+			button.Disabled = !canChoose;
+			button.FocusMode = canChoose ? Control.FocusModeEnum.All : Control.FocusModeEnum.None;
+
+			if (canChoose)
+				open.Add(button);
+		}
+
+		for (int index = 0; index < open.Count; index++)
+		{
+			Button button = open[index];
+			NodePath self = button.GetPath();
+			button.FocusNeighborLeft = open[(index - 1 + open.Count) % open.Count].GetPath();
+			button.FocusNeighborRight = open[(index + 1) % open.Count].GetPath();
+			button.FocusNeighborTop = self;
+			button.FocusNeighborBottom = self;
+			button.FocusNext = self;
+			button.FocusPrevious = self;
+		}
 	}
 
 	private void MoveTargetFocus(Side side)
@@ -382,14 +480,24 @@ public partial class CombatScreen : CanvasLayer
 		}
 	}
 
-	/// <summary>Shows one event, if it has a line, and moves the health shown with it.</summary>
+	/// <summary>Shows one event, if it has a line, and copies what it changed into what the screen shows.</summary>
 	/// <returns>Whether it had a line.</returns>
 	private bool Show(CombatEvent happened)
 	{
-		if (happened is AttackResolved attack)
+		switch (happened)
 		{
-			int[] side = attack.Target.Side == CombatSide.Party ? _partyHealth : _enemyHealth;
-			side[attack.Target.Position] = Math.Max(0, side[attack.Target.Position] - attack.DamageTaken);
+			case AttackResolved attack:
+				(attack.Target.Side == CombatSide.Party ? _partyHealth : _enemyHealth)[attack.Target.Position] = attack.HealthAfter;
+				break;
+			case Meditated meditated:
+				_partyMana[meditated.Member.Position] = meditated.ManaAfter;
+				break;
+			case Focused focused:
+				_partyFocus[focused.Member.Position] = focused.Rounds;
+				break;
+			case CombatantDowned downed when downed.Combatant.Side == CombatSide.Party:
+				_partyFocus[downed.Combatant.Position] = 0;
+				break;
 		}
 
 		string line = CombatLog.LineFor(happened, _names, key => Tr(key));
@@ -519,11 +627,17 @@ public partial class CombatScreen : CanvasLayer
 			CombatantSetup member = _lineup.Party[position];
 			string marker = choosing == id ? "> " : "";
 
-			label.Text = string.Join(
-				"\n",
+			var lines = new List<string>
+			{
 				marker + _names.Of(id),
 				Points("ui.stat.health_points", _partyHealth[position], member.Stats.HealthPoints),
-				Points("ui.stat.mana_points", _runner.Party[position].ManaPoints, member.Stats.ManaPoints));
+				Points("ui.stat.mana_points", _partyMana[position], member.Stats.ManaPoints)
+			};
+
+			if (_partyFocus[position] > 0)
+				lines.Add(TextTemplate.Fill(Tr("ui.combat.focused"), ("rounds", _partyFocus[position])));
+
+			label.Text = string.Join("\n", lines);
 
 			// A member down is dimmed.
 			label.Modulate = _partyHealth[position] == 0 ? new Color(1, 1, 1, 0.4f) : Colors.White;

@@ -16,6 +16,7 @@ public class SnapshotShelfTests
 		'flags': {
 			'combat.wins': { 'type': 'counter', 'lifetime': 'run' },
 			'combat.losses': { 'type': 'counter', 'lifetime': 'run' },
+			'combat.escapes': { 'type': 'counter', 'lifetime': 'run' },
 			'test.tonight': { 'type': 'bool', 'lifetime': 'cycle' },
 			'test.visits': { 'type': 'counter', 'lifetime': 'run' },
 			'test.ever': { 'type': 'bool', 'lifetime': 'persistent' }
@@ -177,6 +178,7 @@ public class SnapshotShelfTests
 			'flags': {
 				'combat.wins': { 'type': 'counter', 'lifetime': 'run' },
 				'combat.losses': { 'type': 'counter', 'lifetime': 'run' },
+				'combat.escapes': { 'type': 'counter', 'lifetime': 'run' },
 				'test.visits': { 'type': 'counter', 'lifetime': 'run' }
 			}
 		}".Replace('\'', '"')));

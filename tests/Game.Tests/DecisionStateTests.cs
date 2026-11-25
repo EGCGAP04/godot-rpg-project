@@ -12,7 +12,7 @@ namespace GodotRPGProject.Tests;
 public class DecisionStateTests
 {
 	/// <summary>
-	/// One flag of each type and lifetime that matters here, plus the two counters the
+	/// One flag of each type and lifetime that matters here, plus the three counters the
 	/// registry needs.
 	/// </summary>
 	private static readonly FlagCatalogue Catalogue = FlagCatalogue.Read(@"{
@@ -20,6 +20,7 @@ public class DecisionStateTests
 		'flags': {
 			'combat.wins': { 'type': 'counter', 'lifetime': 'run' },
 			'combat.losses': { 'type': 'counter', 'lifetime': 'run' },
+			'combat.escapes': { 'type': 'counter', 'lifetime': 'run' },
 			'test.tonight': { 'type': 'bool', 'lifetime': 'cycle' },
 			'test.steps': { 'type': 'counter', 'lifetime': 'cycle' },
 			'test.promised': { 'type': 'bool', 'lifetime': 'run' },
@@ -58,16 +59,18 @@ public class DecisionStateTests
 
 		Assert.Same(Catalogue, state.Catalogue);
 		Assert.All(new[] { "test.tonight", "test.promised", "test.ever" }, name => Assert.False(state.GetFlag(name)));
-		Assert.All(new[] { "combat.wins", "combat.losses", "test.steps", "test.visits", "test.runs" }, name => Assert.Equal(0, state.GetCounter(name)));
+		Assert.All(new[] { "combat.wins", "combat.losses", "combat.escapes", "test.steps", "test.visits", "test.runs" }, name => Assert.Equal(0, state.GetCounter(name)));
 		Assert.Empty(state.Combats);
 	}
 
 	[Theory]
 	[InlineData("combat.wins")]
 	[InlineData("combat.losses")]
+	[InlineData("combat.escapes")]
 	public void New_RejectsACatalogueWithoutTheFightCounters(string missing)
 	{
-		var catalogue = FlagCatalogue.Read($"{{ 'format': 1, 'flags': {{ '{(missing == "combat.wins" ? "combat.losses" : "combat.wins")}': {{ 'type': 'counter', 'lifetime': 'run' }} }} }}".Replace('\'', '"'));
+		string others = string.Join(", ", new[] { "combat.wins", "combat.losses", "combat.escapes" }.Where(name => name != missing).Select(name => $"'{name}': {{ 'type': 'counter', 'lifetime': 'run' }}"));
+		var catalogue = FlagCatalogue.Read($"{{ 'format': 1, 'flags': {{ {others} }} }}".Replace('\'', '"'));
 
 		var error = Assert.Throws<ArgumentException>(() => new DecisionState(catalogue));
 
@@ -77,7 +80,7 @@ public class DecisionStateTests
 	[Fact]
 	public void New_RejectsAFightCounterDeclaredAsABooleanFlag()
 	{
-		var catalogue = FlagCatalogue.Read("{ 'format': 1, 'flags': { 'combat.wins': { 'type': 'bool', 'lifetime': 'run' }, 'combat.losses': { 'type': 'counter', 'lifetime': 'run' } } }".Replace('\'', '"'));
+		var catalogue = FlagCatalogue.Read("{ 'format': 1, 'flags': { 'combat.wins': { 'type': 'bool', 'lifetime': 'run' }, 'combat.losses': { 'type': 'counter', 'lifetime': 'run' }, 'combat.escapes': { 'type': 'counter', 'lifetime': 'run' } } }".Replace('\'', '"'));
 
 		var error = Assert.Throws<ArgumentException>(() => new DecisionState(catalogue));
 
@@ -91,6 +94,7 @@ public class DecisionStateTests
 
 		Assert.Equal(0, state.GetCounter(DecisionState.Wins));
 		Assert.Equal(0, state.GetCounter(DecisionState.Losses));
+		Assert.Equal(0, state.GetCounter(DecisionState.Escapes));
 	}
 
 	[Fact]
@@ -261,7 +265,7 @@ public class DecisionStateTests
 		var state = new DecisionState(Catalogue);
 
 		Assert.Throws<ArgumentNullException>(() => state.RecordCombat(World.Fantasy, 1, null, FightOutcome.Won));
-		Assert.Throws<ArgumentOutOfRangeException>(() => state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), (FightOutcome)2));
+		Assert.Throws<ArgumentOutOfRangeException>(() => state.RecordCombat(World.Fantasy, 1, TestFights.Group("weak"), (FightOutcome)99));
 		Assert.Empty(state.Combats);
 		Assert.Equal(0, state.GetCounter(DecisionState.Wins));
 		Assert.Equal(0, state.GetCounter(DecisionState.Losses));
@@ -359,7 +363,7 @@ public class DecisionStateTests
 			new Dictionary<string, bool> { ["test.tonight"] = true, ["test.promised"] = true },
 			snapshot.Flags);
 		Assert.Equal(
-			new Dictionary<string, int> { ["combat.wins"] = 3, ["combat.losses"] = 4, ["test.steps"] = 3, ["test.visits"] = 3 },
+			new Dictionary<string, int> { ["combat.wins"] = 3, ["combat.losses"] = 4, ["combat.escapes"] = 3, ["test.steps"] = 3, ["test.visits"] = 3 },
 			snapshot.Counters);
 		Assert.Equal(new[] { TestFights.Record(World.Fantasy, 1, "weak", FightOutcome.Lost) }, snapshot.Combats);
 	}

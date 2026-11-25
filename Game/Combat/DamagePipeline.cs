@@ -2,8 +2,9 @@ using System;
 
 /// <summary>
 /// Works out one attack, from the attacker's accuracy to the damage the defender takes:
-/// accuracy, then evasion, then the critical hit, then armor. It changes nobody's health;
-/// it answers with an <see cref="AttackResult"/> and whoever asked applies it.
+/// accuracy, then evasion, then the critical hit, then armor, then the defence of a
+/// defender who defends. It changes nobody's health; it answers with an
+/// <see cref="AttackResult"/> and whoever asked applies it.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -20,6 +21,11 @@ using System;
 /// A stage that is reached always rolls, even when its chance is 0% or 100%, so how many
 /// rolls an attack takes depends on how far it got and never on the stats: one for a
 /// miss, two for an evaded attack, four for a hit.
+/// </para>
+/// <para>
+/// <b>Defending takes <see cref="CombatTuningValues.DefendReductionPercent"/> off what the
+/// armor left,</b> as a factor of its own: it is outside the armor's cap, so it is worth as
+/// much against a defender whose armor is already at the cap. It rolls nothing.
 /// </para>
 /// <para>
 /// <b>The damage is rounded down once, at the end,</b> and a hit that got this far does
@@ -50,7 +56,11 @@ public sealed class DamagePipeline
 		_tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
 	}
 
-	public AttackResult Resolve(BaseStats attacker, BaseStats defender, ActionKind kind, ICombatRandom random)
+	/// <param name="defending">
+	/// Whether the defender defends this round. Asked of every call, never defaulted, so
+	/// no caller can forget it.
+	/// </param>
+	public AttackResult Resolve(BaseStats attacker, BaseStats defender, ActionKind kind, ICombatRandom random, bool defending)
 	{
 		ArgumentNullException.ThrowIfNull(random);
 
@@ -68,6 +78,10 @@ public sealed class DamagePipeline
 			damage *= _formulas.CriticalDamage(attacker, kind) / 100;
 
 		damage *= 1 - _formulas.ArmorReduction(defender, kind) / 100;
+
+		// Before the rounding and the minimum, so both happen once.
+		if (defending)
+			damage *= 1 - _tuning.DefendReductionPercent / 100.0;
 
 		return AttackResult.Hit(RoundDown(damage), isCritical);
 	}

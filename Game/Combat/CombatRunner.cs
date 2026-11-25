@@ -30,13 +30,22 @@ public enum CombatResult
 	Won,
 
 	/// <summary>The whole party is down.</summary>
-	Lost
+	Lost,
+
+	/// <summary>The party fled.</summary>
+	Fled
 }
 
 /// <summary>
 /// An enemy's attack, worked out and not applied yet: who attacks, whom, and what the
-/// damage pipeline answered, with armor already taken out of the damage.
+/// damage pipeline answered, with armor and the target's defence already taken out of
+/// the damage.
 /// </summary>
+/// <remarks>
+/// A fight where the player dodges in real time answers with what got through, as it is.
+/// Such a scene will need to know whether the target defends, to take the defence out of
+/// what it lets through; the day it exists, this record carries that too.
+/// </remarks>
 public sealed record PendingEnemyAttack(CombatantId Attacker, CombatantId Target, AttackResult Result);
 
 /// <summary>
@@ -71,10 +80,43 @@ public sealed record PendingEnemyAttack(CombatantId Attacker, CombatantId Target
 /// On an enemy's attack, an index roll among the standing members, always, even when one
 /// is left.
 /// </item>
+/// <item>
+/// In a round the party flees, one roll for the escape, after the turn order's and before
+/// any turn. It is the only roll an order other than an attack makes.
+/// </item>
 /// </list>
 /// <para>
 /// Whoever goes down before its turn loses it. The fight ends the moment a whole side is
 /// down, and nobody after that acts.
+/// </para>
+/// <para>
+/// <b>A member who defends is protected from the round's start,</b> so an enemy faster
+/// than them is no reason to defend in vain: a <see cref="Defended"/> comes right after
+/// <see cref="RoundStarted"/>, for each in the party's order, and their own turn passes
+/// with nothing. The defence lasts until the round ends. It rolls nothing.
+/// </para>
+/// <para>
+/// <b>A member who focuses does so on their turn,</b> like an attack, and their attack is
+/// raised for the <see cref="CombatTuningValues.FocusRounds"/> rounds after it: the
+/// stats the pipeline gets are a copy with <see cref="BaseStats.AttackDamage"/> raised by
+/// <see cref="CombatTuningValues.FocusAttackPercent"/>, rounded down, so everything that
+/// reads the attack, the critical damage included, sees it raised. Focusing again starts
+/// the count again instead of adding to it, and going down loses it. It rolls nothing.
+/// </para>
+/// <para>
+/// <b>A member who meditates does so on their turn,</b> and gets back a share of their most
+/// mana (<see cref="Meditated"/>). Only a member below their most can be ordered to
+/// (<see cref="CanMeditate"/>): nothing takes mana away during a round, so a meditation
+/// ordered at the most would always be wasted, and one whose most is 0 has nothing to get
+/// back. It rolls nothing.
+/// </para>
+/// <para>
+/// <b>Fleeing is the party's,</b> a <see cref="FleeOrder"/> that is the round's only
+/// order, and only in a fight that can be fled (<see cref="CanFlee"/>). The round starts
+/// as any other, and before any turn one roll is made against
+/// <see cref="StatFormulas.EscapeRate"/> over those standing on each side. If it comes up
+/// the fight ends, <see cref="CombatResult.Fled"/>, and nobody acts. If not, the party
+/// loses the round: the members' turns pass with nothing, and the enemies act.
 /// </para>
 /// </remarks>
 public sealed class CombatRunner
@@ -84,6 +126,8 @@ public sealed class CombatRunner
 	private readonly List<Combatant> _party;
 	private readonly List<Combatant> _enemies;
 	private readonly DamagePipeline _pipeline;
+	private readonly StatFormulas _formulas;
+	private readonly CombatTuningValues _tuning;
 	private readonly ICombatRandom _random;
 	private readonly List<CombatEvent> _events = new();
 
@@ -92,11 +136,14 @@ public sealed class CombatRunner
 	private IReadOnlyList<Combatant> _turns = Array.Empty<Combatant>();
 	private int _turn;
 
-	private CombatRunner(List<Combatant> party, List<Combatant> enemies, DamagePipeline pipeline, ICombatRandom random)
+	private CombatRunner(List<Combatant> party, List<Combatant> enemies, bool canFlee, DamagePipeline pipeline, StatFormulas formulas, CombatTuningValues tuning, ICombatRandom random)
 	{
 		_party = party;
 		_enemies = enemies;
+		CanFlee = canFlee;
 		_pipeline = pipeline;
+		_formulas = formulas;
+		_tuning = tuning;
 		_random = random;
 	}
 
@@ -105,6 +152,9 @@ public sealed class CombatRunner
 
 	/// <summary>How the fight stands. <see cref="CombatResult.Ongoing"/> until <see cref="Step"/> is <see cref="CombatStep.Finished"/>.</summary>
 	public CombatResult Result { get; private set; } = CombatResult.Ongoing;
+
+	/// <summary>Whether the party can be ordered to flee this fight. Some groups cannot be fled from.</summary>
+	public bool CanFlee { get; }
 
 	/// <summary>The round being ordered or worked out, from 1. It stays at the last one when the fight ends.</summary>
 	public int Round { get; private set; } = 1;
@@ -126,6 +176,34 @@ public sealed class CombatRunner
 	public PendingEnemyAttack PendingAttack { get; private set; }
 
 	/// <summary>
+	/// Whether a member can be ordered to meditate: standing, with less mana than their
+	/// most. A most of 0 is never below it.
+	/// </summary>
+	/// <exception cref="ArgumentException">The member is not a party member in this fight.</exception>
+	public bool CanMeditate(CombatantId member)
+	{
+		if (member.Side != CombatSide.Party || !Exists(member))
+			throw new ArgumentException($"{member} is not a party member in this fight.", nameof(member));
+
+		Combatant found = Find(member);
+		return !found.IsDown && found.ManaPoints < found.Stats.ManaPoints;
+	}
+
+	/// <summary>
+	/// How many rounds, from <see cref="Round"/> on and counting it, a combatant's attack is
+	/// raised by a focus: 0 when it is not focused. Meant to be read while the fight waits
+	/// for orders; during the round a member focused in, that round is counted too.
+	/// </summary>
+	/// <exception cref="ArgumentException">The combatant is not in this fight.</exception>
+	public int FocusRoundsLeft(CombatantId combatant)
+	{
+		if (!Exists(combatant))
+			throw new ArgumentException($"{combatant} is not in this fight.", nameof(combatant));
+
+		return Math.Max(0, Find(combatant).FocusedThrough - Round + 1);
+	}
+
+	/// <summary>
 	/// Sets a fight up and waits for the first round's orders. Nothing is rolled yet.
 	/// </summary>
 	/// <remarks>
@@ -133,9 +211,14 @@ public sealed class CombatRunner
 	/// least one enemy, and each side has someone standing. How many enemies fit is not
 	/// decided here.
 	/// </remarks>
+	/// <param name="canFlee">
+	/// Whether the party may flee. Asked of every caller, never defaulted, so a group that
+	/// cannot be fled from cannot be fled from by a caller's omission.
+	/// </param>
 	public static CombatRunner Start(
 		IReadOnlyList<CombatantSetup> party,
 		IReadOnlyList<CombatantSetup> enemies,
+		bool canFlee,
 		StatFormulas formulas,
 		CombatTuningValues tuning,
 		ICombatRandom random)
@@ -161,7 +244,7 @@ public sealed class CombatRunner
 		if (foes.All(foe => foe.IsDown))
 			throw new ArgumentException("No enemy is standing.", nameof(enemies));
 
-		return new CombatRunner(members, foes, pipeline, random);
+		return new CombatRunner(members, foes, canFlee, pipeline, formulas, tuning, random);
 	}
 
 	/// <summary>
@@ -171,8 +254,10 @@ public sealed class CombatRunner
 	/// <remarks>
 	/// Orders that do not fit are refused with <see cref="ArgumentException"/> before
 	/// anything changes or is rolled: one missing, one for somebody who is down or is not
-	/// a member, two for the same member, a kind of order the fight does not know, and an
-	/// attack whose target is not an enemy or is already down.
+	/// a member, two for the same member, a kind of order the fight does not know, an
+	/// attack whose target is not an enemy or is already down, a meditation for a member
+	/// who cannot meditate, and a flee that does not come alone or in a fight that cannot
+	/// be fled. A flee is the one order that leaves the other members without one.
 	/// </remarks>
 	public void SubmitOrders(IEnumerable<CombatOrder> orders)
 	{
@@ -185,6 +270,13 @@ public sealed class CombatRunner
 		_turns = TurnOrder.For(_party.Concat(_enemies), _random);
 		_turn = 0;
 		_events.Add(new RoundStarted(Round, _turns.Select(combatant => combatant.Id).ToArray()));
+
+		foreach (Combatant member in Standing(_party).Where(Defends))
+			_events.Add(new Defended(member.Id));
+
+		// Check lets a flee through only as the round's one order.
+		if (_orders.Values.Any(order => order is FleeOrder) && TryToFlee())
+			return;
 
 		Continue();
 	}
@@ -259,17 +351,46 @@ public sealed class CombatRunner
 			if (Find(order.Actor).IsDown)
 				throw new ArgumentException($"An order is for {order.Actor}, who is down.", nameof(orders));
 
-			if (order is not AttackOrder attack)
-				throw new ArgumentException($"The fight does not know the kind of order given to {order.Actor}, {order.GetType().Name}.", nameof(orders));
+			switch (order)
+			{
+				case AttackOrder attack:
+					if (attack.Target.Side != CombatSide.Enemy || !Exists(attack.Target))
+						throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is not an enemy in this fight.", nameof(orders));
 
-			if (attack.Target.Side != CombatSide.Enemy || !Exists(attack.Target))
-				throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is not an enemy in this fight.", nameof(orders));
+					if (Find(attack.Target).IsDown)
+						throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is already down.", nameof(orders));
 
-			if (Find(attack.Target).IsDown)
-				throw new ArgumentException($"{order.Actor} is ordered to attack {attack.Target}, who is already down.", nameof(orders));
+					break;
+
+				case DefendOrder or FocusOrder:
+					break;
+
+				case MeditateOrder when !CanMeditate(order.Actor):
+					throw new ArgumentException($"{order.Actor} is ordered to meditate with their mana at its most.", nameof(orders));
+
+				case MeditateOrder:
+					break;
+
+				case FleeOrder when !CanFlee:
+					throw new ArgumentException($"{order.Actor} is ordered to flee a fight that cannot be fled.", nameof(orders));
+
+				case FleeOrder:
+					break;
+
+				default:
+					throw new ArgumentException($"The fight does not know the kind of order given to {order.Actor}, {order.GetType().Name}.", nameof(orders));
+			}
 
 			if (!checkedOrders.TryAdd(order.Actor, order))
 				throw new ArgumentException($"{order.Actor} was given two orders.", nameof(orders));
+		}
+
+		if (checkedOrders.Values.Any(order => order is FleeOrder))
+		{
+			if (checkedOrders.Count > 1)
+				throw new ArgumentException("A flee is the whole party's order, and comes alone.", nameof(orders));
+
+			return checkedOrders;
 		}
 
 		foreach (Combatant member in Standing(_party))
@@ -297,21 +418,33 @@ public sealed class CombatRunner
 			if (actor.Id.Side == CombatSide.Enemy)
 			{
 				Combatant victim = PickStanding(_party);
-				AttackResult worked = _pipeline.Resolve(actor.Stats, victim.Stats, ActionKind.Attack, _random);
+				AttackResult worked = _pipeline.Resolve(actor.Stats, victim.Stats, ActionKind.Attack, _random, defending: Defends(victim));
 
 				PendingAttack = new PendingEnemyAttack(actor.Id, victim.Id, worked);
 				Step = CombatStep.EnemyAttackPending;
 				return;
 			}
 
-			var order = (AttackOrder)_orders[actor.Id];
-			Combatant target = Find(order.Target);
+			// In a round the party failed to flee, the members have no order of their own.
+			switch (_orders.GetValueOrDefault(actor.Id))
+			{
+				case AttackOrder order:
+					Attack(actor, order);
+					break;
 
-			if (target.IsDown)
-				target = PickStanding(_enemies);
+				// Defending acted when the round started.
+				case DefendOrder:
+					break;
 
-			AttackResult result = _pipeline.Resolve(actor.Stats, target.Stats, ActionKind.Attack, _random);
-			Apply(actor.Id, target, result, result.Damage);
+				case FocusOrder:
+					actor.FocusThrough(Round + _tuning.FocusRounds);
+					_events.Add(new Focused(actor.Id, _tuning.FocusRounds));
+					break;
+
+				case MeditateOrder:
+					Meditate(actor);
+					break;
+			}
 
 			if (Step == CombatStep.Finished)
 				return;
@@ -323,6 +456,74 @@ public sealed class CombatRunner
 		Step = CombatStep.AwaitingOrders;
 	}
 
+	/// <summary>A member's attack, on the ordered target or, if it went down, on another standing enemy.</summary>
+	private void Attack(Combatant actor, AttackOrder order)
+	{
+		Combatant target = Find(order.Target);
+
+		if (target.IsDown)
+			target = PickStanding(_enemies);
+
+		// Enemies only attack: none of them defends.
+		AttackResult result = _pipeline.Resolve(AttackingStats(actor), target.Stats, ActionKind.Attack, _random, defending: false);
+		Apply(actor.Id, target, result, result.Damage);
+	}
+
+	/// <summary>
+	/// The party's attempt to flee, before any turn: one roll against the escape rate of
+	/// those standing on each side. Whether it ended the fight.
+	/// </summary>
+	private bool TryToFlee()
+	{
+		BaseStats[] allies = Standing(_party).Select(member => member.Stats).ToArray();
+		BaseStats[] foes = Standing(_enemies).Select(foe => foe.Stats).ToArray();
+		bool escaped = _random.Percent() < _formulas.EscapeRate(allies, foes);
+
+		_events.Add(new EscapeAttempted(escaped));
+
+		if (!escaped)
+			return false;
+
+		Result = CombatResult.Fled;
+		Step = CombatStep.Finished;
+		_events.Add(new FightEnded(Result));
+		return true;
+	}
+
+	/// <summary>
+	/// A member's meditation: the tuning's share of the most mana, rounded down and never
+	/// below its minimum, up to the most. In <c>long</c>, so the largest most cannot overflow.
+	/// </summary>
+	private void Meditate(Combatant actor)
+	{
+		int most = actor.Stats.ManaPoints;
+		long share = Math.Max(_tuning.MeditateMinimum, (long)most * _tuning.MeditatePercent / 100);
+		int recovered = (int)Math.Min(share, most - actor.ManaPoints);
+
+		actor.RecoverMana(recovered);
+		_events.Add(new Meditated(actor.Id, recovered, actor.ManaPoints));
+	}
+
+	/// <summary>
+	/// The stats a member attacks with: their own, with the attack raised while a focus
+	/// lasts. In <c>long</c>, so a huge attack stops at the largest int instead of overflowing.
+	/// </summary>
+	private BaseStats AttackingStats(Combatant actor)
+	{
+		BaseStats stats = actor.Stats;
+
+		if (Round > actor.FocusedThrough)
+			return stats;
+
+		long raised = stats.AttackDamage * (100L + _tuning.FocusAttackPercent) / 100;
+
+		return new BaseStats(stats.HealthPoints, (int)Math.Min(raised, int.MaxValue), stats.Armor, stats.ManaPoints, stats.Agility, stats.Luck, stats.HitRate);
+	}
+
+	/// <summary>Whether a member defends in the round being worked out.</summary>
+	private bool Defends(Combatant member) =>
+		_orders.TryGetValue(member.Id, out CombatOrder order) && order is DefendOrder;
+
 	/// <summary>One of the side's standing combatants, by a roll that is made even when one is left.</summary>
 	private Combatant PickStanding(List<Combatant> side)
 	{
@@ -333,7 +534,7 @@ public sealed class CombatRunner
 	private void Apply(CombatantId attacker, Combatant target, AttackResult result, int damageTaken)
 	{
 		target.TakeDamage(damageTaken);
-		_events.Add(new AttackResolved(attacker, target.Id, result, damageTaken));
+		_events.Add(new AttackResolved(attacker, target.Id, result, damageTaken, target.HealthPoints));
 
 		if (!target.IsDown)
 			return;

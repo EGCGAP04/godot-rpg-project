@@ -161,7 +161,7 @@ public class CombatLineupTests
 	{
 		CombatLineup lineup = CombatLineup.For(PartyOfThree(), World.Fantasy, Group(Enemy("weak", 10), Enemy("weak", 10)));
 
-		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, TestTuning.Formulas(), TestTuning.Combat(), new ScriptedCombatRandom());
+		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, canFlee: true, TestTuning.Formulas(), TestTuning.Combat(), new ScriptedCombatRandom());
 
 		Assert.Equal(3, runner.Party.Count);
 		Assert.Equal(2, runner.Enemies.Count);

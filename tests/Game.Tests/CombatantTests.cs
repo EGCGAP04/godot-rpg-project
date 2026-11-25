@@ -182,4 +182,43 @@ public class CombatantTests
 
 		Assert.True(combatant.IsDown);
 	}
+
+	[Fact]
+	public void RecoverMana_AddsIt_UpToTheMost()
+	{
+		var combatant = new Combatant(CombatantId.Party(0), new CombatantSetup("speaker.someone", Stats, 30, 4));
+
+		combatant.RecoverMana(3);
+		Assert.Equal(7, combatant.ManaPoints);
+
+		combatant.RecoverMana(5);
+		Assert.Equal(10, combatant.ManaPoints);
+
+		combatant.RecoverMana(int.MaxValue);
+		Assert.Equal(10, combatant.ManaPoints);
+		Assert.Equal(30, combatant.HealthPoints);
+	}
+
+	[Fact]
+	public void RecoverMana_RefusesANegativeNumber_AndChangesNothing()
+	{
+		var combatant = new Combatant(CombatantId.Party(0), new CombatantSetup("speaker.someone", Stats, 30, 4));
+
+		Assert.Throws<ArgumentOutOfRangeException>(() => combatant.RecoverMana(-1));
+		Assert.Equal(4, combatant.ManaPoints);
+	}
+
+	[Fact]
+	public void AFocus_LastsThroughItsRound_UntilTheCombatantGoesDown()
+	{
+		var combatant = new Combatant(CombatantId.Party(0), new CombatantSetup("speaker.someone", Stats, 30, 0));
+		Assert.Equal(0, combatant.FocusedThrough);
+
+		combatant.FocusThrough(4);
+		combatant.TakeDamage(29);
+		Assert.Equal(4, combatant.FocusedThrough);
+
+		combatant.TakeDamage(1);
+		Assert.Equal(0, combatant.FocusedThrough);
+	}
 }

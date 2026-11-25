@@ -34,7 +34,7 @@ public class EncounterDataTests
 
 		foreach (string name in resource.Values.Keys.Where(key => key != "script" && !key.StartsWith("metadata/", StringComparison.Ordinal)))
 		{
-			if (name is not ("Id" or "Enemies"))
+			if (name is not ("Id" or "Enemies" or "CannotFlee"))
 				problems.Add($"it writes '{name}', which EncounterData does not have.");
 		}
 
@@ -68,13 +68,24 @@ public class EncounterDataTests
 				group.Add(enemy);
 		}
 
+		// Godot writes a bool as true or false, and leaves it out at its default, false.
+		bool cannotFlee = false;
+
+		if (resource.Values.TryGetValue("CannotFlee", out string flee))
+		{
+			if (flee is "true" or "false")
+				cannotFlee = flee == "true";
+			else
+				problems.Add($"it writes CannotFlee as {flee}, which is neither true nor false.");
+		}
+
 		if (problems.Count > 0)
 			return (null, problems);
 
 		try
 		{
 			string id = Regex.Match(resource.Values.GetValueOrDefault("Id", ""), "^\"(.*)\"$").Groups[1].Value;
-			return (new EncounterValues(id, group), problems);
+			return (new EncounterValues(id, group, cannotFlee), problems);
 		}
 		catch (ArgumentException exception)
 		{
@@ -133,7 +144,7 @@ public class EncounterDataTests
 	[Fact]
 	public void TheResource_ExportsTheValuesThisTestKnows()
 	{
-		Assert.Equal(new[] { "Id", "Enemies" }, EnemyDataTests.ExportedProperties(ProjectFiles.ReadText("Enemy", "EncounterData.cs")));
+		Assert.Equal(new[] { "Id", "Enemies", "CannotFlee" }, EnemyDataTests.ExportedProperties(ProjectFiles.ReadText("Enemy", "EncounterData.cs")));
 	}
 
 	[Fact]
@@ -171,6 +182,23 @@ public class EncounterDataTests
 		Assert.Equal(new[] { "weak", "demo_clumsy" }, Ids("demo_patrol"));
 		Assert.Equal(new[] { "demo_armored", "demo_nimble", "demo_lucky" }, Ids("demo_showcase"));
 		Assert.Equal(new[] { "strong", "strong" }, Ids("demo_wall"));
+	}
+
+	[Fact]
+	public void OnlyTheDemosWall_CannotBeFled()
+	{
+		Dictionary<string, string> enemies = EnemyDataTests.EnemyFiles();
+
+		Dictionary<string, bool> cannotFlee = EncounterFiles().ToDictionary(file => file.Key, file => Read(file.Value, enemies).Encounter.CannotFlee);
+
+		Assert.Equal(
+			new Dictionary<string, bool>
+			{
+				[$"{Folder}demo_patrol.tres"] = false,
+				[$"{Folder}demo_showcase.tres"] = false,
+				[$"{Folder}demo_wall.tres"] = true
+			},
+			cannotFlee);
 	}
 
 	[Fact]
@@ -224,6 +252,20 @@ public class EncounterDataTests
 		Assert.Equal("demo_pair", encounter.Id);
 		Assert.Equal(new[] { "weak", "weak" }, encounter.Enemies.Select(enemy => enemy.Id));
 		Assert.Equal(10, encounter.Experience);
+		Assert.False(encounter.CannotFlee);
+	}
+
+	[Theory]
+	[InlineData("CannotFlee = true\n", true)]
+	[InlineData("CannotFlee = false\n", false)]
+	public void Read_TakesWhetherTheGroupCanBeFled(string extra, bool cannotFlee)
+	{
+		string file = EncounterFile("demo_pair", "Enemies = Array[ExtResource(\"2_d\")]([ExtResource(\"3_weak\")])", extra);
+
+		(EncounterValues encounter, List<string> problems) = Read(file, OneEnemy);
+
+		Assert.Empty(problems);
+		Assert.Equal(cannotFlee, encounter.CannotFlee);
 	}
 
 	public static TheoryData<string, string, string, string> FilesThatAreNotAnEncounter() => new()
@@ -234,7 +276,8 @@ public class EncounterDataTests
 		{ "an empty entry", "demo_pair", "Enemies = Array[ExtResource(\"2_d\")]([ExtResource(\"3_weak\"), null])", "" },
 		{ "five enemies", "demo_pair", "Enemies = Array[ExtResource(\"2_d\")]([ExtResource(\"3_weak\"), ExtResource(\"3_weak\"), ExtResource(\"3_weak\"), ExtResource(\"3_weak\"), ExtResource(\"3_weak\")])", "" },
 		{ "an id that is not a word", "Demo Pair", "Enemies = Array[ExtResource(\"2_d\")]([ExtResource(\"3_weak\")])", "" },
-		{ "a property the resource does not have", "demo_pair", "Enemies = Array[ExtResource(\"2_d\")]([ExtResource(\"3_weak\")])", "CanFlee = true\n" }
+		{ "a property the resource does not have", "demo_pair", "Enemies = Array[ExtResource(\"2_d\")]([ExtResource(\"3_weak\")])", "CanFlee = true\n" },
+		{ "a flight that is not true or false", "demo_pair", "Enemies = Array[ExtResource(\"2_d\")]([ExtResource(\"3_weak\")])", "CannotFlee = 1\n" }
 	};
 
 	[Theory]

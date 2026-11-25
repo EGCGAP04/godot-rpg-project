@@ -54,7 +54,7 @@ godot-rpg-project/
 │   │   ├── CombatantId.cs (+.uid)      # engine-free: a side and a position
 │   │   ├── CombatantNames.cs (+.uid)   # engine-free: the name each combatant is shown by, with a letter for repeats
 │   │   ├── CombatantSetup.cs (+.uid)   # engine-free: what a combatant brings into a fight
-│   │   ├── DamagePipeline.cs (+.uid)   # engine-free: accuracy, evasion, critical, armor
+│   │   ├── DamagePipeline.cs (+.uid)   # engine-free: accuracy, evasion, critical, armor, defence
 │   │   ├── ICombatRandom.cs (+.uid)    # engine-free: every roll a fight makes
 │   │   ├── OrderEntry.cs (+.uid)       # engine-free: the menu's way through a round
 │   │   ├── SeededCombatRandom.cs (+.uid) # engine-free: the game's dice, from a seed
@@ -130,9 +130,9 @@ godot-rpg-project/
 │   │   ├── Encounters/                 # groups of enemies, each file named after its id
 │   │   │   ├── demo_patrol.tres        # weak + demo_clumsy, on the map — the protagonist alone wins
 │   │   │   ├── demo_showcase.tres      # demo_armored + demo_nimble + demo_lucky — a party of three wins
-│   │   │   └── demo_wall.tres          # strong + strong, on the map — the party loses
+│   │   │   └── demo_wall.tres          # strong + strong, on the map — the party loses, and cannot flee
 │   │   │
-│   │   ├── EncounterData.cs (+.uid)    # [GlobalClass] Resource: a group's id and its enemies
+│   │   ├── EncounterData.cs (+.uid)    # [GlobalClass] Resource: a group's id, its enemies and whether it can be fled
 │   │   ├── EncounterValues.cs (+.uid)  # engine-free: a group, checked, and its experience
 │   │   ├── Enemy.cs (+.uid)            # the enemy on the map, carrying a group
 │   │   ├── EnemyData.cs (+.uid)        # [GlobalClass] Resource holding the id, the seven stats, experience and the name's key
@@ -278,6 +278,7 @@ godot-rpg-project/
 │       ├── ExperienceCurveTests.cs
 │       ├── ExperienceCurvesTests.cs
 │       ├── FacingTests.cs
+│       ├── FightOutcomesTests.cs   # every way a fight ends, through every place that tells them apart
 │       ├── FlagCatalogueTests.cs
 │       ├── FlagConditionParserTests.cs
 │       ├── FlagConditionTests.cs

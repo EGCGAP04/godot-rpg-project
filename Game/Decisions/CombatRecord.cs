@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 /// <summary>How a fight in the history ended.</summary>
@@ -10,7 +11,10 @@ using System.Linq;
 public enum FightOutcome
 {
 	Won,
-	Lost
+	Lost,
+
+	/// <summary>The party fled: the group is still on the map, and nobody gained anything.</summary>
+	Fled
 }
 
 /// <summary>
@@ -48,7 +52,7 @@ public sealed record CombatRecord
 			throw new ArgumentException($"The fight against '{encounterId}' names an enemy with no id.", nameof(enemyIds));
 
 		if (!Enum.IsDefined(outcome))
-			throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "A fight is won or lost.");
+			throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "A fight is won, lost or fled.");
 
 		World = world;
 		Cycle = cycle;
@@ -91,5 +95,14 @@ public sealed record CombatRecord
 
 	/// <summary>The fight as one line, as the debug overlay lists it: <c>Fantasy, cycle 1: demo_patrol (weak, weak), won</c>.</summary>
 	public override string ToString() =>
-		FormattableString.Invariant($"{World}, cycle {Cycle}: {EncounterId} ({string.Join(", ", EnemyIds)}), {(Outcome == FightOutcome.Won ? "won" : "lost")}");
+		FormattableString.Invariant($"{World}, cycle {Cycle}: {EncounterId} ({string.Join(", ", EnemyIds)}), {Word(Outcome)}");
+
+	// The constructor lets no other value through.
+	private static string Word(FightOutcome outcome) => outcome switch
+	{
+		FightOutcome.Won => "won",
+		FightOutcome.Lost => "lost",
+		FightOutcome.Fled => "fled",
+		_ => throw new UnreachableException($"A fight in the history ended as {outcome}, which has no word.")
+	};
 }
