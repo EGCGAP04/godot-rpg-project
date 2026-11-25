@@ -56,22 +56,22 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "ui.combat.attack"
 
-[node name="DefendButton" type="Button" parent="Commands"]
+[node name="DefendButton" type="Button" parent="Commands" unique_id=286784398]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "ui.combat.defend"
 
-[node name="FocusButton" type="Button" parent="Commands"]
+[node name="FocusButton" type="Button" parent="Commands" unique_id=1016054128]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "ui.combat.focus"
 
-[node name="MeditateButton" type="Button" parent="Commands"]
+[node name="MeditateButton" type="Button" parent="Commands" unique_id=366259795]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "ui.combat.meditate"
 
-[node name="FleeButton" type="Button" parent="Commands"]
+[node name="FleeButton" type="Button" parent="Commands" unique_id=1503459857]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "ui.combat.flee"
