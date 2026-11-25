@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 /// <summary>
@@ -37,6 +39,9 @@ public partial class Main : Node2D
 	private CombatScreen _combat;
 	private Enemy _pendingEnemy;
 	private bool _combatOnCooldown;
+
+	// Set when a cooldown ends, and read on the next physics frame: see RecheckContacts.
+	private bool _recheckContacts;
 	private bool _transitioning;
 	private DialogueBox _dialogue;
 	private ConversationKind? _conversationKind;
@@ -147,10 +152,10 @@ public partial class Main : Node2D
 	/// <see cref="OnCombatRequested"/>.
 	/// </para>
 	/// <para>
-	/// The trade-off: a player who genuinely lands on an enemy at the new world's spawn
-	/// is not pulled into a fight either, because <c>body_entered</c> does not fire again
-	/// once the cooldown lapses. That is the same trade-off already accepted for
-	/// respawning after a loss, and it is a level-design problem rather than a code one.
+	/// A player who genuinely lands on an enemy at the new world's spawn is pulled into
+	/// the fight once the cooldown lapses: <c>body_entered</c> does not fire again, but
+	/// <see cref="RecheckContacts"/> asks (#105). By then the phantom pair is gone, so it
+	/// finds only a real contact (measured).
 	/// </para>
 	/// </remarks>
 	private void SwapWorld(int world)
@@ -219,6 +224,14 @@ public partial class Main : Node2D
 
 	private void OnCombatRequested(Enemy enemy)
 	{
+		// A fight is against the enemy's group, and the screen refuses to start without one.
+		// Refused here, before anything pauses, so a broken enemy only logs an error.
+		if (enemy.Encounter == null)
+		{
+			GD.PushError($"{enemy.GetPath()} has no Encounter, so touching it starts no fight.");
+			return;
+		}
+
 		switch (ConversationRules.OnCombatRequest(Activity))
 		{
 			case CombatRequestOutcome.Start:
@@ -292,7 +305,60 @@ public partial class Main : Node2D
 		// SceneTreeTimer ignores the pause state by default, so the cooldown is
 		// started before unpausing on purpose: it must already be active on the
 		// first physics frame the world map runs again.
-		GetTree().CreateTimer(CombatCooldown).Timeout += () => _combatOnCooldown = false;
+		GetTree().CreateTimer(CombatCooldown).Timeout += () =>
+		{
+			_combatOnCooldown = false;
+			_recheckContacts = true;
+		};
+	}
+
+	public override void _PhysicsProcess(double delta)
+	{
+		if (!_recheckContacts)
+			return;
+
+		_recheckContacts = false;
+		RecheckContacts();
+	}
+
+	/// <summary>
+	/// Asks for the fight against an enemy the player is still touching once a cooldown
+	/// is over, through <see cref="OnCombatRequested"/> and its rules like any contact.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// A contact refused while the cooldown ran is never reported again:
+	/// <c>body_entered</c> fires once per entry. Measured in #105 after a flight, which
+	/// leaves the player on the enemy: standing still, or stepping off and back on before
+	/// the cooldown ended, the player stood on it and no fight ever started. The cooldown
+	/// delays a contact; it does not drop it.
+	/// </para>
+	/// <para>
+	/// It runs on a physics frame rather than in the timer's callback because the timer
+	/// ignores the pause: a cooldown that ends behind the menu, the debug overlay or a
+	/// forced conversation is checked once the tree runs again, when the player can
+	/// still be touching the enemy. Behind a voluntary conversation the rules queue the
+	/// fight. With more than one enemy touching, the first in the tree is fought.
+	/// </para>
+	/// </remarks>
+	private void RecheckContacts()
+	{
+		Enemy touching = EnemiesIn(_world).FirstOrDefault(enemy => !enemy.IsQueuedForDeletion() && enemy.OverlapsBody(_player));
+
+		if (touching != null)
+			OnCombatRequested(touching);
+	}
+
+	private static IEnumerable<Enemy> EnemiesIn(Node node)
+	{
+		foreach (Node child in node.GetChildren())
+		{
+			if (child is Enemy enemy)
+				yield return enemy;
+
+			foreach (Enemy nested in EnemiesIn(child))
+				yield return nested;
+		}
 	}
 
 	// --- Conversations ---

@@ -14,17 +14,17 @@ color = Color(0.09, 0.09, 0.13, 1)
 
 [node name="Enemies" type="HBoxContainer" parent="." unique_id=371185375]
 offset_left = 16.0
-offset_top = 16.0
+offset_top = 12.0
 offset_right = 624.0
-offset_bottom = 76.0
+offset_bottom = 72.0
 theme_override_constants/separation = 8
 alignment = 1
 
 [node name="LogPanel" type="Panel" parent="." unique_id=1320720831]
 offset_left = 16.0
-offset_top = 88.0
+offset_top = 80.0
 offset_right = 624.0
-offset_bottom = 200.0
+offset_bottom = 192.0
 
 [node name="LogLabel" type="Label" parent="LogPanel" unique_id=1317628666]
 auto_translate_mode = 2
@@ -44,19 +44,41 @@ offset_bottom = 106.0
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Commands" type="VBoxContainer" parent="." unique_id=1405115015]
+[node name="Commands" type="HBoxContainer" parent="." unique_id=1405115015]
 offset_left = 16.0
-offset_top = 212.0
-offset_right = 160.0
-offset_bottom = 244.0
+offset_top = 200.0
+offset_right = 624.0
+offset_bottom = 232.0
+theme_override_constants/separation = 8
 
 [node name="AttackButton" type="Button" parent="Commands" unique_id=831428884]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "ui.combat.attack"
+
+[node name="DefendButton" type="Button" parent="Commands"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ui.combat.defend"
+
+[node name="FocusButton" type="Button" parent="Commands"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ui.combat.focus"
+
+[node name="MeditateButton" type="Button" parent="Commands"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ui.combat.meditate"
+
+[node name="FleeButton" type="Button" parent="Commands"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "ui.combat.flee"
 
 [node name="Members" type="HBoxContainer" parent="." unique_id=1453983390]
 offset_left = 16.0
-offset_top = 260.0
+offset_top = 240.0
 offset_right = 624.0
 offset_bottom = 344.0
 theme_override_constants/separation = 8
