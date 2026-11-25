@@ -227,7 +227,7 @@ public partial class CombatScreen : CanvasLayer
 
 	private void BeginOrders()
 	{
-		_entry = new OrderEntry(_runner.MembersToOrder, StandingEnemies());
+		_entry = new OrderEntry(_runner.MembersToOrder, StandingEnemies(), _runner.MembersToOrder.Where(_runner.CanMeditate), _runner.CanFlee);
 		_phase = Phase.Ordering;
 		ShowOrderStep();
 	}
@@ -239,7 +239,7 @@ public partial class CombatScreen : CanvasLayer
 	{
 		if (_entry.Step == OrderStep.Command)
 		{
-			_entry.ChooseAttack();
+			_entry.Choose(CombatCommand.Attack);
 			ShowOrderStep();
 		}
 		else if (_entry.Step == OrderStep.Target && FocusedEnemy() is CombatantId target)

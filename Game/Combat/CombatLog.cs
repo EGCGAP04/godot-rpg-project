@@ -7,7 +7,8 @@ using System;
 /// <remarks>
 /// Engine-free: it takes the translation as a function, as <c>Tr</c> gives it. The damage
 /// a line gives is the damage taken, which for an enemy's attack is what the screen
-/// answered. <see cref="FightEnded"/> has no line: the result pages tell it.
+/// answered. <see cref="FightEnded"/> has no line: the result pages tell it. Neither has an
+/// <see cref="EscapeAttempted"/> that got away, for the same reason; one that failed does.
 /// </remarks>
 public static class CombatLog
 {
@@ -17,6 +18,10 @@ public static class CombatLog
 	public const string Missed = "ui.combat.log.missed";
 	public const string Evaded = "ui.combat.log.evaded";
 	public const string Downed = "ui.combat.log.downed";
+	public const string Defends = "ui.combat.log.defends";
+	public const string Focuses = "ui.combat.log.focuses";
+	public const string Meditates = "ui.combat.log.meditates";
+	public const string EscapeFailed = "ui.combat.log.escape_failed";
 
 	/// <summary>The event's line, or <c>null</c> for one the log does not show.</summary>
 	/// <exception cref="ArgumentException">The event is of a kind the log does not know.</exception>
@@ -31,6 +36,11 @@ public static class CombatLog
 			RoundStarted round => TextTemplate.Fill(translate(Round), ("round", round.Round)),
 			AttackResolved attack => AttackLine(attack, names, translate),
 			CombatantDowned downed => TextTemplate.Fill(translate(Downed), ("name", names.Of(downed.Combatant))),
+			Defended defended => TextTemplate.Fill(translate(Defends), ("name", names.Of(defended.Member))),
+			Focused focused => TextTemplate.Fill(translate(Focuses), ("name", names.Of(focused.Member))),
+			Meditated meditated => TextTemplate.Fill(translate(Meditates), ("name", names.Of(meditated.Member)), ("mana", meditated.Recovered)),
+			EscapeAttempted { Escaped: true } => null,
+			EscapeAttempted => translate(EscapeFailed),
 			FightEnded => null,
 			_ => throw new ArgumentException($"The log has no line for {happened.GetType().Name}.", nameof(happened))
 		};

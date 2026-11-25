@@ -7,6 +7,22 @@ msgstr ""
 msgid "ui.combat.attack"
 msgstr "Atacar"
 
+#. A combat command. Room for about twelve characters.
+msgid "ui.combat.defend"
+msgstr "Defenderse"
+
+#. A combat command. Room for about twelve characters.
+msgid "ui.combat.focus"
+msgstr "Concentrarse"
+
+#. A combat command. Room for about twelve characters.
+msgid "ui.combat.meditate"
+msgstr "Meditar"
+
+#. A combat command. Room for about twelve characters.
+msgid "ui.combat.flee"
+msgstr "Huir"
+
 msgid "ui.combat.player_won"
 msgstr "Gana el jugador."
 
@@ -32,6 +48,10 @@ msgstr "{name} cayó y no gana nada."
 msgid "ui.combat.name_with_letter"
 msgstr "{name} {letter}"
 
+#. Under a member who focused. {rounds} is a number: the rounds the focus has left.
+msgid "ui.combat.focused"
+msgstr "Concentrado: {rounds}"
+
 #. The fight's log. {round} is a number.
 msgid "ui.combat.log.round"
 msgstr "Ronda {round}"
@@ -55,6 +75,21 @@ msgstr "{target} esquiva el ataque de {attacker}."
 #. {name} is a combatant's name.
 msgid "ui.combat.log.downed"
 msgstr "{name} cae."
+
+#. {name} is a member's name.
+msgid "ui.combat.log.defends"
+msgstr "{name} se defiende."
+
+#. {name} is a member's name.
+msgid "ui.combat.log.focuses"
+msgstr "{name} se concentra."
+
+#. {name} is a member's name; {mana}, a number.
+msgid "ui.combat.log.meditates"
+msgstr "{name} medita y recupera {mana} PM."
+
+msgid "ui.combat.log.escape_failed"
+msgstr "El grupo intenta huir, pero no puede escapar."
 
 #. {world} is a world's name (world.*); {cycle}, a number.
 msgid "ui.hud.world_and_cycle"
