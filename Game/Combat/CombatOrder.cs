@@ -20,3 +20,12 @@ public sealed record AttackOrder(CombatantId Actor, CombatantId Target) : Combat
 /// </summary>
 /// <param name="Actor">The member who defends.</param>
 public sealed record DefendOrder(CombatantId Actor) : CombatOrder(Actor);
+
+/// <summary>
+/// The member focuses, on their turn: for the <see cref="CombatTuningValues.FocusRounds"/>
+/// rounds after this one, their attack is raised by
+/// <see cref="CombatTuningValues.FocusAttackPercent"/>. Focusing again while focused starts
+/// the count again; it does not add to it.
+/// </summary>
+/// <param name="Actor">The member who focuses.</param>
+public sealed record FocusOrder(CombatantId Actor) : CombatOrder(Actor);

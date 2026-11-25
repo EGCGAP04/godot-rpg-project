@@ -15,6 +15,9 @@ public sealed record RoundStarted(int Round, IReadOnlyList<CombatantId> TurnOrde
 /// </summary>
 public sealed record Defended(CombatantId Member) : CombatEvent;
 
+/// <summary>A member focused, on their turn: their attack is raised for the next <paramref name="Rounds"/> rounds.</summary>
+public sealed record Focused(CombatantId Member, int Rounds) : CombatEvent;
+
 /// <summary>An attack was worked out and its damage taken.</summary>
 /// <param name="Attacker">Who attacked.</param>
 /// <param name="Target">

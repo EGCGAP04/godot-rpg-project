@@ -88,6 +88,14 @@ public sealed record PendingEnemyAttack(CombatantId Attacker, CombatantId Target
 /// <see cref="RoundStarted"/>, for each in the party's order, and their own turn passes
 /// with nothing. The defence lasts until the round ends. It rolls nothing.
 /// </para>
+/// <para>
+/// <b>A member who focuses does so on their turn,</b> like an attack, and their attack is
+/// raised for the <see cref="CombatTuningValues.FocusRounds"/> rounds after it: the
+/// stats the pipeline gets are a copy with <see cref="BaseStats.AttackDamage"/> raised by
+/// <see cref="CombatTuningValues.FocusAttackPercent"/>, rounded down, so everything that
+/// reads the attack, the critical damage included, sees it raised. Focusing again starts
+/// the count again instead of adding to it, and going down loses it. It rolls nothing.
+/// </para>
 /// </remarks>
 public sealed class CombatRunner
 {
@@ -96,6 +104,7 @@ public sealed class CombatRunner
 	private readonly List<Combatant> _party;
 	private readonly List<Combatant> _enemies;
 	private readonly DamagePipeline _pipeline;
+	private readonly CombatTuningValues _tuning;
 	private readonly ICombatRandom _random;
 	private readonly List<CombatEvent> _events = new();
 
@@ -104,11 +113,12 @@ public sealed class CombatRunner
 	private IReadOnlyList<Combatant> _turns = Array.Empty<Combatant>();
 	private int _turn;
 
-	private CombatRunner(List<Combatant> party, List<Combatant> enemies, DamagePipeline pipeline, ICombatRandom random)
+	private CombatRunner(List<Combatant> party, List<Combatant> enemies, DamagePipeline pipeline, CombatTuningValues tuning, ICombatRandom random)
 	{
 		_party = party;
 		_enemies = enemies;
 		_pipeline = pipeline;
+		_tuning = tuning;
 		_random = random;
 	}
 
@@ -136,6 +146,20 @@ public sealed class CombatRunner
 
 	/// <summary>The enemy attack waiting for its answer. Null unless <see cref="Step"/> is <see cref="CombatStep.EnemyAttackPending"/>.</summary>
 	public PendingEnemyAttack PendingAttack { get; private set; }
+
+	/// <summary>
+	/// How many rounds, from <see cref="Round"/> on and counting it, a combatant's attack is
+	/// raised by a focus: 0 when it is not focused. Meant to be read while the fight waits
+	/// for orders; during the round a member focused in, that round is counted too.
+	/// </summary>
+	/// <exception cref="ArgumentException">The combatant is not in this fight.</exception>
+	public int FocusRoundsLeft(CombatantId combatant)
+	{
+		if (!Exists(combatant))
+			throw new ArgumentException($"{combatant} is not in this fight.", nameof(combatant));
+
+		return Math.Max(0, Find(combatant).FocusedThrough - Round + 1);
+	}
 
 	/// <summary>
 	/// Sets a fight up and waits for the first round's orders. Nothing is rolled yet.
@@ -173,7 +197,7 @@ public sealed class CombatRunner
 		if (foes.All(foe => foe.IsDown))
 			throw new ArgumentException("No enemy is standing.", nameof(enemies));
 
-		return new CombatRunner(members, foes, pipeline, random);
+		return new CombatRunner(members, foes, pipeline, tuning, random);
 	}
 
 	/// <summary>
@@ -285,7 +309,7 @@ public sealed class CombatRunner
 
 					break;
 
-				case DefendOrder:
+				case DefendOrder or FocusOrder:
 					break;
 
 				default:
@@ -337,6 +361,11 @@ public sealed class CombatRunner
 				// Defending acted when the round started.
 				case DefendOrder:
 					break;
+
+				case FocusOrder:
+					actor.FocusThrough(Round + _tuning.FocusRounds);
+					_events.Add(new Focused(actor.Id, _tuning.FocusRounds));
+					break;
 			}
 
 			if (Step == CombatStep.Finished)
@@ -358,8 +387,24 @@ public sealed class CombatRunner
 			target = PickStanding(_enemies);
 
 		// Enemies only attack: none of them defends.
-		AttackResult result = _pipeline.Resolve(actor.Stats, target.Stats, ActionKind.Attack, _random, defending: false);
+		AttackResult result = _pipeline.Resolve(AttackingStats(actor), target.Stats, ActionKind.Attack, _random, defending: false);
 		Apply(actor.Id, target, result, result.Damage);
+	}
+
+	/// <summary>
+	/// The stats a member attacks with: their own, with the attack raised while a focus
+	/// lasts. In <c>long</c>, so a huge attack stops at the largest int instead of overflowing.
+	/// </summary>
+	private BaseStats AttackingStats(Combatant actor)
+	{
+		BaseStats stats = actor.Stats;
+
+		if (Round > actor.FocusedThrough)
+			return stats;
+
+		long raised = stats.AttackDamage * (100L + _tuning.FocusAttackPercent) / 100;
+
+		return new BaseStats(stats.HealthPoints, (int)Math.Min(raised, int.MaxValue), stats.Armor, stats.ManaPoints, stats.Agility, stats.Luck, stats.HitRate);
 	}
 
 	/// <summary>Whether a member defends in the round being worked out.</summary>

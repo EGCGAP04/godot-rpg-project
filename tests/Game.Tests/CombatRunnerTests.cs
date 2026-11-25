@@ -22,6 +22,9 @@ internal static class CombatRolls
 
 	/// <summary>The same roll, required to be over exactly <paramref name="among"/> standing.</summary>
 	public static ScriptedCombatRandom Target(this ScriptedCombatRandom random, int index, int among) => random.Index(index, among);
+
+	/// <summary>The rolls of an enemy's attack that misses the only member standing.</summary>
+	public static ScriptedCombatRandom EnemyMisses(this ScriptedCombatRandom random) => random.Target(0, among: 1).Miss();
 }
 
 /// <summary>
@@ -40,6 +43,8 @@ public class CombatRunnerTests
 
 	private static DefendOrder Defend(int member) => new(P(member));
 
+	private static FocusOrder Focus(int member) => new(P(member));
+
 	private static CombatantSetup Fighter(int healthPoints, int attackDamage, int agility, int armor = 0, int? healthLeft = null) =>
 		new(
 			"speaker.someone",
@@ -47,8 +52,20 @@ public class CombatRunnerTests
 			healthLeft ?? healthPoints,
 			0);
 
-	private static CombatRunner Start(ScriptedCombatRandom random, CombatantSetup[] party, CombatantSetup[] enemies) =>
-		CombatRunner.Start(party, enemies, TestTuning.Formulas(), TestTuning.Combat(), random);
+	private static CombatRunner Start(ScriptedCombatRandom random, CombatantSetup[] party, CombatantSetup[] enemies, CombatTuningValues tuning = null) =>
+		CombatRunner.Start(party, enemies, TestTuning.Formulas(), tuning ?? TestTuning.Combat(), random);
+
+	/// <summary>Submits the orders, answers every enemy attack as worked out, and hands over the round's events.</summary>
+	private static IReadOnlyList<CombatEvent> PlayRound(CombatRunner runner, params CombatOrder[] orders)
+	{
+		runner.SubmitOrders(orders);
+		AnswerAsWorkedOut(runner);
+		return runner.TakeEvents();
+	}
+
+	/// <summary>The damage the member at <paramref name="member"/> did in a round's events.</summary>
+	private static int[] DamageBy(int member, IReadOnlyList<CombatEvent> events) =>
+		events.OfType<AttackResolved>().Where(attack => attack.Attacker == P(member)).Select(attack => attack.DamageTaken).ToArray();
 
 	/// <summary>Answers every enemy attack of the round with the damage the pipeline worked out.</summary>
 	private static void AnswerAsWorkedOut(CombatRunner runner)
@@ -642,6 +659,182 @@ public class CombatRunnerTests
 		random.RequireUsedUp();
 	}
 
+	// --- Focusing ---
+
+	[Fact]
+	public void AFocus_RaisesTheAttack_ForTheRoundsAfterIt_AndThenEnds()
+	{
+		// The member acts first and the enemy always misses. Focusing rolls nothing: round 1
+		// takes only the enemy's rolls.
+		var random = new ScriptedCombatRandom().EnemyMisses();
+		for (int round = 2; round <= 5; round++)
+			random.Hit().EnemyMisses();
+		CombatRunner runner = Start(random, new[] { Fighter(100, 10, 30) }, new[] { Fighter(1000, 1, 1) });
+		Assert.Equal(0, runner.FocusRoundsLeft(P(0)));
+
+		IReadOnlyList<CombatEvent> focusing = PlayRound(runner, Focus(0));
+		Assert.Contains(new Focused(P(0), 3), focusing);
+		Assert.Empty(DamageBy(0, focusing));
+
+		var damage = new List<int>();
+		var left = new List<int>();
+
+		for (int round = 2; round <= 5; round++)
+		{
+			left.Add(runner.FocusRoundsLeft(P(0)));
+			damage.AddRange(DamageBy(0, PlayRound(runner, Attack(0, 0))));
+		}
+
+		Assert.Equal(new[] { 15, 15, 15, 10 }, damage);
+		Assert.Equal(new[] { 3, 2, 1, 0 }, left);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheFocus_ComesOnTheMembersTurn()
+	{
+		var random = new ScriptedCombatRandom().EnemyMisses();
+		CombatRunner runner = Start(random, new[] { Fighter(100, 10, 10) }, new[] { Fighter(1000, 1, 20) });
+
+		runner.SubmitOrders(new[] { Focus(0) });
+
+		Assert.Equal(CombatStep.EnemyAttackPending, runner.Step);
+		Assert.DoesNotContain(runner.TakeEvents(), happened => happened is Focused);
+
+		runner.AnswerEnemyAttack(0);
+		IReadOnlyList<CombatEvent> events = runner.TakeEvents();
+		Assert.IsType<AttackResolved>(events[0]);
+		Assert.Equal(new Focused(P(0), 3), events[1]);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheRaisedAttack_IsRoundedDown()
+	{
+		// Half again of 5 is 7.5.
+		var random = new ScriptedCombatRandom().EnemyMisses().Hit().EnemyMisses();
+		CombatRunner runner = Start(random, new[] { Fighter(100, 5, 30) }, new[] { Fighter(1000, 1, 1) });
+
+		PlayRound(runner, Focus(0));
+
+		Assert.Equal(new[] { 7 }, DamageBy(0, PlayRound(runner, Attack(0, 0))));
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheRaisedAttack_GoesThroughTheFormulas_TheCriticalDamageIncluded()
+	{
+		// 100 attack raised to 150. The critical damage reads the attack too: 150 + 150 / 5 +
+		// 100 / 5 = 200%, so 300. Read from the attack before the focus, it would be 190%, 285.
+		var lucky = new CombatantSetup("speaker.someone", TestTuning.Stats(healthPoints: 100, attackDamage: 100, agility: 30, luck: 100, hitRate: 90), 100, 0);
+		var random = new ScriptedCombatRandom()
+			.EnemyMisses()
+			.Percent(0).Percent(CombatRolls.Max).Percent(0).Percent(50).EnemyMisses();
+		CombatRunner runner = Start(random, new[] { lucky }, new[] { Fighter(10_000, 1, 1) });
+
+		PlayRound(runner, Focus(0));
+		IReadOnlyList<CombatEvent> events = PlayRound(runner, Attack(0, 0));
+
+		Assert.Equal(new[] { 300 }, DamageBy(0, events));
+		Assert.True(events.OfType<AttackResolved>().Single(attack => attack.Attacker == P(0)).Result.IsCritical);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void FocusingAgain_StartsTheCountAgain_WithoutAddingToIt()
+	{
+		var random = new ScriptedCombatRandom().EnemyMisses().EnemyMisses();
+		for (int round = 3; round <= 6; round++)
+			random.Hit().EnemyMisses();
+		CombatRunner runner = Start(random, new[] { Fighter(100, 10, 30) }, new[] { Fighter(1000, 1, 1) });
+
+		PlayRound(runner, Focus(0));
+		PlayRound(runner, Focus(0));
+		Assert.Equal(3, runner.FocusRoundsLeft(P(0)));
+
+		var damage = new List<int>();
+		for (int round = 3; round <= 6; round++)
+			damage.AddRange(DamageBy(0, PlayRound(runner, Attack(0, 0))));
+
+		// Stacked, the attack would be 22 in round 3; added, it would last into round 7.
+		Assert.Equal(new[] { 15, 15, 15, 10 }, damage);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void GoingDown_LosesTheFocus()
+	{
+		var random = new ScriptedCombatRandom().Hit().Target(0, among: 2).Hit();
+		CombatRunner runner = Start(
+			random,
+			new[] { Fighter(10, 10, 30), Fighter(100, 10, 20) },
+			new[] { Fighter(1000, 20, 10) });
+
+		PlayRound(runner, Focus(0), Attack(1, 0));
+
+		Assert.True(runner.Party[0].IsDown);
+		Assert.Equal(0, runner.FocusRoundsLeft(P(0)));
+		Assert.Equal(0, runner.Party[0].FocusedThrough);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void AMemberDownedBeforeTheirTurn_DoesNotFocus()
+	{
+		var random = new ScriptedCombatRandom().Target(0, among: 2).Hit().Hit();
+		CombatRunner runner = Start(
+			random,
+			new[] { Fighter(10, 10, 5), Fighter(100, 10, 4) },
+			new[] { Fighter(1000, 20, 20) });
+
+		IReadOnlyList<CombatEvent> events = PlayRound(runner, Focus(0), Attack(1, 0));
+
+		Assert.DoesNotContain(events, happened => happened is Focused);
+		Assert.Equal(0, runner.FocusRoundsLeft(P(0)));
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheFocus_IsTheTunings()
+	{
+		var random = new ScriptedCombatRandom().EnemyMisses().Hit().EnemyMisses().Hit().EnemyMisses();
+		CombatRunner runner = Start(
+			random,
+			new[] { Fighter(100, 10, 30) },
+			new[] { Fighter(1000, 1, 1) },
+			TestTuning.Combat(focusAttackPercent: 100, focusRounds: 1));
+
+		Assert.Contains(new Focused(P(0), 1), PlayRound(runner, Focus(0)));
+		Assert.Equal(new[] { 20 }, DamageBy(0, PlayRound(runner, Attack(0, 0))));
+		Assert.Equal(new[] { 10 }, DamageBy(0, PlayRound(runner, Attack(0, 0))));
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void AHugeFocusedAttack_StopsAtTheLargestInt()
+	{
+		var random = new ScriptedCombatRandom().EnemyMisses().Hit();
+		// Raised by half, the largest attack is past what an int holds: worked out in int it
+		// would turn negative, and BaseStats would refuse it.
+		CombatRunner runner = Start(random, new[] { Fighter(100, int.MaxValue, 30) }, new[] { Fighter(int.MaxValue, 1, 1) });
+
+		PlayRound(runner, Focus(0));
+		IReadOnlyList<CombatEvent> events = PlayRound(runner, Attack(0, 0));
+
+		Assert.Equal(new[] { int.MaxValue }, DamageBy(0, events));
+		Assert.Equal(CombatResult.Won, runner.Result);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void FocusRoundsLeft_OfSomebodyNotInTheFight_IsRefused()
+	{
+		CombatRunner runner = Start(new ScriptedCombatRandom(), new[] { Fighter(100, 10, 30) }, new[] { Fighter(1000, 1, 1) });
+
+		Assert.Throws<ArgumentException>(() => runner.FocusRoundsLeft(P(3)));
+		Assert.Equal(0, runner.FocusRoundsLeft(E(0)));
+	}
+
 	// --- Orders that do not fit ---
 
 	private sealed record WaveOrder(CombatantId Actor) : CombatOrder(Actor);
@@ -668,7 +861,9 @@ public class CombatRunnerTests
 		{ "a kind the fight does not know", new CombatOrder[] { Attack(0, 0), new WaveOrder(P(1)) } },
 		{ "a defence for a member who is down", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Defend(2) } },
 		{ "a defence and an attack for the same member", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Defend(0) } },
-		{ "a defence for an enemy", new CombatOrder[] { Attack(0, 0), Attack(1, 0), new DefendOrder(E(0)) } }
+		{ "a defence for an enemy", new CombatOrder[] { Attack(0, 0), Attack(1, 0), new DefendOrder(E(0)) } },
+		{ "a focus for a member who is down", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Focus(2) } },
+		{ "a focus and a defence for the same member", new CombatOrder[] { Focus(0), Attack(1, 0), Defend(0) } }
 	};
 
 	[Theory]

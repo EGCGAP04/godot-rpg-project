@@ -32,6 +32,12 @@ public sealed class Combatant
 	public bool IsDown => HealthPoints == 0;
 
 	/// <summary>
+	/// The last round in which a focus raises this combatant's attack, or 0 when it is not
+	/// focused. Only a member focuses, and going down loses the focus.
+	/// </summary>
+	public int FocusedThrough { get; private set; }
+
+	/// <summary>
 	/// Takes the damage out of the health, which stops at 0. The damage is final: armor
 	/// was applied by whoever worked it out, and is not applied again here.
 	/// </summary>
@@ -41,5 +47,11 @@ public sealed class Combatant
 			throw new ArgumentOutOfRangeException(nameof(damage), damage, "Damage cannot be negative.");
 
 		HealthPoints = Math.Max(0, HealthPoints - damage);
+
+		if (IsDown)
+			FocusedThrough = 0;
 	}
+
+	/// <summary>Raises the attack up to <paramref name="round"/>, the last round included, whatever an earlier focus said.</summary>
+	internal void FocusThrough(int round) => FocusedThrough = round;
 }
