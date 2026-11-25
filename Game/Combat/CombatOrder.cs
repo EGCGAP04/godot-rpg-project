@@ -38,3 +38,13 @@ public sealed record FocusOrder(CombatantId Actor) : CombatOrder(Actor);
 /// </summary>
 /// <param name="Actor">The member who meditates.</param>
 public sealed record MeditateOrder(CombatantId Actor) : CombatOrder(Actor);
+
+/// <summary>
+/// The whole party tries to flee: the round's only order, worked out before anyone acts.
+/// If it fails, the party loses the round, and only the enemies act.
+/// </summary>
+/// <param name="Actor">
+/// The member whose menu it was chosen from. It is kept as the record of who asked, and
+/// changes nothing: the flee is the party's.
+/// </param>
+public sealed record FleeOrder(CombatantId Actor) : CombatOrder(Actor);

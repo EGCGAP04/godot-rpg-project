@@ -33,7 +33,7 @@ public class CombatAftermathTests
 	}
 
 	private static CombatRunner Start(CombatLineup lineup, ScriptedCombatRandom random) =>
-		CombatRunner.Start(lineup.Party, lineup.Enemies, TestTuning.Formulas(), TestTuning.Combat(), random);
+		CombatRunner.Start(lineup.Party, lineup.Enemies, canFlee: true, TestTuning.Formulas(), TestTuning.Combat(), random);
 
 	/// <summary>
 	/// A win where abe goes down: the foe hits abe for 25 first, then the hero hits the foe

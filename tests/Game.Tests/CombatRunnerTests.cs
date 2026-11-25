@@ -47,6 +47,8 @@ public class CombatRunnerTests
 
 	private static MeditateOrder Meditate(int member) => new(P(member));
 
+	private static FleeOrder Flee(int member) => new(P(member));
+
 	/// <summary>A member with mana: a most of <paramref name="mostMana"/>, and <paramref name="manaLeft"/> of it now.</summary>
 	private static CombatantSetup Mage(int mostMana, int manaLeft, int agility = 30, int healthPoints = 100) =>
 		new(
@@ -62,8 +64,8 @@ public class CombatRunnerTests
 			healthLeft ?? healthPoints,
 			0);
 
-	private static CombatRunner Start(ScriptedCombatRandom random, CombatantSetup[] party, CombatantSetup[] enemies, CombatTuningValues tuning = null) =>
-		CombatRunner.Start(party, enemies, TestTuning.Formulas(), tuning ?? TestTuning.Combat(), random);
+	private static CombatRunner Start(ScriptedCombatRandom random, CombatantSetup[] party, CombatantSetup[] enemies, CombatTuningValues tuning = null, bool canFlee = true) =>
+		CombatRunner.Start(party, enemies, canFlee, TestTuning.Formulas(), tuning ?? TestTuning.Combat(), random);
 
 	/// <summary>Submits the orders, answers every enemy attack as worked out, and hands over the round's events.</summary>
 	private static IReadOnlyList<CombatEvent> PlayRound(CombatRunner runner, params CombatOrder[] orders)
@@ -147,11 +149,11 @@ public class CombatRunnerTests
 		var random = new ScriptedCombatRandom();
 		CombatantSetup[] one = { Fighter(30, 10, 20) };
 
-		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(null, one, TestTuning.Formulas(), TestTuning.Combat(), random));
-		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(one, null, TestTuning.Formulas(), TestTuning.Combat(), random));
-		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(one, one, null, TestTuning.Combat(), random));
-		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(one, one, TestTuning.Formulas(), null, random));
-		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(one, one, TestTuning.Formulas(), TestTuning.Combat(), null));
+		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(null, one, true, TestTuning.Formulas(), TestTuning.Combat(), random));
+		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(one, null, true, TestTuning.Formulas(), TestTuning.Combat(), random));
+		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(one, one, true, null, TestTuning.Combat(), random));
+		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(one, one, true, TestTuning.Formulas(), null, random));
+		Assert.Throws<ArgumentNullException>(() => CombatRunner.Start(one, one, true, TestTuning.Formulas(), TestTuning.Combat(), null));
 	}
 
 	// --- A round ---
@@ -970,6 +972,168 @@ public class CombatRunnerTests
 		Assert.Equal(new[] { manaLeft, 0 }, runner.Party.Select(member => member.ManaPoints));
 	}
 
+	// --- Fleeing ---
+
+	[Fact]
+	public void AFleeThatComesUp_EndsTheFight_BeforeAnyoneActs()
+	{
+		// The escape rate is 50 + 10 / 20 - 20 / 20 = 49.5, and the enemy is the faster.
+		var random = new ScriptedCombatRandom().Percent(49.4);
+		CombatRunner runner = Start(random, new[] { Fighter(30, 10, 10) }, new[] { Fighter(25, 7, 20) });
+
+		runner.SubmitOrders(new[] { Flee(0) });
+
+		Assert.Equal(CombatStep.Finished, runner.Step);
+		Assert.Equal(CombatResult.Fled, runner.Result);
+		Assert.Null(runner.PendingAttack);
+		Assert.Empty(runner.MembersToOrder);
+		Assert.Equal(new[] { 30 }, Health(runner.Party));
+		Assert.Equal(new[] { 25 }, Health(runner.Enemies));
+
+		IReadOnlyList<CombatEvent> events = runner.TakeEvents();
+		Assert.Equal(3, events.Count);
+		Assert.IsType<RoundStarted>(events[0]);
+		Assert.Equal(new EscapeAttempted(true), events[1]);
+		Assert.Equal(new FightEnded(CombatResult.Fled), events[2]);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void AFleeThatFails_CostsThePartyItsRound_AndTheEnemiesAct()
+	{
+		// The escape rate is 50 + 20 / 20 - 20 / 20 = 50, and a roll of 50 is not below it.
+		// The second member asked, and the faster first member does nothing either.
+		var random = new ScriptedCombatRandom().Percent(50).Target(1, among: 2).Hit();
+		CombatRunner runner = Start(random, new[] { Fighter(30, 10, 30), Fighter(30, 10, 10) }, new[] { Fighter(25, 7, 20) });
+
+		runner.SubmitOrders(new[] { Flee(1) });
+
+		IReadOnlyList<CombatEvent> events = runner.TakeEvents();
+		Assert.Equal(2, events.Count);
+		Assert.IsType<RoundStarted>(events[0]);
+		Assert.Equal(new EscapeAttempted(false), events[1]);
+		Assert.Equal(new PendingEnemyAttack(E(0), P(1), AttackResult.Hit(7, isCritical: false)), runner.PendingAttack);
+
+		runner.AnswerEnemyAttack(7);
+
+		Assert.Equal(new CombatEvent[] { new AttackResolved(E(0), P(1), AttackResult.Hit(7, isCritical: false), 7, 23) }, runner.TakeEvents());
+		Assert.Equal(CombatStep.AwaitingOrders, runner.Step);
+		Assert.Equal(CombatResult.Ongoing, runner.Result);
+		Assert.Equal(2, runner.Round);
+		Assert.Equal(new[] { 25 }, Health(runner.Enemies));
+		random.RequireUsedUp();
+	}
+
+	[Theory]
+	[InlineData(49.9, true)] // Counting the enemy who is down would make it 48.825.
+	[InlineData(50.1, false)] // Counting the member who is down would make it 55.
+	public void TheEscapeRate_CountsThoseStandingOnEachSide(double roll, bool escapes)
+	{
+		// Standing, it is 50 + 2 / 20 - 1 / 20 = 50.05. The member down has 200 agility,
+		// and the enemy down 50.
+		var random = new ScriptedCombatRandom().Percent(roll);
+		if (!escapes)
+			random.Index(0).Miss();
+		CombatRunner runner = Start(
+			random,
+			new[] { Fighter(30, 10, 2), Fighter(30, 10, 200, healthLeft: 0) },
+			new[] { Fighter(25, 7, 1), Fighter(25, 7, 50, healthLeft: 0) });
+
+		runner.SubmitOrders(new[] { Flee(0) });
+		AnswerAsWorkedOut(runner);
+
+		Assert.Equal(escapes ? CombatResult.Fled : CombatResult.Ongoing, runner.Result);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheEscapeRate_IsTheStatFormulas_LuckIncluded()
+	{
+		// 100 luck on the member adds 10: 60.
+		var lucky = new CombatantSetup("speaker.someone", TestTuning.Stats(healthPoints: 30, attackDamage: 10, luck: 100, hitRate: 90), 30, 0);
+		var random = new ScriptedCombatRandom().Percent(59.9);
+		CombatRunner runner = Start(random, new[] { lucky }, new[] { Fighter(25, 7, 1) });
+
+		runner.SubmitOrders(new[] { Flee(0) });
+
+		Assert.Equal(CombatResult.Fled, runner.Result);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheFleeRoll_ComesAfterTheTurnOrdersRolls()
+	{
+		// A tie in agility is rolled for first; a flee rolled before it would take the index
+		// roll as its percentage, and the script would refuse it.
+		var random = new ScriptedCombatRandom().Index(1).Percent(0);
+		CombatRunner runner = Start(random, new[] { Fighter(30, 10, 20) }, new[] { Fighter(25, 7, 20) });
+
+		runner.SubmitOrders(new[] { Flee(0) });
+
+		Assert.Equal(CombatResult.Fled, runner.Result);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void AFledFight_TakesNoMoreOrders()
+	{
+		CombatRunner runner = Start(new ScriptedCombatRandom().Percent(0), new[] { Fighter(30, 10, 10) }, new[] { Fighter(25, 7, 20) });
+		runner.SubmitOrders(new[] { Flee(0) });
+
+		Assert.Throws<InvalidOperationException>(() => runner.SubmitOrders(new[] { Attack(0, 0) }));
+	}
+
+	[Fact]
+	public void CanFlee_IsWhatTheFightWasStartedWith()
+	{
+		Assert.True(Start(new ScriptedCombatRandom(), new[] { Fighter(30, 10, 10) }, new[] { Fighter(25, 7, 20) }, canFlee: true).CanFlee);
+		Assert.False(Start(new ScriptedCombatRandom(), new[] { Fighter(30, 10, 10) }, new[] { Fighter(25, 7, 20) }, canFlee: false).CanFlee);
+	}
+
+	[Fact]
+	public void AFlee_InAFightThatCannotBeFled_IsRefused_BeforeAnythingIsRolled()
+	{
+		CombatRunner runner = Start(new ScriptedCombatRandom(), new[] { Fighter(30, 10, 10) }, new[] { Fighter(25, 7, 20) }, canFlee: false);
+
+		Assert.Throws<ArgumentException>(() => runner.SubmitOrders(new[] { Flee(0) }));
+
+		Assert.Equal(CombatStep.AwaitingOrders, runner.Step);
+		Assert.Empty(runner.TakeEvents());
+	}
+
+	[Fact]
+	public void TheOtherOrders_StillWork_InAFightThatCannotBeFled()
+	{
+		var random = new ScriptedCombatRandom().Target(0, among: 1).Hit();
+		CombatRunner runner = Start(random, new[] { Fighter(30, 10, 10) }, new[] { Fighter(25, 7, 20) }, canFlee: false);
+
+		PlayRound(runner, Defend(0));
+
+		Assert.Equal(2, runner.Round);
+		random.RequireUsedUp();
+	}
+
+	// --- The rolls of the new orders ---
+
+	[Fact]
+	public void DefendingFocusingAndMeditating_RollNothing_SoARoundOfThemTakesOnlyTheEnemysRolls()
+	{
+		// The flee's is the only roll an order other than an attack adds; these three add none.
+		var random = new ScriptedCombatRandom().Target(0, among: 3).Hit();
+		CombatRunner runner = Start(
+			random,
+			new[] { Fighter(30, 10, 30), Fighter(30, 10, 20), Mage(mostMana: 20, manaLeft: 0, agility: 10) },
+			new[] { Fighter(100, 20, 25) });
+
+		IReadOnlyList<CombatEvent> events = PlayRound(runner, Defend(0), Focus(1), Meditate(2));
+
+		Assert.Contains(new Defended(P(0)), events);
+		Assert.Contains(new Focused(P(1), 3), events);
+		Assert.Contains(new Meditated(P(2), 5, 5), events);
+		Assert.Equal(new[] { 20, 30, 100 }, Health(runner.Party));
+		random.RequireUsedUp();
+	}
+
 	// --- Orders that do not fit ---
 
 	private sealed record WaveOrder(CombatantId Actor) : CombatOrder(Actor);
@@ -999,7 +1163,11 @@ public class CombatRunnerTests
 		{ "a defence for an enemy", new CombatOrder[] { Attack(0, 0), Attack(1, 0), new DefendOrder(E(0)) } },
 		{ "a focus for a member who is down", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Focus(2) } },
 		{ "a focus and a defence for the same member", new CombatOrder[] { Focus(0), Attack(1, 0), Defend(0) } },
-		{ "a meditation for a member who is down", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Meditate(2) } }
+		{ "a meditation for a member who is down", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Meditate(2) } },
+		{ "a flee with another order", new CombatOrder[] { Flee(0), Attack(1, 0) } },
+		{ "two flees", new CombatOrder[] { Flee(0), Flee(1) } },
+		{ "a flee for a member who is down", new CombatOrder[] { Flee(2) } },
+		{ "a flee for an enemy", new CombatOrder[] { new FleeOrder(E(0)) } }
 	};
 
 	[Theory]

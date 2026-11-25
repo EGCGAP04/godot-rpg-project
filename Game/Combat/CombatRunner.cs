@@ -30,7 +30,10 @@ public enum CombatResult
 	Won,
 
 	/// <summary>The whole party is down.</summary>
-	Lost
+	Lost,
+
+	/// <summary>The party fled.</summary>
+	Fled
 }
 
 /// <summary>
@@ -77,6 +80,10 @@ public sealed record PendingEnemyAttack(CombatantId Attacker, CombatantId Target
 /// On an enemy's attack, an index roll among the standing members, always, even when one
 /// is left.
 /// </item>
+/// <item>
+/// In a round the party flees, one roll for the escape, after the turn order's and before
+/// any turn. It is the only roll an order other than an attack makes.
+/// </item>
 /// </list>
 /// <para>
 /// Whoever goes down before its turn loses it. The fight ends the moment a whole side is
@@ -103,6 +110,14 @@ public sealed record PendingEnemyAttack(CombatantId Attacker, CombatantId Target
 /// ordered at the most would always be wasted, and one whose most is 0 has nothing to get
 /// back. It rolls nothing.
 /// </para>
+/// <para>
+/// <b>Fleeing is the party's,</b> a <see cref="FleeOrder"/> that is the round's only
+/// order, and only in a fight that can be fled (<see cref="CanFlee"/>). The round starts
+/// as any other, and before any turn one roll is made against
+/// <see cref="StatFormulas.EscapeRate"/> over those standing on each side. If it comes up
+/// the fight ends, <see cref="CombatResult.Fled"/>, and nobody acts. If not, the party
+/// loses the round: the members' turns pass with nothing, and the enemies act.
+/// </para>
 /// </remarks>
 public sealed class CombatRunner
 {
@@ -111,6 +126,7 @@ public sealed class CombatRunner
 	private readonly List<Combatant> _party;
 	private readonly List<Combatant> _enemies;
 	private readonly DamagePipeline _pipeline;
+	private readonly StatFormulas _formulas;
 	private readonly CombatTuningValues _tuning;
 	private readonly ICombatRandom _random;
 	private readonly List<CombatEvent> _events = new();
@@ -120,11 +136,13 @@ public sealed class CombatRunner
 	private IReadOnlyList<Combatant> _turns = Array.Empty<Combatant>();
 	private int _turn;
 
-	private CombatRunner(List<Combatant> party, List<Combatant> enemies, DamagePipeline pipeline, CombatTuningValues tuning, ICombatRandom random)
+	private CombatRunner(List<Combatant> party, List<Combatant> enemies, bool canFlee, DamagePipeline pipeline, StatFormulas formulas, CombatTuningValues tuning, ICombatRandom random)
 	{
 		_party = party;
 		_enemies = enemies;
+		CanFlee = canFlee;
 		_pipeline = pipeline;
+		_formulas = formulas;
 		_tuning = tuning;
 		_random = random;
 	}
@@ -134,6 +152,9 @@ public sealed class CombatRunner
 
 	/// <summary>How the fight stands. <see cref="CombatResult.Ongoing"/> until <see cref="Step"/> is <see cref="CombatStep.Finished"/>.</summary>
 	public CombatResult Result { get; private set; } = CombatResult.Ongoing;
+
+	/// <summary>Whether the party can be ordered to flee this fight. Some groups cannot be fled from.</summary>
+	public bool CanFlee { get; }
 
 	/// <summary>The round being ordered or worked out, from 1. It stays at the last one when the fight ends.</summary>
 	public int Round { get; private set; } = 1;
@@ -190,9 +211,14 @@ public sealed class CombatRunner
 	/// least one enemy, and each side has someone standing. How many enemies fit is not
 	/// decided here.
 	/// </remarks>
+	/// <param name="canFlee">
+	/// Whether the party may flee. Asked of every caller, never defaulted, so a group that
+	/// cannot be fled from cannot be fled from by a caller's omission.
+	/// </param>
 	public static CombatRunner Start(
 		IReadOnlyList<CombatantSetup> party,
 		IReadOnlyList<CombatantSetup> enemies,
+		bool canFlee,
 		StatFormulas formulas,
 		CombatTuningValues tuning,
 		ICombatRandom random)
@@ -218,7 +244,7 @@ public sealed class CombatRunner
 		if (foes.All(foe => foe.IsDown))
 			throw new ArgumentException("No enemy is standing.", nameof(enemies));
 
-		return new CombatRunner(members, foes, pipeline, tuning, random);
+		return new CombatRunner(members, foes, canFlee, pipeline, formulas, tuning, random);
 	}
 
 	/// <summary>
@@ -229,8 +255,9 @@ public sealed class CombatRunner
 	/// Orders that do not fit are refused with <see cref="ArgumentException"/> before
 	/// anything changes or is rolled: one missing, one for somebody who is down or is not
 	/// a member, two for the same member, a kind of order the fight does not know, an
-	/// attack whose target is not an enemy or is already down, and a meditation for a
-	/// member who cannot meditate.
+	/// attack whose target is not an enemy or is already down, a meditation for a member
+	/// who cannot meditate, and a flee that does not come alone or in a fight that cannot
+	/// be fled. A flee is the one order that leaves the other members without one.
 	/// </remarks>
 	public void SubmitOrders(IEnumerable<CombatOrder> orders)
 	{
@@ -244,8 +271,12 @@ public sealed class CombatRunner
 		_turn = 0;
 		_events.Add(new RoundStarted(Round, _turns.Select(combatant => combatant.Id).ToArray()));
 
-		foreach (Combatant member in Standing(_party).Where(member => _orders[member.Id] is DefendOrder))
+		foreach (Combatant member in Standing(_party).Where(member => _orders.GetValueOrDefault(member.Id) is DefendOrder))
 			_events.Add(new Defended(member.Id));
+
+		// Check lets a flee through only alone.
+		if (_orders.Values.Any(order => order is FleeOrder) && TryToFlee())
+			return;
 
 		Continue();
 	}
@@ -340,12 +371,26 @@ public sealed class CombatRunner
 				case MeditateOrder:
 					break;
 
+				case FleeOrder when !CanFlee:
+					throw new ArgumentException($"{order.Actor} is ordered to flee a fight that cannot be fled.", nameof(orders));
+
+				case FleeOrder:
+					break;
+
 				default:
 					throw new ArgumentException($"The fight does not know the kind of order given to {order.Actor}, {order.GetType().Name}.", nameof(orders));
 			}
 
 			if (!checkedOrders.TryAdd(order.Actor, order))
 				throw new ArgumentException($"{order.Actor} was given two orders.", nameof(orders));
+		}
+
+		if (checkedOrders.Values.Any(order => order is FleeOrder))
+		{
+			if (checkedOrders.Count > 1)
+				throw new ArgumentException("A flee is the whole party's order, and comes alone.", nameof(orders));
+
+			return checkedOrders;
 		}
 
 		foreach (Combatant member in Standing(_party))
@@ -380,7 +425,8 @@ public sealed class CombatRunner
 				return;
 			}
 
-			switch (_orders[actor.Id])
+			// In a round the party failed to flee, the members have no order of their own.
+			switch (_orders.GetValueOrDefault(actor.Id))
 			{
 				case AttackOrder order:
 					Attack(actor, order);
@@ -421,6 +467,27 @@ public sealed class CombatRunner
 		// Enemies only attack: none of them defends.
 		AttackResult result = _pipeline.Resolve(AttackingStats(actor), target.Stats, ActionKind.Attack, _random, defending: false);
 		Apply(actor.Id, target, result, result.Damage);
+	}
+
+	/// <summary>
+	/// The party's attempt to flee, before any turn: one roll against the escape rate of
+	/// those standing on each side. Whether it ended the fight.
+	/// </summary>
+	private bool TryToFlee()
+	{
+		BaseStats[] allies = Standing(_party).Select(member => member.Stats).ToArray();
+		BaseStats[] foes = Standing(_enemies).Select(foe => foe.Stats).ToArray();
+		bool escaped = _random.Percent() < _formulas.EscapeRate(allies, foes);
+
+		_events.Add(new EscapeAttempted(escaped));
+
+		if (!escaped)
+			return false;
+
+		Result = CombatResult.Fled;
+		Step = CombatStep.Finished;
+		_events.Add(new FightEnded(Result));
+		return true;
 	}
 
 	/// <summary>

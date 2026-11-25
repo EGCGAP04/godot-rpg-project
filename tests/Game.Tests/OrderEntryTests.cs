@@ -68,7 +68,7 @@ public class OrderEntryTests
 		random.Index(0, among: 2); // the tie between the members
 		random.Index(1, among: 2); // the foe, first, picks abe
 		random.Hit();
-		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, TestTuning.Formulas(), TestTuning.Combat(), random);
+		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, canFlee: true, TestTuning.Formulas(), TestTuning.Combat(), random);
 		var entry = new OrderEntry(runner.MembersToOrder, runner.Enemies.Where(enemy => !enemy.IsDown).Select(enemy => enemy.Id));
 
 		entry.ChooseAttack();

@@ -42,7 +42,7 @@ internal static class TestFights
 		random.Hit();
 		random.Hit();
 
-		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, TestTuning.Formulas(), TestTuning.Combat(), random);
+		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, canFlee: true, TestTuning.Formulas(), TestTuning.Combat(), random);
 		runner.SubmitOrders(Enumerable.Range(0, members).Select(member => (CombatOrder)new AttackOrder(CombatantId.Party(member), CombatantId.Enemy(0))).ToArray());
 		runner.AnswerEnemyAttack(runner.PendingAttack.Result.Damage);
 
@@ -61,7 +61,7 @@ internal static class TestFights
 		random.Index(0, among: 1);
 		random.Hit();
 
-		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, TestTuning.Formulas(), TestTuning.Combat(), random);
+		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, canFlee: true, TestTuning.Formulas(), TestTuning.Combat(), random);
 		runner.SubmitOrders(new CombatOrder[] { new AttackOrder(CombatantId.Party(0), CombatantId.Enemy(0)) });
 		runner.AnswerEnemyAttack(runner.PendingAttack.Result.Damage);
 

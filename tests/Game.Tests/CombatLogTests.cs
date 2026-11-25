@@ -115,7 +115,7 @@ public class CombatLogTests
 		random.Hit();
 		random.Hit();
 
-		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, TestTuning.Formulas(), TestTuning.Combat(), random);
+		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, canFlee: true, TestTuning.Formulas(), TestTuning.Combat(), random);
 		runner.SubmitOrders(new CombatOrder[] { new AttackOrder(CombatantId.Party(0), CombatantId.Enemy(0)), new AttackOrder(CombatantId.Party(1), CombatantId.Enemy(0)) });
 		runner.AnswerEnemyAttack(runner.PendingAttack.Result.Damage);
 		return runner;

@@ -18,6 +18,12 @@ public sealed record Defended(CombatantId Member) : CombatEvent;
 /// <summary>A member focused, on their turn: their attack is raised for the next <paramref name="Rounds"/> rounds.</summary>
 public sealed record Focused(CombatantId Member, int Rounds) : CombatEvent;
 
+/// <summary>
+/// The party tried to flee, right after <see cref="RoundStarted"/>. When it got away, a
+/// <see cref="FightEnded"/> with <see cref="CombatResult.Fled"/> follows.
+/// </summary>
+public sealed record EscapeAttempted(bool Escaped) : CombatEvent;
+
 /// <summary>A member meditated, on their turn.</summary>
 /// <param name="Recovered">The mana they got back.</param>
 /// <param name="ManaAfter">The mana they have now. Whoever shows the fight copies it.</param>
@@ -44,5 +50,5 @@ public sealed record AttackResolved(CombatantId Attacker, CombatantId Target, At
 /// <summary>A combatant's health reached 0.</summary>
 public sealed record CombatantDowned(CombatantId Combatant) : CombatEvent;
 
-/// <summary>A whole side is down and the fight is over.</summary>
+/// <summary>The fight is over: a whole side is down, or the party fled.</summary>
 public sealed record FightEnded(CombatResult Result) : CombatEvent;
