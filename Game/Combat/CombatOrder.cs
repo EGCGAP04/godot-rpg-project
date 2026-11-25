@@ -29,3 +29,12 @@ public sealed record DefendOrder(CombatantId Actor) : CombatOrder(Actor);
 /// </summary>
 /// <param name="Actor">The member who focuses.</param>
 public sealed record FocusOrder(CombatantId Actor) : CombatOrder(Actor);
+
+/// <summary>
+/// The member meditates, on their turn, and gets back
+/// <see cref="CombatTuningValues.MeditatePercent"/> of their most mana, rounded down, but
+/// never less than <see cref="CombatTuningValues.MeditateMinimum"/> nor past the most. Only
+/// a member whose mana is below their most can be given it.
+/// </summary>
+/// <param name="Actor">The member who meditates.</param>
+public sealed record MeditateOrder(CombatantId Actor) : CombatOrder(Actor);

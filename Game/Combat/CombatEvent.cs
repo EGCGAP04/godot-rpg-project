@@ -18,6 +18,11 @@ public sealed record Defended(CombatantId Member) : CombatEvent;
 /// <summary>A member focused, on their turn: their attack is raised for the next <paramref name="Rounds"/> rounds.</summary>
 public sealed record Focused(CombatantId Member, int Rounds) : CombatEvent;
 
+/// <summary>A member meditated, on their turn.</summary>
+/// <param name="Recovered">The mana they got back.</param>
+/// <param name="ManaAfter">The mana they have now. Whoever shows the fight copies it.</param>
+public sealed record Meditated(CombatantId Member, int Recovered, int ManaAfter) : CombatEvent;
+
 /// <summary>An attack was worked out and its damage taken.</summary>
 /// <param name="Attacker">Who attacked.</param>
 /// <param name="Target">

@@ -52,6 +52,15 @@ public sealed class Combatant
 			FocusedThrough = 0;
 	}
 
+	/// <summary>Adds the mana, which stops at the most the stats allow.</summary>
+	internal void RecoverMana(int mana)
+	{
+		if (mana < 0)
+			throw new ArgumentOutOfRangeException(nameof(mana), mana, "Mana recovered cannot be negative.");
+
+		ManaPoints = (int)Math.Min((long)ManaPoints + mana, Stats.ManaPoints);
+	}
+
 	/// <summary>Raises the attack up to <paramref name="round"/>, the last round included, whatever an earlier focus said.</summary>
 	internal void FocusThrough(int round) => FocusedThrough = round;
 }

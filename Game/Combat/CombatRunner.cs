@@ -96,6 +96,13 @@ public sealed record PendingEnemyAttack(CombatantId Attacker, CombatantId Target
 /// reads the attack, the critical damage included, sees it raised. Focusing again starts
 /// the count again instead of adding to it, and going down loses it. It rolls nothing.
 /// </para>
+/// <para>
+/// <b>A member who meditates does so on their turn,</b> and gets back a share of their most
+/// mana (<see cref="Meditated"/>). Only a member below their most can be ordered to
+/// (<see cref="CanMeditate"/>): nothing takes mana away during a round, so a meditation
+/// ordered at the most would always be wasted, and one whose most is 0 has nothing to get
+/// back. It rolls nothing.
+/// </para>
 /// </remarks>
 public sealed class CombatRunner
 {
@@ -146,6 +153,20 @@ public sealed class CombatRunner
 
 	/// <summary>The enemy attack waiting for its answer. Null unless <see cref="Step"/> is <see cref="CombatStep.EnemyAttackPending"/>.</summary>
 	public PendingEnemyAttack PendingAttack { get; private set; }
+
+	/// <summary>
+	/// Whether a member can be ordered to meditate: standing, with less mana than their
+	/// most. A most of 0 is never below it.
+	/// </summary>
+	/// <exception cref="ArgumentException">The member is not a party member in this fight.</exception>
+	public bool CanMeditate(CombatantId member)
+	{
+		if (member.Side != CombatSide.Party || !Exists(member))
+			throw new ArgumentException($"{member} is not a party member in this fight.", nameof(member));
+
+		Combatant found = Find(member);
+		return !found.IsDown && found.ManaPoints < found.Stats.ManaPoints;
+	}
 
 	/// <summary>
 	/// How many rounds, from <see cref="Round"/> on and counting it, a combatant's attack is
@@ -207,8 +228,9 @@ public sealed class CombatRunner
 	/// <remarks>
 	/// Orders that do not fit are refused with <see cref="ArgumentException"/> before
 	/// anything changes or is rolled: one missing, one for somebody who is down or is not
-	/// a member, two for the same member, a kind of order the fight does not know, and an
-	/// attack whose target is not an enemy or is already down.
+	/// a member, two for the same member, a kind of order the fight does not know, an
+	/// attack whose target is not an enemy or is already down, and a meditation for a
+	/// member who cannot meditate.
 	/// </remarks>
 	public void SubmitOrders(IEnumerable<CombatOrder> orders)
 	{
@@ -312,6 +334,12 @@ public sealed class CombatRunner
 				case DefendOrder or FocusOrder:
 					break;
 
+				case MeditateOrder when !CanMeditate(order.Actor):
+					throw new ArgumentException($"{order.Actor} is ordered to meditate with their mana at its most.", nameof(orders));
+
+				case MeditateOrder:
+					break;
+
 				default:
 					throw new ArgumentException($"The fight does not know the kind of order given to {order.Actor}, {order.GetType().Name}.", nameof(orders));
 			}
@@ -366,6 +394,10 @@ public sealed class CombatRunner
 					actor.FocusThrough(Round + _tuning.FocusRounds);
 					_events.Add(new Focused(actor.Id, _tuning.FocusRounds));
 					break;
+
+				case MeditateOrder:
+					Meditate(actor);
+					break;
 			}
 
 			if (Step == CombatStep.Finished)
@@ -389,6 +421,20 @@ public sealed class CombatRunner
 		// Enemies only attack: none of them defends.
 		AttackResult result = _pipeline.Resolve(AttackingStats(actor), target.Stats, ActionKind.Attack, _random, defending: false);
 		Apply(actor.Id, target, result, result.Damage);
+	}
+
+	/// <summary>
+	/// A member's meditation: the tuning's share of the most mana, rounded down and never
+	/// below its minimum, up to the most. In <c>long</c>, so the largest most cannot overflow.
+	/// </summary>
+	private void Meditate(Combatant actor)
+	{
+		int most = actor.Stats.ManaPoints;
+		long share = Math.Max(_tuning.MeditateMinimum, (long)most * _tuning.MeditatePercent / 100);
+		int recovered = (int)Math.Min(share, most - actor.ManaPoints);
+
+		actor.RecoverMana(recovered);
+		_events.Add(new Meditated(actor.Id, recovered, actor.ManaPoints));
 	}
 
 	/// <summary>

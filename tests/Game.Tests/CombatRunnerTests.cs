@@ -45,6 +45,16 @@ public class CombatRunnerTests
 
 	private static FocusOrder Focus(int member) => new(P(member));
 
+	private static MeditateOrder Meditate(int member) => new(P(member));
+
+	/// <summary>A member with mana: a most of <paramref name="mostMana"/>, and <paramref name="manaLeft"/> of it now.</summary>
+	private static CombatantSetup Mage(int mostMana, int manaLeft, int agility = 30, int healthPoints = 100) =>
+		new(
+			"speaker.someone",
+			TestTuning.Stats(healthPoints: healthPoints, attackDamage: 10, manaPoints: mostMana, agility: agility, hitRate: 90),
+			healthPoints,
+			manaLeft);
+
 	private static CombatantSetup Fighter(int healthPoints, int attackDamage, int agility, int armor = 0, int? healthLeft = null) =>
 		new(
 			"speaker.someone",
@@ -835,6 +845,131 @@ public class CombatRunnerTests
 		Assert.Equal(0, runner.FocusRoundsLeft(E(0)));
 	}
 
+	// --- Meditating ---
+
+	[Fact]
+	public void AMeditation_GivesBackItsShareOfTheMostMana_OnTheMembersTurn()
+	{
+		// A quarter of 20 is 5. The enemy is the faster, so the meditation comes after its
+		// attack; the script holds only the enemy's rolls, so meditating rolls nothing.
+		var random = new ScriptedCombatRandom().EnemyMisses();
+		CombatRunner runner = Start(random, new[] { Mage(mostMana: 20, manaLeft: 2, agility: 10) }, new[] { Fighter(1000, 1, 20) });
+
+		runner.SubmitOrders(new[] { Meditate(0) });
+		Assert.DoesNotContain(runner.TakeEvents(), happened => happened is Meditated);
+		Assert.Equal(2, runner.Party[0].ManaPoints);
+
+		runner.AnswerEnemyAttack(0);
+		IReadOnlyList<CombatEvent> events = runner.TakeEvents();
+
+		Assert.Equal(new Meditated(P(0), 5, 7), events.Last());
+		Assert.Equal(7, runner.Party[0].ManaPoints);
+		random.RequireUsedUp();
+	}
+
+	[Theory]
+	[InlineData(7, 1)] // A quarter of 7 is 1.75.
+	[InlineData(3, 1)] // A quarter of 3 is 0.75, and the minimum is 1.
+	[InlineData(1, 1)]
+	[InlineData(40, 10)]
+	public void TheShare_IsRoundedDown_AndNeverBelowTheMinimum(int mostMana, int recovered)
+	{
+		var random = new ScriptedCombatRandom().EnemyMisses();
+		CombatRunner runner = Start(random, new[] { Mage(mostMana, manaLeft: 0) }, new[] { Fighter(1000, 1, 1) });
+
+		Assert.Contains(new Meditated(P(0), recovered, recovered), PlayRound(runner, Meditate(0)));
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void AMeditation_StopsAtTheMostMana()
+	{
+		var random = new ScriptedCombatRandom().EnemyMisses();
+		CombatRunner runner = Start(random, new[] { Mage(mostMana: 20, manaLeft: 18) }, new[] { Fighter(1000, 1, 1) });
+
+		Assert.Contains(new Meditated(P(0), 2, 20), PlayRound(runner, Meditate(0)));
+		Assert.False(runner.CanMeditate(P(0)));
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheMeditation_IsTheTunings()
+	{
+		var random = new ScriptedCombatRandom().EnemyMisses().EnemyMisses();
+		CombatRunner runner = Start(
+			random,
+			new[] { Mage(mostMana: 20, manaLeft: 0) },
+			new[] { Fighter(1000, 1, 1) },
+			TestTuning.Combat(meditatePercent: 50, meditateMinimum: 3));
+
+		Assert.Contains(new Meditated(P(0), 10, 10), PlayRound(runner, Meditate(0)));
+
+		CombatRunner small = Start(
+			random,
+			new[] { Mage(mostMana: 4, manaLeft: 0) },
+			new[] { Fighter(1000, 1, 1) },
+			TestTuning.Combat(meditatePercent: 50, meditateMinimum: 3));
+
+		Assert.Contains(new Meditated(P(0), 3, 3), PlayRound(small, Meditate(0)));
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void TheLargestMostMana_DoesNotOverflow()
+	{
+		var random = new ScriptedCombatRandom().EnemyMisses();
+		CombatRunner runner = Start(random, new[] { Mage(mostMana: int.MaxValue, manaLeft: 0) }, new[] { Fighter(1000, 1, 1) });
+
+		Assert.Contains(new Meditated(P(0), int.MaxValue / 4, int.MaxValue / 4), PlayRound(runner, Meditate(0)));
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void AMemberDownedBeforeTheirTurn_DoesNotMeditate()
+	{
+		var random = new ScriptedCombatRandom().Target(0, among: 2).Hit().Hit();
+		CombatRunner runner = Start(
+			random,
+			new[] { Mage(mostMana: 20, manaLeft: 0, agility: 5, healthPoints: 10), Fighter(100, 10, 4) },
+			new[] { Fighter(1000, 20, 20) });
+
+		IReadOnlyList<CombatEvent> events = PlayRound(runner, Meditate(0), Attack(1, 0));
+
+		Assert.DoesNotContain(events, happened => happened is Meditated);
+		Assert.Equal(0, runner.Party[0].ManaPoints);
+		random.RequireUsedUp();
+	}
+
+	[Fact]
+	public void CanMeditate_IsWhetherTheManaIsBelowItsMost()
+	{
+		CombatRunner runner = Start(
+			new ScriptedCombatRandom(),
+			new[] { Mage(mostMana: 20, manaLeft: 19), Mage(mostMana: 20, manaLeft: 20), Mage(mostMana: 0, manaLeft: 0), Mage(mostMana: 20, manaLeft: 0, healthPoints: 0) },
+			new[] { Fighter(1000, 1, 1) });
+
+		Assert.True(runner.CanMeditate(P(0)));
+		Assert.False(runner.CanMeditate(P(1)));
+		Assert.False(runner.CanMeditate(P(2)));
+		Assert.False(runner.CanMeditate(P(3)));
+		Assert.Throws<ArgumentException>(() => runner.CanMeditate(E(0)));
+		Assert.Throws<ArgumentException>(() => runner.CanMeditate(P(4)));
+	}
+
+	[Theory]
+	[InlineData(20, 20)]
+	[InlineData(0, 0)]
+	public void AMeditation_ForAMemberWhoCannot_IsRefused_BeforeAnythingChangesOrIsRolled(int mostMana, int manaLeft)
+	{
+		CombatRunner runner = Start(new ScriptedCombatRandom(), new[] { Mage(mostMana, manaLeft), Mage(20, 0) }, new[] { Fighter(1000, 1, 1) });
+
+		Assert.Throws<ArgumentException>(() => runner.SubmitOrders(new[] { Meditate(1), Meditate(0) }));
+
+		Assert.Equal(CombatStep.AwaitingOrders, runner.Step);
+		Assert.Empty(runner.TakeEvents());
+		Assert.Equal(new[] { manaLeft, 0 }, runner.Party.Select(member => member.ManaPoints));
+	}
+
 	// --- Orders that do not fit ---
 
 	private sealed record WaveOrder(CombatantId Actor) : CombatOrder(Actor);
@@ -863,7 +998,8 @@ public class CombatRunnerTests
 		{ "a defence and an attack for the same member", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Defend(0) } },
 		{ "a defence for an enemy", new CombatOrder[] { Attack(0, 0), Attack(1, 0), new DefendOrder(E(0)) } },
 		{ "a focus for a member who is down", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Focus(2) } },
-		{ "a focus and a defence for the same member", new CombatOrder[] { Focus(0), Attack(1, 0), Defend(0) } }
+		{ "a focus and a defence for the same member", new CombatOrder[] { Focus(0), Attack(1, 0), Defend(0) } },
+		{ "a meditation for a member who is down", new CombatOrder[] { Attack(0, 0), Attack(1, 0), Meditate(2) } }
 	};
 
 	[Theory]
