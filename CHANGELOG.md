@@ -24,14 +24,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CombatLineup` and `CombatAftermath`, engine-free, which take the party into a fight and write back what it left
 - `OrderEntry`, `CombatantNames`, `CombatLog` and `CombatResultPages`, engine-free: the menu's way through a round, the combatants' names, the log's lines and the result's pages
 - The combat screen's text in English and Spanish
-
-### Changed
+- **Four more commands in a fight: defend, focus, meditate and flee.** A member who defends takes half the damage for the whole round, from its start, so an enemy faster than them does not get in first. One who focuses hits half as hard again for the three rounds after, and the screen shows the rounds left under their name. One who meditates gets back a quarter of their most mana, at least 1. Fleeing is the whole party's, chosen from any member's menu, with one roll against the escape rate before anyone acts: if it fails, the party loses the round. The numbers are provisional, in `Combat/combat_tuning.tres`
+- Meditating is offered only to a member below their most mana, and fleeing only in a fight that can be fled; the menu shows the rest disabled, and the focus passes over them
+- A fled fight is a third outcome, recorded in the history as `fled` and counted in a new counter, `combat.escapes`. Nobody gains experience from it, the enemy stays on the map and the player where they were
+- `EncounterData.CannotFlee`, for a group that cannot be fled; `demo_wall` is one
+- A test that puts every outcome of a fight through every place that tells them apart, so a new one cannot pass for an old one
 
 - Enemies have the seven base stats, fixed, with no level and no growth, instead of a health and an attack
 - **A member who goes down leaves the fight with 1 health point and 1 mana point,** or no mana if they have none, and gets no experience from it. Only the members standing at the end of a fight won receive its experience, whole
 - The whole party is healed after every fight, won or lost, until the rules of defeat and healing per world arrive
 - The history of fights records the group fought and each of its enemies, and its outcome is `Won` or `Lost` instead of a yes or no. The debug overlay lists a fight as `Fantasy, cycle 1: demo_patrol (weak, demo_clumsy), won`
 - `PartyState.PreviewAward` and `Award` can be told which members receive the experience
+- **An enemy the player still touches when the cooldown after a fight ends starts its fight then.** Before, a contact refused by the cooldown was never reported again, so a player who fled and stayed on the enemy, or who landed on one at a new world's spawn, stood on it with no fight. Stepping away before the cooldown ends still avoids it
+- The combat screen's commands are a row, walked with left and right like the enemies, and the screen moved up a little to fit a fourth line under each member
+- An enemy on the map that carries no group no longer starts a fight: `Main` logs the error instead, and the combat screen falls back to `demo_patrol` only when it runs on its own
 - The tree of every file in the repository moved from the README to a document of its own, `docs/PROJECT_STRUCTURE.md`. The README keeps a short tree of the folders, with a line on each, and a link to the full one
 - The pull request template and the Docs Issue form now name `docs/PROJECT_STRUCTURE.md` as the tree to keep up to date
 - **The license changed from MIT to the [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0).** From this change on, the project may be used, modified and shared for noncommercial purposes only, every copy must carry the license's terms and the `Required Notice` line at the top of `LICENSE`, and commercial use needs the maintainer's permission. Everything published before this change, the versions up to `v0.4.0` included, was released under MIT and stays available under it

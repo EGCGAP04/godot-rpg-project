@@ -278,6 +278,7 @@ godot-rpg-project/
 │       ├── ExperienceCurveTests.cs
 │       ├── ExperienceCurvesTests.cs
 │       ├── FacingTests.cs
+│       ├── FightOutcomesTests.cs   # every way a fight ends, through every place that tells them apart
 │       ├── FlagCatalogueTests.cs
 │       ├── FlagConditionParserTests.cs
 │       ├── FlagConditionTests.cs
