@@ -30,10 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EncounterData.CannotFlee`, for a group that cannot be fled; `demo_wall` is one
 - A test that puts every outcome of a fight through every place that tells them apart, so a new one cannot pass for an old one
 
+### Changed
+
 - Enemies have the seven base stats, fixed, with no level and no growth, instead of a health and an attack
 - **A member who goes down leaves the fight with 1 health point and 1 mana point,** or no mana if they have none, and gets no experience from it. Only the members standing at the end of a fight won receive its experience, whole
-- The whole party is healed after every fight, won or lost, until the rules of defeat and healing per world arrive
-- The history of fights records the group fought and each of its enemies, and its outcome is `Won` or `Lost` instead of a yes or no. The debug overlay lists a fight as `Fantasy, cycle 1: demo_patrol (weak, demo_clumsy), won`
+- The whole party is healed after every fight, however it ends, until the rules of defeat and healing per world arrive
+- The history of fights records the group fought and each of its enemies, and its outcome is `Won`, `Lost` or `Fled` instead of a yes or no. The debug overlay lists a fight as `Fantasy, cycle 1: demo_patrol (weak, demo_clumsy), won`
 - `PartyState.PreviewAward` and `Award` can be told which members receive the experience
 - **An enemy the player still touches when the cooldown after a fight ends starts its fight then.** Before, a contact refused by the cooldown was never reported again, so a player who fled and stayed on the enemy, or who landed on one at a new world's spawn, stood on it with no fight. Stepping away before the cooldown ends still avoids it
 - The combat screen's commands are a row, walked with left and right like the enemies, and the screen moved up a little to fit a fourth line under each member

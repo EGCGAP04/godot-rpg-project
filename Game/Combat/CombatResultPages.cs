@@ -29,9 +29,8 @@ public static class CombatResultPages
 	/// <remarks>
 	/// After a loss it is the one line: everyone was down, and nobody gains anything, so a
 	/// line per member would say nothing. After a flight too: nobody gains anything either.
-	/// After a win, one line per member who was down,
-	/// after the levels, so the rule that they gain nothing shows even though everyone is
-	/// healed once the fight is over.
+	/// After a win, one line per member who was down, after the levels, so the rule that
+	/// they gain nothing shows even though everyone is healed once the fight is over.
 	/// </remarks>
 	public static IReadOnlyList<string> Lines(CombatAftermath aftermath, ExperienceAward award, CharacterRosterValues roster, Func<string, string> translate)
 	{

@@ -271,10 +271,10 @@ public sealed class CombatRunner
 		_turn = 0;
 		_events.Add(new RoundStarted(Round, _turns.Select(combatant => combatant.Id).ToArray()));
 
-		foreach (Combatant member in Standing(_party).Where(member => _orders.GetValueOrDefault(member.Id) is DefendOrder))
+		foreach (Combatant member in Standing(_party).Where(Defends))
 			_events.Add(new Defended(member.Id));
 
-		// Check lets a flee through only alone.
+		// Check lets a flee through only as the round's one order.
 		if (_orders.Values.Any(order => order is FleeOrder) && TryToFlee())
 			return;
 

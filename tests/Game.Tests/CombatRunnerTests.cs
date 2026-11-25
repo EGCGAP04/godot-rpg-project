@@ -1077,10 +1077,12 @@ public class CombatRunnerTests
 	[Fact]
 	public void AFledFight_TakesNoMoreOrders()
 	{
-		CombatRunner runner = Start(new ScriptedCombatRandom().Percent(0), new[] { Fighter(30, 10, 10) }, new[] { Fighter(25, 7, 20) });
+		var random = new ScriptedCombatRandom().Percent(0);
+		CombatRunner runner = Start(random, new[] { Fighter(30, 10, 10) }, new[] { Fighter(25, 7, 20) });
 		runner.SubmitOrders(new[] { Flee(0) });
 
 		Assert.Throws<InvalidOperationException>(() => runner.SubmitOrders(new[] { Attack(0, 0) }));
+		random.RequireUsedUp();
 	}
 
 	[Fact]

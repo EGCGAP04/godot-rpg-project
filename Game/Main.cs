@@ -291,7 +291,7 @@ public partial class Main : Node2D
 		aftermath.ApplyTo(party);
 
 		// The heal after the experience, so a level reached is full too. The whole party
-		// is healed after every fight, won or lost, until #107 gives each world its rules.
+		// is healed after every fight, however it ended, until #107 gives each world its rules.
 		foreach (string id in party.Members)
 			party.FullHeal(id, world);
 
