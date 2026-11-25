@@ -23,6 +23,13 @@ public class EncounterValuesTests
 	}
 
 	[Fact]
+	public void AGroup_CanBeFled_UnlessItSaysOtherwise()
+	{
+		Assert.False(new EncounterValues("demo_pair", new[] { Enemy("weak") }).CannotFlee);
+		Assert.True(new EncounterValues("demo_pair", new[] { Enemy("weak") }, cannotFlee: true).CannotFlee);
+	}
+
+	[Fact]
 	public void TheSameEnemy_MayBeInAGroupMoreThanOnce()
 	{
 		EnemyValues weak = Enemy("weak");

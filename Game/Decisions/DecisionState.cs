@@ -33,19 +33,29 @@ public sealed class DecisionState : IFlagStore
 	/// <summary>The counter of fights the player lost, which <see cref="RecordCombat"/> adds to.</summary>
 	public const string Losses = "combat.losses";
 
+	/// <summary>The counter of fights the party fled, which <see cref="RecordCombat"/> adds to.</summary>
+	public const string Escapes = "combat.escapes";
+
+	/// <summary>
+	/// The counter of every outcome a fight can have, one each: what <see cref="RecordCombat"/>
+	/// adds to, and what tells a listener to <see cref="FlagChanged"/> that a fight was recorded.
+	/// </summary>
+	public static IReadOnlyList<string> FightCounters { get; } =
+		Array.AsReadOnly(Enum.GetValues<FightOutcome>().Select(CounterFor).ToArray());
+
 	private readonly Dictionary<string, bool> _flags = new();
 	private readonly Dictionary<string, int> _counters = new();
 	private readonly List<CombatRecord> _combats = new();
 
 	/// <summary>Starts with every flag of <paramref name="catalogue"/> at its starting value and no fights.</summary>
 	/// <exception cref="ArgumentException">
-	/// The catalogue does not declare <see cref="Wins"/> and <see cref="Losses"/> as counters.
+	/// The catalogue does not declare every one of <see cref="FightCounters"/> as a counter.
 	/// </exception>
 	public DecisionState(FlagCatalogue catalogue)
 	{
 		ArgumentNullException.ThrowIfNull(catalogue);
 
-		foreach (string name in new[] { Wins, Losses })
+		foreach (string name in FightCounters)
 		{
 			if (!catalogue.Flags.TryGetValue(name, out FlagDeclaration flag) || flag.Type != FlagType.Counter)
 				throw new ArgumentException($"'{name}' must be declared in {FlagCatalogue.FileName} as a counter: the registry counts fights with it", nameof(catalogue));
@@ -108,19 +118,32 @@ public sealed class DecisionState : IFlagStore
 	}
 
 	/// <summary>
-	/// Records the end of a fight: adds it to <see cref="Combats"/> and 1 to
-	/// <see cref="Wins"/> or <see cref="Losses"/>. The two always go together, so the
-	/// history and the totals never disagree.
+	/// Records the end of a fight: adds it to <see cref="Combats"/> and 1 to the outcome's
+	/// counter, <see cref="CounterFor"/>. The two always go together, so the history and
+	/// the totals never disagree.
 	/// </summary>
 	/// <param name="encounter">The group the fight was against. Its id and its enemies' ids go into the history.</param>
-	/// <exception cref="ArgumentOutOfRangeException">The outcome is neither won nor lost. Nothing is recorded then.</exception>
+	/// <exception cref="ArgumentOutOfRangeException">The outcome is not one a fight can have. Nothing is recorded then.</exception>
 	public void RecordCombat(World world, int cycle, EncounterValues encounter, FightOutcome outcome)
 	{
 		ArgumentNullException.ThrowIfNull(encounter);
 
-		_combats.Add(new CombatRecord(world, cycle, encounter.Id, encounter.Enemies.Select(enemy => enemy.Id), outcome));
-		AddToCounter(outcome == FightOutcome.Won ? Wins : Losses, 1);
+		var record = new CombatRecord(world, cycle, encounter.Id, encounter.Enemies.Select(enemy => enemy.Id), outcome);
+		string counter = CounterFor(outcome);
+
+		_combats.Add(record);
+		AddToCounter(counter, 1);
 	}
+
+	/// <summary>The counter a fight with this outcome adds to.</summary>
+	/// <exception cref="ArgumentOutOfRangeException">The outcome is not one a fight can have.</exception>
+	public static string CounterFor(FightOutcome outcome) => outcome switch
+	{
+		FightOutcome.Won => Wins,
+		FightOutcome.Lost => Losses,
+		FightOutcome.Fled => Escapes,
+		_ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "A fight is won, lost or fled.")
+	};
 
 	/// <summary>
 	/// Starts a new cycle: every flag whose lifetime is <see cref="FlagLifetime.Cycle"/>

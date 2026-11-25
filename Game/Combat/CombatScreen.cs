@@ -121,7 +121,7 @@ public partial class CombatScreen : CanvasLayer
 		_runner = CombatRunner.Start(
 			_lineup.Party,
 			_lineup.Enemies,
-			canFlee: true,
+			canFlee: !_lineup.Encounter.CannotFlee,
 			new StatFormulas(GD.Load<StatTuning>(Party.TuningPath).ToValues()),
 			GD.Load<CombatTuning>(TuningPath).ToValues(),
 			random);

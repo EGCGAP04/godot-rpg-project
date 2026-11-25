@@ -210,7 +210,7 @@ public partial class DebugOverlay : CanvasLayer
 		}
 
 		// A fight raises FlagChanged on its total once it is in the history.
-		if (name is DecisionState.Wins or DecisionState.Losses)
+		if (DecisionState.FightCounters.Contains(name))
 			RefreshFights();
 
 		UpdateJumpWarning();

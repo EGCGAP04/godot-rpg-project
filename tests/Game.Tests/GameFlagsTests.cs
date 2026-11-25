@@ -16,8 +16,10 @@ namespace GodotRPGProject.Tests;
 /// such as <c>SetFlag("world.fantasy_closed", true)</c> rather than for any string that
 /// starts like a flag: <c>world.</c> is both a group of flags and the prefix of the
 /// worlds' names in the translation tables. A name built at run time is invisible to it,
-/// and so are <see cref="DecisionState.Wins"/> and <see cref="DecisionState.Losses"/>,
-/// which <see cref="DecisionStateTests.New_WorksWithTheProjectCatalogue"/> covers.
+/// and so are the fight counters, <see cref="DecisionState.Wins"/>,
+/// <see cref="DecisionState.Losses"/> and <see cref="DecisionState.Escapes"/>, which
+/// <see cref="DecisionStateTests.New_WorksWithTheProjectCatalogue"/> covers. Reading
+/// constants would not help: a constant may just as well hold a translation key.
 /// </remarks>
 public class GameFlagsTests
 {

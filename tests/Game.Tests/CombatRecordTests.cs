@@ -64,7 +64,7 @@ public class CombatRecordTests
 	[Fact]
 	public void Constructor_RefusesAnOutcomeThatDoesNotExist()
 	{
-		Assert.Throws<ArgumentOutOfRangeException>(() => Fight(outcome: (FightOutcome)2));
+		Assert.Throws<ArgumentOutOfRangeException>(() => Fight(outcome: (FightOutcome)99));
 	}
 
 	[Fact]

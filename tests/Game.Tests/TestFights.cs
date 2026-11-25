@@ -51,6 +51,58 @@ internal static class TestFights
 		return CombatAftermath.Of(lineup, runner);
 	}
 
+	/// <summary>
+	/// A group that outlasts any party of <see cref="TestRoster"/>'s: 1000 health points, 25
+	/// attack and 10 agility, worth 7 experience, so it acts first and downs a member at level
+	/// 1 in the Fantasy world with a hit.
+	/// </summary>
+	public static EncounterValues Pursuer() =>
+		new("test_pursuer", new[] { new EnemyValues("pursuer", "enemy.pursuer", TestTuning.Stats(healthPoints: 1000, attackDamage: 25, agility: 10, hitRate: 100), experience: 7) });
+
+	/// <summary>
+	/// A flight in the Fantasy world, from <see cref="Pursuer"/>, for a party of two or more.
+	/// With <paramref name="lastGoesDownFirst"/>, the first round is a fight in which the
+	/// pursuer downs the last member, and the party flees in the second.
+	/// </summary>
+	public static CombatAftermath AFlight(PartyState party, bool lastGoesDownFirst)
+	{
+		CombatLineup lineup = CombatLineup.For(party, World.Fantasy, Pursuer());
+		int members = lineup.Party.Count;
+		Assert.True(members >= 2, "A flight here is for a party of two or more.");
+
+		var random = new ScriptedCombatRandom();
+		CombatRunner runner = CombatRunner.Start(lineup.Party, lineup.Enemies, canFlee: true, TestTuning.Formulas(), TestTuning.Combat(), random);
+
+		if (lastGoesDownFirst)
+		{
+			// The members tie on agility, and stay in the party's order.
+			for (int left = members; left > 1; left--)
+				random.Index(0, among: left);
+
+			random.Index(members - 1, among: members);
+			random.Hit();
+
+			for (int member = 0; member < members - 1; member++)
+				random.Hit();
+
+			runner.SubmitOrders(Enumerable.Range(0, members).Select(member => (CombatOrder)new AttackOrder(CombatantId.Party(member), CombatantId.Enemy(0))).ToArray());
+			runner.AnswerEnemyAttack(runner.PendingAttack.Result.Damage);
+			Assert.Equal(CombatStep.AwaitingOrders, runner.Step);
+		}
+
+		int standing = runner.MembersToOrder.Count;
+
+		for (int left = standing; left > 1; left--)
+			random.Index(0, among: left);
+
+		random.Percent(0);
+		runner.SubmitOrders(new CombatOrder[] { new FleeOrder(CombatantId.Party(0)) });
+
+		Assert.Equal(CombatResult.Fled, runner.Result);
+		random.RequireUsedUp();
+		return CombatAftermath.Of(lineup, runner);
+	}
+
 	/// <summary>A loss in the Fantasy world, against <see cref="Foe"/>, for the protagonist alone.</summary>
 	public static CombatAftermath ALoss(PartyState party)
 	{

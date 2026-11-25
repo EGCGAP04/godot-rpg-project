@@ -19,6 +19,7 @@ public class CombatResultPagesTests
 	{
 		[CombatResultPages.Won] = "WON",
 		[CombatResultPages.Lost] = "LOST",
+		[CombatResultPages.Fled] = "FLED",
 		[CombatResultPages.ExperienceGained] = "+{experience}",
 		[CombatResultPages.LevelReached] = "{name} -> {level}",
 		[CombatResultPages.WasDown] = "{name} was down",
@@ -79,6 +80,14 @@ public class CombatResultPagesTests
 		PartyState party = TestRoster.Party();
 
 		Assert.Equal(new[] { "LOST" }, Lines(party, TestFights.ALoss(party)));
+	}
+
+	[Fact]
+	public void AFlight_IsOneLine_EvenWithAMemberWhoWasDown()
+	{
+		PartyState party = PartyOf("abe");
+
+		Assert.Equal(new[] { "FLED" }, Lines(party, TestFights.AFlight(party, lastGoesDownFirst: true)));
 	}
 
 	[Fact]

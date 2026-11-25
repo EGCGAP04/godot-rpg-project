@@ -250,14 +250,12 @@ public partial class Main : Node2D
 		// Read now: the screen is freed below.
 		CombatAftermath aftermath = _combat.Aftermath;
 
-		if (aftermath.Won)
-		{
+		// After a flight, neither: the enemy stays on the map, and the player where they are.
+		if (aftermath.DefeatsTheEnemy)
 			_pendingEnemy.QueueFree();
-		}
-		else
-		{
+
+		if (aftermath.SendsThePlayerBack)
 			_player.GlobalPosition = _world.PlayerSpawnPosition;
-		}
 
 		_pendingEnemy = null;
 		_combat.QueueFree();

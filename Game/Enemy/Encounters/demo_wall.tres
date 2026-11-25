@@ -8,3 +8,4 @@
 script = ExtResource("1_encounter")
 Id = "demo_wall"
 Enemies = Array[ExtResource("2_enemy")]([ExtResource("3_strong"), ExtResource("3_strong")])
+CannotFlee = true

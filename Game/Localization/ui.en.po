@@ -13,6 +13,9 @@ msgstr "Player wins."
 msgid "ui.combat.player_lost"
 msgstr "Player loses."
 
+msgid "ui.combat.player_fled"
+msgstr "The party got away."
+
 #. Under the result of a fight won. {experience} is a number.
 msgid "ui.combat.experience_gained"
 msgstr "Gained {experience} experience."

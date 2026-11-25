@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 /// <summary>
@@ -19,6 +20,7 @@ public static class CombatResultPages
 
 	public const string Won = "ui.combat.player_won";
 	public const string Lost = "ui.combat.player_lost";
+	public const string Fled = "ui.combat.player_fled";
 	public const string ExperienceGained = "ui.combat.experience_gained";
 	public const string LevelReached = "ui.combat.level_reached";
 	public const string WasDown = "ui.combat.was_down";
@@ -26,7 +28,8 @@ public static class CombatResultPages
 	/// <summary>Every line, in order, before it is cut into pages.</summary>
 	/// <remarks>
 	/// After a loss it is the one line: everyone was down, and nobody gains anything, so a
-	/// line per member would say nothing. After a win, one line per member who was down,
+	/// line per member would say nothing. After a flight too: nobody gains anything either.
+	/// After a win, one line per member who was down,
 	/// after the levels, so the rule that they gain nothing shows even though everyone is
 	/// healed once the fight is over.
 	/// </remarks>
@@ -37,8 +40,17 @@ public static class CombatResultPages
 		ArgumentNullException.ThrowIfNull(roster);
 		ArgumentNullException.ThrowIfNull(translate);
 
-		if (!aftermath.Won)
-			return new[] { translate(Lost) };
+		switch (aftermath.Result)
+		{
+			case CombatResult.Lost:
+				return new[] { translate(Lost) };
+			case CombatResult.Fled:
+				return new[] { translate(Fled) };
+			case CombatResult.Won:
+				break;
+			default:
+				throw new UnreachableException($"A fight ended as {aftermath.Result}, which the result pages do not know.");
+		}
 
 		var lines = new List<string> { translate(Won) };
 

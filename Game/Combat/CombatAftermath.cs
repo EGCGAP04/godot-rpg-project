@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 /// <summary>
@@ -25,7 +26,18 @@ public sealed record MemberAftermath(string Id, int HealthPoints, int ManaPoints
 /// <b>A member who went down leaves with 1 health point and 1 mana point,</b> or 0 mana
 /// where their most is 0, whatever they had before: going down drains the mana too. They
 /// get none of the experience. In a loss the whole party is down, so everyone leaves that
-/// way, and there is no experience at all.
+/// way, and there is no experience at all. A member who went down before the party fled
+/// leaves the same way: never with 0 health.
+/// </para>
+/// <para>
+/// <b>Only a win gives experience.</b> A flight gives none, not even for the enemies
+/// already down: otherwise the way to play a group would be to down its weakest and flee
+/// from the rest.
+/// </para>
+/// <para>
+/// What each ending means outside the fight is answered here, engine-free, so a test can
+/// put every <see cref="CombatResult"/> through it: <see cref="Outcome"/> for the history,
+/// and <see cref="DefeatsTheEnemy"/> and <see cref="SendsThePlayerBack"/> for the map.
 /// </para>
 /// <para>
 /// The party is written in one place, <see cref="ApplyTo"/>, once the fight is over; what
@@ -48,13 +60,35 @@ public sealed class CombatAftermath
 	/// <summary>The world the fight was in.</summary>
 	public World World => Lineup.World;
 
-	/// <summary>How the fight ended: <see cref="CombatResult.Won"/> or <see cref="CombatResult.Lost"/>, never <see cref="CombatResult.Ongoing"/>.</summary>
+	/// <summary>How the fight ended: won, lost or fled, never <see cref="CombatResult.Ongoing"/>.</summary>
 	public CombatResult Result { get; }
 
 	public bool Won => Result == CombatResult.Won;
 
 	/// <summary>How the fight ended, as the decision registry's history records it.</summary>
-	public FightOutcome Outcome => Won ? FightOutcome.Won : FightOutcome.Lost;
+	public FightOutcome Outcome => Result switch
+	{
+		CombatResult.Won => FightOutcome.Won,
+		CombatResult.Lost => FightOutcome.Lost,
+		CombatResult.Fled => FightOutcome.Fled,
+		_ => throw Unknown()
+	};
+
+	/// <summary>Whether the enemy on the map is gone: after a win. After a flight it stays.</summary>
+	public bool DefeatsTheEnemy => Result switch
+	{
+		CombatResult.Won => true,
+		CombatResult.Lost or CombatResult.Fled => false,
+		_ => throw Unknown()
+	};
+
+	/// <summary>Whether the player goes back to the world's spawn: after a loss. After a flight they stay where they are.</summary>
+	public bool SendsThePlayerBack => Result switch
+	{
+		CombatResult.Lost => true,
+		CombatResult.Won or CombatResult.Fled => false,
+		_ => throw Unknown()
+	};
 
 	/// <summary>One entry per member, in the party's order.</summary>
 	public IReadOnlyList<MemberAftermath> Members { get; }
@@ -128,6 +162,10 @@ public sealed class CombatAftermath
 	}
 
 	private IEnumerable<string> Recipients(PartyState party) => Standing.Where(party.IsMember).ToArray();
+
+	// Of only reads a finished fight, so Result is never Ongoing, and a new result reaches
+	// here only if nobody taught this class what it means.
+	private UnreachableException Unknown() => new($"A fight ended as {Result}, which the aftermath does not know.");
 
 	private static void CheckSide(IReadOnlyList<Combatant> fought, IReadOnlyList<CombatantSetup> lined, string side)
 	{
